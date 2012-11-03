@@ -261,7 +261,7 @@ public class LiferayRepository
 
 	public List<FileEntry> getFileEntries(
 			long folderId, int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFileEntry> dlFileEntries = dlFileEntryService.getFileEntries(
 			getGroupId(), toFolderId(folderId), start, end, obc);
@@ -272,7 +272,7 @@ public class LiferayRepository
 	public List<FileEntry> getFileEntries(
 			long folderId, long fileEntryTypeId, int start, int end,
 			OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFileEntry> dlFileEntries = dlFileEntryService.getFileEntries(
 			getGroupId(), toFolderId(folderId), fileEntryTypeId, start, end,
@@ -284,7 +284,7 @@ public class LiferayRepository
 	public List<FileEntry> getFileEntries(
 			long folderId, String[] mimeTypes, int start, int end,
 			OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFileEntry> dlFileEntries = dlFileEntryService.getFileEntries(
 			getGroupId(), toFolderId(folderId), mimeTypes, start, end, obc);
@@ -294,7 +294,7 @@ public class LiferayRepository
 
 	public List<Object> getFileEntriesAndFileShortcuts(
 			long folderId, int status, int start, int end)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<Object> dlFileEntriesAndFileShortcuts =
 			dlFolderService.getFileEntriesAndFileShortcuts(
@@ -396,7 +396,7 @@ public class LiferayRepository
 	public List<Folder> getFolders(
 			long parentFolderId, boolean includeMountfolders, int start,
 			int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFolder> dlFolders = dlFolderService.getFolders(
 			getGroupId(), toFolderId(parentFolderId), includeMountfolders,
@@ -408,7 +408,7 @@ public class LiferayRepository
 	public List<Object> getFoldersAndFileEntriesAndFileShortcuts(
 			long folderId, int status, boolean includeMountFolders, int start,
 			int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<Object> dlFoldersAndFileEntriesAndFileShortcuts =
 			dlFolderService.getFoldersAndFileEntriesAndFileShortcuts(
@@ -422,7 +422,7 @@ public class LiferayRepository
 			long folderId, int status, String[] mimeTypes,
 			boolean includeMountFolders, int start, int end,
 			OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<Object> dlFoldersAndFileEntriesAndFileShortcuts =
 			dlFolderService.getFoldersAndFileEntriesAndFileShortcuts(
@@ -470,7 +470,7 @@ public class LiferayRepository
 
 	public List<Folder> getMountFolders(
 			long parentFolderId, int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFolder> dlFolders = dlFolderService.getMountFolders(
 			getGroupId(), toFolderId(parentFolderId), start, end, obc);
@@ -488,7 +488,7 @@ public class LiferayRepository
 	public List<FileEntry> getRepositoryFileEntries(
 			long userId, long rootFolderId, int start, int end,
 			OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFileEntry> dlFileEntries =
 			dlFileEntryService.getGroupFileEntries(
@@ -501,7 +501,7 @@ public class LiferayRepository
 	public List<FileEntry> getRepositoryFileEntries(
 			long userId, long rootFolderId, String[] mimeTypes, int status,
 			int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<DLFileEntry> dlFileEntries =
 			dlFileEntryService.getGroupFileEntries(
@@ -512,7 +512,7 @@ public class LiferayRepository
 	}
 
 	public int getRepositoryFileEntriesCount(long userId, long rootFolderId)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return dlFileEntryService.getGroupFileEntriesCount(
 			getGroupId(), userId, toFolderId(rootFolderId));
@@ -520,21 +520,21 @@ public class LiferayRepository
 
 	public int getRepositoryFileEntriesCount(
 			long userId, long rootFolderId, String[] mimeTypes, int status)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return dlFileEntryService.getGroupFileEntriesCount(
 			getGroupId(), userId, toFolderId(rootFolderId), mimeTypes, status);
 	}
 
 	public void getSubfolderIds(List<Long> folderIds, long folderId)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		dlFolderService.getSubfolderIds(
 			folderIds, getGroupId(), toFolderId(folderId));
 	}
 
 	public List<Long> getSubfolderIds(long folderId, boolean recurse)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return dlFolderService.getSubfolderIds(
 			getGroupId(), toFolderId(folderId), recurse);

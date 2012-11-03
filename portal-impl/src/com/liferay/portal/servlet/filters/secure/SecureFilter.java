@@ -26,6 +26,7 @@ import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.User;
+import com.liferay.portal.security.auth.CompanyThreadLocal;
 import com.liferay.portal.security.auth.PrincipalThreadLocal;
 import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.security.permission.PermissionCheckerFactoryUtil;
@@ -103,6 +104,8 @@ public class SecureFilter extends BasePortalFilter {
 		if (userId > 0) {
 			request = new ProtectedServletRequest(
 				request, String.valueOf(userId), HttpServletRequest.BASIC_AUTH);
+				
+			initThreadLocals(request);
 		}
 		else {
 			try {
@@ -140,6 +143,8 @@ public class SecureFilter extends BasePortalFilter {
 			request = new ProtectedServletRequest(
 				request, String.valueOf(userId),
 				HttpServletRequest.DIGEST_AUTH);
+				
+			initThreadLocals(request);
 		}
 		else {
 			try {
@@ -200,6 +205,29 @@ public class SecureFilter extends BasePortalFilter {
 		}
 
 		return false;
+	}
+
+
+	protected void initThreadLocals(HttpServletRequest request)
+		throws Exception {		
+		
+		HttpSession session = request.getSession();
+		
+		User user = (User)session.getAttribute(WebKeys.USER);
+		
+		CompanyThreadLocal.setCompanyId(user.getCompanyId());
+				
+		PrincipalThreadLocal.setName(user.getUserId());
+		PrincipalThreadLocal.setPassword(PortalUtil.getUserPassword(request));
+		
+		if (!_usePermissionChecker) {
+			return;
+		}
+		
+		PermissionChecker permissionChecker =
+			PermissionCheckerFactoryUtil.create(user);
+			
+		PermissionThreadLocal.setPermissionChecker(permissionChecker);
 	}
 
 	@Override
@@ -310,16 +338,7 @@ public class SecureFilter extends BasePortalFilter {
 		session.setAttribute(WebKeys.USER, user);
 		session.setAttribute(_AUTHENTICATED_USER, userIdString);
 
-		if (_usePermissionChecker) {
-			PrincipalThreadLocal.setName(userId);
-			PrincipalThreadLocal.setPassword(
-				PortalUtil.getUserPassword(request));
-
-			PermissionChecker permissionChecker =
-				PermissionCheckerFactoryUtil.create(user);
-
-			PermissionThreadLocal.setPermissionChecker(permissionChecker);
-		}
+		initThreadLocals(request);
 
 		return request;
 	}

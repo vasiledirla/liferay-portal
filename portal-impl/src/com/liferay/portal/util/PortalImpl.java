@@ -809,7 +809,7 @@ public class PortalImpl implements Portal {
 						groupId, mainPath, friendlyURL, params, requestContext);
 				}
 				catch (Exception e) {
-					friendlyURL = null;
+					throw new NoSuchLayoutException(e);
 				}
 			}
 			else if (friendlyURL.startsWith(
@@ -821,7 +821,7 @@ public class PortalImpl implements Portal {
 						requestContext);
 				}
 				catch (Exception e) {
-					friendlyURL = null;
+					throw new NoSuchLayoutException(e);
 				}
 			}
 		}
@@ -5774,7 +5774,7 @@ public class PortalImpl implements Portal {
 		catch (NoSuchResourceException nsre) {
 			ResourceLocalServiceUtil.addResources(
 				companyId, groupId, 0, name, primaryKey, portletActions, true,
-				true);
+				!layout.isPrivateLayout());
 		}
 	}
 
@@ -6065,7 +6065,13 @@ public class PortalImpl implements Portal {
 					 (group.getClassPK() != themeDisplay.getUserId()))) {
 
 					if (group.isControlPanel()) {
-						virtualHostname = curLayoutSet.getVirtualHostname();
+						virtualHostname = themeDisplay.getServerName();
+						
+						if (Validator.isNull(virtualHostname) ||
+							virtualHostname.equalsIgnoreCase(_LOCALHOST)) {
+							
+							virtualHostname = curLayoutSet.getVirtualHostname();
+						}
 					}
 
 					if (Validator.isNull(virtualHostname) ||

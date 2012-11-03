@@ -28,6 +28,10 @@ public class GroupConstants {
 	public static final long DEFAULT_LIVE_GROUP_ID = 0;
 
 	public static final long DEFAULT_PARENT_GROUP_ID = 0;
+	
+	public static final String GLOBAL = "Global";
+	
+	public static final String GLOBAL_FRIENDLY_URL = "/global";
 
 	public static final String GUEST = "Guest";
 

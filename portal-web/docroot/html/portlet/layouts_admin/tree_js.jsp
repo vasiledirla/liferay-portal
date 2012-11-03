@@ -95,6 +95,10 @@ if (!selectableTree) {
 				</c:when>
 			</c:choose>
 		},
+		
+		createLabel: function(data) {
+			return '<span class="' + data.cssClass + '" title="' + data.title + '">' + data.label + '</span>';
+		},
 
 		createListItemId: function(groupId, layoutId, plid) {
 			return '<%= HtmlUtil.escape(treeId) %>' + TreeUtil.PREFIX_LAYOUT_ID + layoutId + TreeUtil.PREFIX_PLID + plid + TreeUtil.PREFIX_GROUP_ID + groupId;
@@ -225,6 +229,15 @@ if (!selectableTree) {
 								title: title,
 								uuid: node.uuid
 							}
+						);
+					}
+					else {
+						newNode.label = TreeUtil.createLabel(
+						   {
+							cssClass: cssClass,
+							label: newNode.label,
+							title: title
+						  }
 						);
 					}
 

@@ -32,6 +32,7 @@ import com.liferay.portal.model.PortletConstants;
 import com.liferay.portal.model.Resource;
 import com.liferay.portal.model.ResourceConstants;
 import com.liferay.portal.model.Role;
+import com.liferay.portal.model.RoleConstants;
 import com.liferay.portal.model.Team;
 import com.liferay.portal.model.User;
 import com.liferay.portal.service.GroupLocalServiceUtil;
@@ -205,12 +206,12 @@ public class PermissionImporter {
 
 			if (PropsValues.PERMISSIONS_USER_CHECK_ALGORITHM == 5) {
 				importPermissions_5(
-					layoutCache, companyId, groupId, userId, resourceName,
+					layoutCache, companyId, groupId, userId, layout, resourceName,
 					resourcePrimKey, permissionsElement, false);
 			}
 			else if (PropsValues.PERMISSIONS_USER_CHECK_ALGORITHM == 6) {
 				importPermissions_6(
-					layoutCache, companyId, groupId, userId, resourceName,
+					layoutCache, companyId, groupId, userId, layout, resourceName,
 					resourcePrimKey, permissionsElement, false);
 			}
 			else {
@@ -290,7 +291,7 @@ public class PermissionImporter {
 
 	protected void importPermissions_5(
 			LayoutCache layoutCache, long companyId, long groupId, long userId,
-			String resourceName, String resourcePrimKey,
+			Layout layout, String resourceName, String resourcePrimKey,
 			Element permissionsElement, boolean portletActions)
 		throws Exception {
 
@@ -343,10 +344,17 @@ public class PermissionImporter {
 					userId, companyId, name, titleMap, descriptionMap, type);
 			}
 
-			List<String> actions = getActions(roleElement);
+			String roleName = role.getName();
+			
+			if (!layout.isPrivateLayout() ||
+				!roleName.equals(RoleConstants.GUEST)) {
+				
+				List<String> actions = getActions(roleElement);
 
-			roleIdsToActionIds.put(
-				role.getRoleId(), actions.toArray(new String[actions.size()]));
+				roleIdsToActionIds.put(
+					role.getRoleId(),
+					actions.toArray(new String[actions.size()]));
+			}
 		}
 
 		if (roleIdsToActionIds.isEmpty()) {
@@ -360,7 +368,7 @@ public class PermissionImporter {
 
 	protected void importPermissions_6(
 			LayoutCache layoutCache, long companyId, long groupId, long userId,
-			String resourceName, String resourcePrimKey,
+			Layout layout, String resourceName, String resourcePrimKey,
 			Element permissionsElement, boolean portletActions)
 		throws Exception {
 
@@ -413,10 +421,18 @@ public class PermissionImporter {
 					userId, companyId, name, titleMap, descriptionMap, type);
 			}
 
-			List<String> actions = getActions(roleElement);
+			String roleName = role.getName();
+			
+			if (!layout.isPrivateLayout() ||
+				!roleName.equals(RoleConstants.GUEST)) {
 
-			roleIdsToActionIds.put(
-				role.getRoleId(), actions.toArray(new String[actions.size()]));
+				List<String> actions = getActions(roleElement);
+
+				roleIdsToActionIds.put(
+					role.getRoleId(),
+					actions.toArray(new String[actions.size()]));
+			}
+
 		}
 
 		if (roleIdsToActionIds.isEmpty()) {
@@ -444,12 +460,12 @@ public class PermissionImporter {
 
 			if (PropsValues.PERMISSIONS_USER_CHECK_ALGORITHM == 5) {
 				importPermissions_5(
-					layoutCache, companyId, groupId, userId, resourceName,
+					layoutCache, companyId, groupId, userId, layout, resourceName,
 					resourcePrimKey, permissionsElement, true);
 			}
 			else if (PropsValues.PERMISSIONS_USER_CHECK_ALGORITHM == 6) {
 				importPermissions_6(
-					layoutCache, companyId, groupId, userId, resourceName,
+					layoutCache, companyId, groupId, userId, layout, resourceName,
 					resourcePrimKey, permissionsElement, true);
 			}
 			else {

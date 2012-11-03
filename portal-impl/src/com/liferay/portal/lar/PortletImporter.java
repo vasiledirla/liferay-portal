@@ -1691,6 +1691,9 @@ public class PortletImporter {
 					}
 				}
 
+			}
+			
+			if (scopeGroup != null) {
 				portletDataContext.setScopeGroupId(scopeGroup.getGroupId());
 			}
 		}

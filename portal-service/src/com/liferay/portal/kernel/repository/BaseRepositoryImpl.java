@@ -108,7 +108,7 @@ public abstract class BaseRepositoryImpl implements BaseRepository {
 
 	public List<Object> getFileEntriesAndFileShortcuts(
 			long folderId, int status, int start, int end)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return new ArrayList<Object>(
 			getFileEntries(folderId, start, end, null));
@@ -214,7 +214,7 @@ public abstract class BaseRepositoryImpl implements BaseRepository {
 	public List<FileEntry> getRepositoryFileEntries(
 			long userId, long rootFolderId, int start, int end,
 			OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return getFileEntries(rootFolderId, start, end, obc);
 	}

@@ -102,11 +102,11 @@ private void _buildLayoutBreadcrumb(Layout selLayout, String selLayoutParam, boo
 
 	breadcrumbSB.append(HtmlUtil.escape(layoutName));
 
-	breadcrumbSB.append("</a></span></li>");
-
-	Layout parentLayout = null;
+	breadcrumbSB.append("</a></span></li>");	
 
 	if (selLayout.getParentLayoutId() != LayoutConstants.DEFAULT_PARENT_LAYOUT_ID) {
+		Layout parentLayout = null;
+		
 		if (selLayout instanceof VirtualLayout) {
 			VirtualLayout virtualLayout = (VirtualLayout)selLayout;
 

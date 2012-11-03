@@ -408,13 +408,24 @@ public class GroupServiceImpl extends GroupServiceBaseImpl {
 				user.getCompanyId(), organizationParams, start, end);
 
 			for (Organization organization : userOrgs) {
-				userPlaces.add(0, organization.getGroup());
+				if (!organization.hasPrivateLayouts() &&
+				    !organization.hasPublicLayouts()) {
+					
+					userPlaces.remove(organization.getGroup());
+				}
+				else {
+					userPlaces.add(0, organization.getGroup());
+				}
 
 				if (!PropsValues.ORGANIZATIONS_MEMBERSHIP_STRICT) {
 					for (Organization ancestorOrganization :
 							organization.getAncestors()) {
 
-						userPlaces.add(0, ancestorOrganization.getGroup());
+						if (!organization.hasPrivateLayouts() &&
+							!organization.hasPublicLayouts()) {
+							
+							continue;
+						}
 					}
 				}
 			}

@@ -27,6 +27,7 @@ import com.liferay.portal.kernel.servlet.PluginContextListener;
 import com.liferay.portal.kernel.servlet.PortletServlet;
 import com.liferay.portal.kernel.servlet.SecurePluginContextListener;
 import com.liferay.portal.kernel.servlet.SecureServlet;
+import com.liferay.portal.kernel.servlet.SerializableSessionAttributeListener;
 import com.liferay.portal.kernel.servlet.filters.invoker.InvokerFilter;
 import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.FileUtil;
@@ -1762,7 +1763,15 @@ public class BaseDeployer implements AutoDeployer, Deployer {
 		}
 	}
 
-	public String secureWebXml(String content) throws Exception {
+	public String secureWebXml(
+		String content, boolean hasCustomServletListener,
+		boolean securityManagerEnabled)
+		throws Exception {
+		
+		if (!hasCustomServletListener && !securityManagerEnabled) {
+			return content;
+		}
+		
 		Document document = SAXReaderUtil.read(content);
 
 		Element rootElement = document.getRootElement();
@@ -1793,25 +1802,27 @@ public class BaseDeployer implements AutoDeployer, Deployer {
 			contextParamElement, "param-value",
 			StringUtil.merge(listenerClasses));
 
-		List<Element> servletElements = rootElement.elements("servlet");
+		if (securityManagerEnabled) {
+			List<Element> servletElements = rootElement.elements("servlet");
 
-		for (Element servletElement : servletElements) {
-			Element servletClassElement = servletElement.element(
-				"servlet-class");
+			for (Element servletElement : servletElements) {
+				Element servletClassElement = servletElement.element(
+					"servlet-class");
 
-			String servletClass = GetterUtil.getString(
-				servletClassElement.getText());
+				String servletClass = GetterUtil.getString(
+					servletClassElement.getText());
+	
+				if (servletClass.equals(PortletServlet.class.getName())) {
+					continue;
+				}
 
-			if (servletClass.equals(PortletServlet.class.getName())) {
-				continue;
+				servletClassElement.setText(SecureServlet.class.getName());
+
+				Element initParamElement = servletElement.addElement("init-param");
+
+				DocUtil.add(initParamElement, "param-name", "servlet-class");
+				DocUtil.add(initParamElement, "param-value", servletClass);
 			}
-
-			servletClassElement.setText(SecureServlet.class.getName());
-
-			Element initParamElement = servletElement.addElement("init-param");
-
-			DocUtil.add(initParamElement, "param-name", "servlet-class");
-			DocUtil.add(initParamElement, "param-value", servletClass);
 		}
 
 		return document.compactString();
@@ -2028,6 +2039,27 @@ public class BaseDeployer implements AutoDeployer, Deployer {
 
 		sb.append("<listener>");
 		sb.append("<listener-class>");
+		
+		boolean hasCustomServletListener = false;
+		
+		List<Element> listenerElements = rootElement.elements("listener");
+		
+		for (Element listenerElement : listenerElements) {
+			String listenerClass = GetterUtil.getString(
+			listenerElement.elementText("listener-class"));
+			
+			if (listenerClass.equals(
+				SerializableSessionAttributeListener.class.getName()) ||
+				listenerClass.equals(
+				SecurePluginContextListener.class.getName())) {
+				
+				continue;
+			}
+			
+			hasCustomServletListener = true;
+			
+			break;
+		}
 
 		boolean securityManagerEnabled = false;
 
@@ -2038,7 +2070,7 @@ public class BaseDeployer implements AutoDeployer, Deployer {
 				properties.getProperty("security-manager-enabled"));
 		}
 
-		if (securityManagerEnabled) {
+		if  (hasCustomServletListener || securityManagerEnabled) {
 			sb.append(SecurePluginContextListener.class.getName());
 		}
 		else {
@@ -2071,9 +2103,8 @@ public class BaseDeployer implements AutoDeployer, Deployer {
 
 		// Update web.xml
 
-		if (securityManagerEnabled) {
-			newContent = secureWebXml(newContent);
-		}
+		newContent = secureWebXml(
+			newContent, hasCustomServletListener, securityManagerEnabled);
 
 		newContent = WebXMLBuilder.organizeWebXML(newContent);
 

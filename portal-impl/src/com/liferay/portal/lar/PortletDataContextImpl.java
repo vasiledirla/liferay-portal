@@ -112,6 +112,7 @@ import java.io.InputStream;
 import java.io.Serializable;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -368,19 +369,7 @@ public class PortletDataContextImpl implements PortletDataContext {
 		String className, long classPK, List<MBMessage> messages) {
 
 		_commentsMap.put(getPrimaryKeyString(className, classPK), messages);
-	}
-
-	public void addCompanyReference(Class<?> clazz, String key) {
-		List<String> keys = _companyReferences.get(clazz.getName());
-
-		if (keys == null) {
-			keys = new ArrayList<String>();
-
-			_companyReferences.put(clazz.getName(), keys);
-		}
-
-		keys.add(key);
-	}
+	}	
 
 	public void addExpando(
 			Element element, String path, ClassedModel classedModel)
@@ -516,10 +505,8 @@ public class PortletDataContextImpl implements PortletDataContext {
 
 				Set<String> availableActionIds = roleIdsToActionIds.get(roleId);
 
-				if ((availableActionIds == null) ||
-					availableActionIds.isEmpty()) {
-
-					continue;
+				if (availableActionIds == null) {
+					availableActionIds = Collections.emptySet();
 				}
 
 				KeyValuePair permission = new KeyValuePair(
@@ -1207,17 +1194,7 @@ public class PortletDataContextImpl implements PortletDataContext {
 				userId, clazz.getName(), newClassPK, ratingsEntry.getScore(),
 				serviceContext);
 		}
-	}
-
-	public boolean isCompanyReference(Class<?> clazz, String key) {
-		List<String> keys = _companyReferences.get(clazz.getName());
-
-		if ((keys != null) && keys.contains(key)) {
-			return true;
-		}
-
-		return false;
-	}
+	}	
 
 	public boolean isDataStrategyMirror() {
 		if (_dataStrategy.equals(PortletDataHandlerKeys.DATA_STRATEGY_MIRROR) ||
@@ -1579,8 +1556,6 @@ public class PortletDataContextImpl implements PortletDataContext {
 	private Map<String, List<MBMessage>> _commentsMap =
 		new HashMap<String, List<MBMessage>>();
 	private long _companyId;
-	private Map<String, List<String>> _companyReferences =
-		new HashMap<String, List<String>>();
 	private String _dataStrategy;
 	private Date _endDate;
 	private Map<String, List<ExpandoColumn>> _expandoColumnsMap =

@@ -89,14 +89,14 @@ public class DefaultLocalRepositoryImpl implements LocalRepository {
 
 	public List<FileEntry> getFileEntries(
 			long folderId, int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return _repository.getFileEntries(folderId, start, end, obc);
 	}
 
 	public List<Object> getFileEntriesAndFileShortcuts(
 			long folderId, int status, int start, int end)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return _repository.getFileEntriesAndFileShortcuts(
 			folderId, status, start, end);
@@ -161,7 +161,7 @@ public class DefaultLocalRepositoryImpl implements LocalRepository {
 	public List<Object> getFoldersAndFileEntriesAndFileShortcuts(
 			long folderId, int status, boolean includeMountFolders, int start,
 			int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return _repository.getFoldersAndFileEntriesAndFileShortcuts(
 			folderId, status, includeMountFolders, start, end, obc);
@@ -170,7 +170,7 @@ public class DefaultLocalRepositoryImpl implements LocalRepository {
 	public List<Object> getFoldersAndFileEntriesAndFileShortcuts(
 			long folderId, int status, int start, int end,
 			OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return getFoldersAndFileEntriesAndFileShortcuts(
 			folderId, status, true, start, end, obc);
@@ -188,7 +188,7 @@ public class DefaultLocalRepositoryImpl implements LocalRepository {
 
 	public int getFoldersAndFileEntriesAndFileShortcutsCount(
 			long folderId, int status)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return getFoldersAndFileEntriesAndFileShortcutsCount(
 			folderId, status, true);
@@ -196,7 +196,7 @@ public class DefaultLocalRepositoryImpl implements LocalRepository {
 
 	public int getFoldersAndFileEntriesAndFileShortcutsCount(
 			long folderId, int status, boolean includeMountFolders)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return _repository.getFoldersAndFileEntriesAndFileShortcutsCount(
 			folderId, status, includeMountFolders);
@@ -225,7 +225,7 @@ public class DefaultLocalRepositoryImpl implements LocalRepository {
 
 	public List<Folder> getMountFolders(
 			long parentFolderId, int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return _repository.getMountFolders(parentFolderId, start, end, obc);
 	}

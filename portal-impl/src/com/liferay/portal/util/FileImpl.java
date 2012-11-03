@@ -294,6 +294,8 @@ public class FileImpl implements com.liferay.portal.kernel.util.File {
 			}
 
 			Tika tika = new Tika();
+			
+			tika.setMaxStringLength(_SIZE_UNLIMITED);
 
 			boolean forkProcess = false;
 
@@ -598,7 +600,20 @@ public class FileImpl implements com.liferay.portal.kernel.util.File {
 
 		destination.delete();
 
-		return source.renameTo(destination);
+		try {
+			if (source.isDirectory()) {			
+				FileUtils.moveDirectory(source, destination);			
+			}
+			else {			
+				FileUtils.moveFile(source, destination);			
+			}
+		
+		}
+		catch (IOException ioe) {
+				return false;
+		}
+		
+		return true;
 	}
 
 	public boolean move(String sourceFileName, String destinationFileName) {
@@ -865,6 +880,8 @@ public class FileImpl implements com.liferay.portal.kernel.util.File {
 	private static final String[] _SAFE_FILE_NAME_2 = {
 		"_AMP_", "_CP_", "_OP_", "_SEM_"
 	};
+
+	private static final int _SIZE_UNLIMITED = -1;
 
 	private static Log _log = LogFactoryUtil.getLog(FileImpl.class);
 
