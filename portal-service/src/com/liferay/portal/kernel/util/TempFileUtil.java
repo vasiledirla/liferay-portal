@@ -30,6 +30,8 @@ import java.io.InputStream;
  */
 public class TempFileUtil {
 
+	public static final String SUFFIX_TEMP_FILE_NAME = "_temp.tmp";
+	
 	public static String addTempFile(
 			long userId, String tempPathName, File file)
 		throws PortalException, SystemException {
@@ -133,7 +135,7 @@ public class TempFileUtil {
 					fileNames[i], StringPool.SLASH);
 
 				fileName = StringUtil.replace(
-					fileName, _SUFFIX_TEMP_FILENAME, StringPool.BLANK);
+					fileName, SUFFIX_TEMP_FILE_NAME, StringPool.BLANK);
 
 				fileNames[i] = fileName;
 			}
@@ -166,7 +168,7 @@ public class TempFileUtil {
 
 		sb.append(getTempFolderName(userId, tempPathName));
 		sb.append(fileName);
-		sb.append(_SUFFIX_TEMP_FILENAME);
+		sb.append(SUFFIX_TEMP_FILE_NAME);
 
 		return sb.toString();
 	}
@@ -247,8 +249,6 @@ public class TempFileUtil {
 	private static final char _NULL_CHAR = 0;
 
 	private static final long _REPOSITORY_ID = 0;
-
-	private static final String _SUFFIX_TEMP_FILENAME = "_temp.tmp";
 
 	private static final long _USER_ID = 0;
 
