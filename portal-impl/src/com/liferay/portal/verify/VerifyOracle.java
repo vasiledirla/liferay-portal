@@ -48,10 +48,15 @@ public class VerifyOracle extends VerifyProcess {
 					"user_tab_columns where data_type = 'VARCHAR2' and " +
 						"char_used = 'B'");
 
-			rs = ps.executeQuery();
+			rs = ps.executeQuery();			
 
 			while (rs.next()) {
 				String tableName = rs.getString(1);
+				
+				if (!isPortalTableName(tableName)) {
+					continue;
+				}
+				
 				String columnName = rs.getString(2);
 				int dataLength = rs.getInt(3);
 

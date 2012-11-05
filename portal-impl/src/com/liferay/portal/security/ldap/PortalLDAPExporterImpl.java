@@ -47,8 +47,8 @@ import javax.naming.ldap.LdapContext;
  * @author Marcellus Tavares
  * @author Wesley Gong
  */
-public class PortalLDAPExporterImpl implements PortalLDAPExporter {
-
+public class PortalLDAPExporterImpl implements PortalLDAPExporter {	
+	
 	public void exportToLDAP(
 			Contact contact, Map<String, Serializable> contactExpandoAttributes)
 		throws Exception {

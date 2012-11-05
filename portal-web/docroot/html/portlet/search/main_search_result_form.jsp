@@ -25,6 +25,7 @@ String className = document.get(Field.ENTRY_CLASS_NAME);
 
 String entryTitle = null;
 String entrySummary = null;
+String returnToFullPageURL = (String)request.getAttribute("search.jsp-returnToFullPageURL");
 PortletURL viewFullContentURL = null;
 String viewURL = null;
 
@@ -46,6 +47,11 @@ if (assetRendererFactory != null) {
 	viewFullContentURL = _getViewFullContentURL(request, themeDisplay, PortletKeys.ASSET_PUBLISHER, document);
 
 	viewFullContentURL.setParameter("struts_action", "/asset_publisher/view_content");
+	
+	if (Validator.isNotNull(returnToFullPageURL)) {
+		viewFullContentURL.setParameter("returnToFullPageURL", returnToFullPageURL);
+	}
+	
 	viewFullContentURL.setParameter("assetEntryId", String.valueOf(assetEntry.getEntryId()));
 	viewFullContentURL.setParameter("type", assetRendererFactory.getType());
 
@@ -75,6 +81,10 @@ else {
 	String portletId = document.get(Field.PORTLET_ID);
 
 	viewFullContentURL = _getViewFullContentURL(request, themeDisplay, portletId, document);
+	
+	if (Validator.isNotNull(returnToFullPageURL)) {
+		viewFullContentURL.setParameter("returnToFullPageURL", returnToFullPageURL);
+	}
 
 	viewURL = viewFullContentURL.toString();
 

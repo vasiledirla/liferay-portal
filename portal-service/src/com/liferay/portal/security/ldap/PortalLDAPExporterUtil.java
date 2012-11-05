@@ -29,7 +29,7 @@ import java.util.Map;
  * @author Marcellus Tavares
  * @author Raymond Augé
  */
-public class PortalLDAPExporterUtil {
+public class PortalLDAPExporterUtil {	
 
 	public static void exportToLDAP(
 			Contact contact, Map<String, Serializable> contactExpandoAttributes)

@@ -146,9 +146,7 @@ public class AddDefaultLayoutPrototypesAction extends SimpleAction {
 
 		updateLayout(layout);
 
-		addResourcePermissions(layout, portletId);
-		addResourcePermissions(layout, portletId);
-		addResourcePermissions(layout, portletId);
+		addResourcePermissions(layout, portletId);		
 
 		return portletId;
 	}

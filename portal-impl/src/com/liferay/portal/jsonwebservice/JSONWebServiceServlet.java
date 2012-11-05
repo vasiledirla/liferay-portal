@@ -113,7 +113,15 @@ public class JSONWebServiceServlet extends JSONServlet {
 
 		ServletContext servletContext = session.getServletContext();
 
-		if (servletContext.getContext(PropsValues.PORTAL_CTX) != null) {
+		String contextPath = PropsValues.PORTAL_CTX;
+		
+		if (servletContext.getContext(contextPath) != null) {
+			if (!contextPath.equals(StringPool.SLASH) &&
+				apiPath.startsWith(contextPath)) {
+				
+				apiPath = apiPath.substring(contextPath.length());
+			}
+			
 			RequestDispatcher requestDispatcher = request.getRequestDispatcher(
 				apiPath);
 

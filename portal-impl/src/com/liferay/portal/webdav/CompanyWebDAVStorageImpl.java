@@ -21,10 +21,8 @@ import com.liferay.portal.kernel.webdav.Resource;
 import com.liferay.portal.kernel.webdav.WebDAVException;
 import com.liferay.portal.kernel.webdav.WebDAVRequest;
 import com.liferay.portal.kernel.webdav.WebDAVUtil;
-import com.liferay.portal.model.Company;
 import com.liferay.portal.model.Group;
 import com.liferay.portal.model.User;
-import com.liferay.portal.service.CompanyLocalServiceUtil;
 import com.liferay.portal.service.UserLocalServiceUtil;
 
 import java.util.ArrayList;
@@ -55,18 +53,15 @@ public class CompanyWebDAVStorageImpl extends BaseWebDAVStorageImpl {
 	}
 
 	protected List<Resource> getResources(long userId) throws Exception {
-		User user = UserLocalServiceUtil.getUserById(userId);
-
-		Company company = CompanyLocalServiceUtil.getCompanyById(
-			user.getCompanyId());
+		User user = UserLocalServiceUtil.getUserById(userId);		
 
 		List<Group> groups = WebDAVUtil.getGroups(user);
 
 		List<Resource> resources = new ArrayList<Resource>(groups.size());
 
-		for (Group group : groups) {
-			String parentPath =
-				getRootPath() + StringPool.SLASH + company.getWebId();
+		for (Group group : groups) {			
+				
+			String parentPath = getRootPath();
 
 			String name = group.getFriendlyURL();
 

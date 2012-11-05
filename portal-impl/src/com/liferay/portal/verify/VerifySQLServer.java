@@ -63,10 +63,15 @@ public class VerifySQLServer extends VerifyProcess {
 
 			ps = con.prepareStatement(sql);
 
-			rs = ps.executeQuery();
+			rs = ps.executeQuery();			
 
 			while (rs.next()) {
 				String tableName = rs.getString("table_name");
+				
+				if (!isPortalTableName(tableName)) {
+					continue;
+				}
+
 				String columnName = rs.getString("column_name");
 				String dataType = rs.getString("data_type");
 				int length = rs.getInt("length");
@@ -200,10 +205,15 @@ public class VerifySQLServer extends VerifyProcess {
 
 			ps = con.prepareStatement(sql);
 
-			rs = ps.executeQuery();
+			rs = ps.executeQuery();			
 
 			while (rs.next()) {
 				String tableName = rs.getString("table_name");
+				
+				if (!isPortalTableName(tableName)) {
+					continue;
+				}
+
 				String indexName = rs.getString("index_name");
 
 				if (_log.isInfoEnabled()) {

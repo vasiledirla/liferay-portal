@@ -495,12 +495,12 @@ public class InlineSQLHelperImpl implements InlineSQLHelper {
 
 		StringBundler sb = new StringBundler();
 
-		sb.append("((InlineSQLResourcePermission.scope = ");
-		sb.append(ResourceConstants.SCOPE_INDIVIDUAL);
-		sb.append(" AND ");
-		sb.append("InlineSQLResourcePermission.primKey = CAST_TEXT(");
+		sb.append("(((InlineSQLResourcePermission.primKey = CAST_TEXT(");
 		sb.append(classPKField);
-		sb.append(") AND (");
+		sb.append(")) AND (((");
+		sb.append("InlineSQLResourcePermission.scope = ");
+		sb.append(ResourceConstants.SCOPE_INDIVIDUAL);
+		sb.append(") AND ");
 
 		long userId = getUserId();
 
@@ -599,7 +599,7 @@ public class InlineSQLHelperImpl implements InlineSQLHelper {
 			}
 		}
 
-		sb.append("))");
+		sb.append(")))");
 
 		permissionJoin = StringUtil.replace(
 			permissionJoin,

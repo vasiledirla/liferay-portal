@@ -25,7 +25,7 @@ import java.util.Map;
  * @author Michael C. Han
  * @author Marcellus Tavares
  */
-public interface PortalLDAPExporter {
+public interface PortalLDAPExporter {	
 
 	public void exportToLDAP(
 			Contact contact, Map<String, Serializable> contactExpandoAttributes)

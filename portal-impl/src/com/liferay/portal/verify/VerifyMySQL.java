@@ -26,6 +26,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+
 /**
  * @author Brian Wing Shun Chan
  */
@@ -74,10 +75,15 @@ public class VerifyMySQL extends VerifyProcess {
 
 			ps = con.prepareStatement("show table status");
 
-			rs = ps.executeQuery();
+			rs = ps.executeQuery();			
 
 			while (rs.next()) {
 				String tableName = rs.getString("Name");
+				
+				if (!isPortalTableName(tableName)) {
+					continue;
+				}
+				
 				String engine = GetterUtil.getString(rs.getString("Engine"));
 				String comment = GetterUtil.getString(rs.getString("Comment"));
 
