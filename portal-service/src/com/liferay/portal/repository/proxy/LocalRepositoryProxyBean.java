@@ -97,7 +97,7 @@ public class LocalRepositoryProxyBean
 
 	public List<FileEntry> getFileEntries(
 			long folderId, int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<FileEntry> fileEntries = _localRepository.getFileEntries(
 			folderId, start, end, obc);
@@ -107,7 +107,7 @@ public class LocalRepositoryProxyBean
 
 	public List<Object> getFileEntriesAndFileShortcuts(
 			long folderId, int status, int start, int end)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<Object> objects = _localRepository.getFileEntriesAndFileShortcuts(
 			folderId, status, start, end);
@@ -187,7 +187,7 @@ public class LocalRepositoryProxyBean
 	public List<Object> getFoldersAndFileEntriesAndFileShortcuts(
 			long folderId, int status, boolean includeMountFolders, int start,
 			int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<Object> objects =
 			_localRepository.getFoldersAndFileEntriesAndFileShortcuts(
@@ -212,7 +212,7 @@ public class LocalRepositoryProxyBean
 
 	public int getFoldersAndFileEntriesAndFileShortcutsCount(
 			long folderId, int status, boolean includeMountFolders)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		return _localRepository.getFoldersAndFileEntriesAndFileShortcutsCount(
 			folderId, status, includeMountFolders);
@@ -242,7 +242,7 @@ public class LocalRepositoryProxyBean
 
 	public List<Folder> getMountFolders(
 			long parentFolderId, int start, int end, OrderByComparator obc)
-		throws SystemException {
+		throws PortalException, SystemException {
 
 		List<Folder> folderList = _localRepository.getMountFolders(
 			parentFolderId, start, end, obc);
