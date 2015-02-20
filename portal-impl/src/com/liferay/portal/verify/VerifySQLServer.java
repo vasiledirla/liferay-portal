@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -20,6 +20,7 @@ import com.liferay.portal.kernel.dao.jdbc.DataAccess;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.StringBundler;
+import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
 
 import java.sql.Connection;
@@ -81,7 +82,7 @@ public class VerifySQLServer extends VerifyProcess {
 					convertVarcharColumn(
 						tableName, columnName, length, nullable);
 				}
-				else if (dataType.equals("text")) {
+				else if (dataType.equals("ntext") || dataType.equals("text")) {
 					convertTextColumn(tableName, columnName, nullable);
 				}
 			}
@@ -104,14 +105,15 @@ public class VerifySQLServer extends VerifyProcess {
 
 		if (_log.isInfoEnabled()) {
 			_log.info(
-				"Updating " + tableName + "." + columnName + " to use ntext");
+				"Updating " + tableName + "." + columnName +" to use " +
+					"nvarchar(max)");
 		}
 
 		StringBundler sb = new StringBundler(4);
 
 		sb.append("alter table ");
 		sb.append(tableName);
-		sb.append(" add temp ntext");
+		sb.append(" add temp nvarchar(max)");
 
 		if (!nullable) {
 			sb.append(" not null");
@@ -153,7 +155,7 @@ public class VerifySQLServer extends VerifyProcess {
 			sb.append(length);
 		}
 
-		sb.append(")");
+		sb.append(StringPool.CLOSE_PARENTHESIS);
 
 		if (!nullable) {
 			sb.append(" not null");
@@ -220,7 +222,7 @@ public class VerifySQLServer extends VerifyProcess {
 					_log.info("Dropping index " + tableName + "." + indexName);
 				}
 
-				String indexNameUpperCase = indexName.toUpperCase();
+				String indexNameUpperCase = StringUtil.toUpperCase(indexName);
 
 				if (indexNameUpperCase.startsWith("PK")) {
 					String primaryKeyColumnNames = StringUtil.merge(
@@ -297,7 +299,8 @@ public class VerifySQLServer extends VerifyProcess {
 			"'Cyrus%') and (sysobjects.name not like 'QUARTZ%')";
 
 	private static final String _FILTER_NONUNICODE_DATA_TYPES =
-		"((systypes.name = 'varchar') OR (systypes.name = 'text'))";
+		"((systypes.name = 'ntext') OR (systypes.name = 'text') OR " +
+			"(systypes.name = 'varchar'))";
 
 	private static Log _log = LogFactoryUtil.getLog(VerifySQLServer.class);
 

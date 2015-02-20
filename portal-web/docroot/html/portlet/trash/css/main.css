@@ -8,7 +8,11 @@
 		width: 100%;
 	}
 
-	.aui-search-bar {
+	.edit-toolbar {
+		margin: 0 0 1em 0;
+	}
+
+	.form-search {
 		display: block;
 		float: right;
 	}
@@ -18,19 +22,12 @@
 		float: right;
 	}
 }
+
 .trash-restore-popup {
-	.aui-form {
+	.form {
 		fieldset {
 			margin-bottom: 0;
 			padding: 0 15px;
 		}
-
-		.new-file-name .aui-field-input {
-			width: 100%;
-		}
-	}
-
-	.portlet-msg-alert {
-		margin: 10px 0;
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,15 +14,18 @@
 
 package com.liferay.portlet.softwarecatalog.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
 import com.liferay.portal.kernel.util.ReferenceRegistry;
 
 /**
- * The utility for the s c product version remote service. This utility wraps {@link com.liferay.portlet.softwarecatalog.service.impl.SCProductVersionServiceImpl} and is the primary access point for service operations in application layer code running on a remote server.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service utility for SCProductVersion. This utility wraps
+ * {@link com.liferay.portlet.softwarecatalog.service.impl.SCProductVersionServiceImpl} and is the
+ * primary access point for service operations in application layer code running
+ * on a remote server. Methods of this service are expected to have security
+ * checks based on the propagated JAAS credentials because this service can be
+ * accessed remotely.
  *
  * @author Brian Wing Shun Chan
  * @see SCProductVersionService
@@ -30,12 +33,30 @@ import com.liferay.portal.kernel.util.ReferenceRegistry;
  * @see com.liferay.portlet.softwarecatalog.service.impl.SCProductVersionServiceImpl
  * @generated
  */
+@ProviderType
 public class SCProductVersionServiceUtil {
 	/*
 	 * NOTE FOR DEVELOPERS:
 	 *
 	 * Never modify this class directly. Add custom service methods to {@link com.liferay.portlet.softwarecatalog.service.impl.SCProductVersionServiceImpl} and rerun ServiceBuilder to regenerate this class.
 	 */
+	public static com.liferay.portlet.softwarecatalog.model.SCProductVersion addProductVersion(
+		long productEntryId, java.lang.String version,
+		java.lang.String changeLog, java.lang.String downloadPageURL,
+		java.lang.String directDownloadURL, boolean testDirectDownloadURL,
+		boolean repoStoreArtifact, long[] frameworkVersionIds,
+		com.liferay.portal.service.ServiceContext serviceContext)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService()
+				   .addProductVersion(productEntryId, version, changeLog,
+			downloadPageURL, directDownloadURL, testDirectDownloadURL,
+			repoStoreArtifact, frameworkVersionIds, serviceContext);
+	}
+
+	public static void deleteProductVersion(long productVersionId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		getService().deleteProductVersion(productVersionId);
+	}
 
 	/**
 	* Returns the Spring bean ID for this bean.
@@ -44,6 +65,23 @@ public class SCProductVersionServiceUtil {
 	*/
 	public static java.lang.String getBeanIdentifier() {
 		return getService().getBeanIdentifier();
+	}
+
+	public static com.liferay.portlet.softwarecatalog.model.SCProductVersion getProductVersion(
+		long productVersionId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getProductVersion(productVersionId);
+	}
+
+	public static java.util.List<com.liferay.portlet.softwarecatalog.model.SCProductVersion> getProductVersions(
+		long productEntryId, int start, int end)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getProductVersions(productEntryId, start, end);
+	}
+
+	public static int getProductVersionsCount(long productEntryId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getProductVersionsCount(productEntryId);
 	}
 
 	/**
@@ -55,53 +93,12 @@ public class SCProductVersionServiceUtil {
 		getService().setBeanIdentifier(beanIdentifier);
 	}
 
-	public static com.liferay.portlet.softwarecatalog.model.SCProductVersion addProductVersion(
-		long productEntryId, java.lang.String version,
-		java.lang.String changeLog, java.lang.String downloadPageURL,
-		java.lang.String directDownloadURL, boolean testDirectDownloadURL,
-		boolean repoStoreArtifact, long[] frameworkVersionIds,
-		com.liferay.portal.service.ServiceContext serviceContext)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .addProductVersion(productEntryId, version, changeLog,
-			downloadPageURL, directDownloadURL, testDirectDownloadURL,
-			repoStoreArtifact, frameworkVersionIds, serviceContext);
-	}
-
-	public static void deleteProductVersion(long productVersionId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		getService().deleteProductVersion(productVersionId);
-	}
-
-	public static com.liferay.portlet.softwarecatalog.model.SCProductVersion getProductVersion(
-		long productVersionId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getProductVersion(productVersionId);
-	}
-
-	public static java.util.List<com.liferay.portlet.softwarecatalog.model.SCProductVersion> getProductVersions(
-		long productEntryId, int start, int end)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getProductVersions(productEntryId, start, end);
-	}
-
-	public static int getProductVersionsCount(long productEntryId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getProductVersionsCount(productEntryId);
-	}
-
 	public static com.liferay.portlet.softwarecatalog.model.SCProductVersion updateProductVersion(
 		long productVersionId, java.lang.String version,
 		java.lang.String changeLog, java.lang.String downloadPageURL,
 		java.lang.String directDownloadURL, boolean testDirectDownloadURL,
 		boolean repoStoreArtifact, long[] frameworkVersionIds)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
+		throws com.liferay.portal.kernel.exception.PortalException {
 		return getService()
 				   .updateProductVersion(productVersionId, version, changeLog,
 			downloadPageURL, directDownloadURL, testDirectDownloadURL,
@@ -120,8 +117,9 @@ public class SCProductVersionServiceUtil {
 	}
 
 	/**
-	 * @deprecated
+	 * @deprecated As of 6.2.0
 	 */
+	@Deprecated
 	public void setService(SCProductVersionService service) {
 	}
 

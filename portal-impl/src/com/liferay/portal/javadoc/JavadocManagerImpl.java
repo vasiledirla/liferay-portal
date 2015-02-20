@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -20,7 +20,9 @@ import com.liferay.portal.kernel.javadoc.JavadocManager;
 import com.liferay.portal.kernel.javadoc.JavadocMethod;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.security.pacl.DoPrivileged;
 import com.liferay.portal.kernel.util.StreamUtil;
+import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.xml.Document;
 import com.liferay.portal.kernel.xml.Element;
@@ -42,8 +44,10 @@ import java.util.Map;
 /**
  * @author Igor Spasic
  */
+@DoPrivileged
 public class JavadocManagerImpl implements JavadocManager {
 
+	@Override
 	public void load(String servletContextName, ClassLoader classLoader) {
 		if (!PropsValues.JAVADOC_MANAGER_ENABLED) {
 			return;
@@ -66,6 +70,12 @@ public class JavadocManagerImpl implements JavadocManager {
 		}
 	}
 
+	@Override
+	public JavadocClass lookupJavadocClass(Class<?> clazz) {
+		return _javadocClasses.get(clazz);
+	}
+
+	@Override
 	public JavadocMethod lookupJavadocMethod(Method method) {
 		JavadocMethod javadocMethod = _javadocMethods.get(method);
 
@@ -119,6 +129,7 @@ public class JavadocManagerImpl implements JavadocManager {
 		return null;
 	}
 
+	@Override
 	public void unload(String servletContextName) {
 		if (_log.isInfoEnabled()) {
 			_log.info("Unloading Javadocs for \"" + servletContextName + '\"');
@@ -191,6 +202,10 @@ public class JavadocManagerImpl implements JavadocManager {
 					JavadocMethod javadocMethod = parseJavadocMethod(
 						servletContextName, clazz, methodElement);
 
+					if (javadocMethod == null) {
+						continue;
+					}
+
 					_javadocMethods.put(
 						javadocMethod.getMethod(), javadocMethod);
 				}
@@ -238,6 +253,12 @@ public class JavadocManagerImpl implements JavadocManager {
 		throws Exception {
 
 		String name = methodElement.elementText("name");
+
+		if (name.equals(clazz.getSimpleName()) ||
+			name.startsWith(StringPool.UNDERLINE)) {
+
+			return null;
+		}
 
 		List<Element> paramElements = methodElement.elements("param");
 
@@ -309,7 +330,7 @@ public class JavadocManagerImpl implements JavadocManager {
 		}
 	}
 
-	private static Log _log = LogFactoryUtil.getLog(JavadocManager.class);
+	private static Log _log = LogFactoryUtil.getLog(JavadocManagerImpl.class);
 
 	private Map<Class<?>, JavadocClass> _javadocClasses =
 		new HashMap<Class<?>, JavadocClass>();

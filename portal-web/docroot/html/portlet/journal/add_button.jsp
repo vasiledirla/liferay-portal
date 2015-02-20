@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,65 +21,54 @@ JournalFolder folder = (JournalFolder)request.getAttribute("view.jsp-folder");
 
 long folderId = GetterUtil.getLong((String)request.getAttribute("view.jsp-folderId"));
 
-List<JournalStructure> structures = JournalStructureServiceUtil.getStructures(PortalUtil.getSiteAndCompanyGroupIds(themeDisplay));
+int restrictionType = JournalFolderConstants.RESTRICTION_TYPE_INHERIT;
+
+if (folder != null) {
+	restrictionType = folder.getRestrictionType();
+}
+
+List<DDMStructure> ddmStructures = DDMStructureServiceUtil.getJournalFolderStructures(PortalUtil.getCurrentAndAncestorSiteGroupIds(scopeGroupId), folderId, restrictionType);
 %>
 
-<liferay-ui:icon-menu align="left" direction="down" icon="" message="add" showExpanded="<%= false %>" showWhenSingleIcon="<%= true %>">
+<aui:nav-item dropdown="<%= true %>" id="addButtonContainer" label="add">
 	<c:if test="<%= JournalFolderPermission.contains(permissionChecker, scopeGroupId, folderId, ActionKeys.ADD_FOLDER) %>">
 		<portlet:renderURL var="addFolderURL">
 			<portlet:param name="struts_action" value="/journal/edit_folder" />
 			<portlet:param name="redirect" value="<%= currentURL %>" />
+			<portlet:param name="groupId" value="<%= String.valueOf(scopeGroupId) %>" />
 			<portlet:param name="parentFolderId" value="<%= String.valueOf(folderId) %>" />
 		</portlet:renderURL>
 
-		<liferay-ui:icon
-			image="folder"
-			message='<%= (folder != null) ? "subfolder" : "folder" %>'
-			url="<%= addFolderURL %>"
-		/>
+		<%
+		AssetRendererFactory assetRendererFactory = AssetRendererFactoryRegistryUtil.getAssetRendererFactoryByClassName(JournalFolder.class.getName());
+		%>
+
+		<aui:nav-item href="<%= addFolderURL %>" iconCssClass="<%= assetRendererFactory.getIconCssClass() %>" label='<%= (folder != null) ? "subfolder" : "folder" %>' />
 	</c:if>
 
 	<c:if test="<%= JournalFolderPermission.contains(permissionChecker, scopeGroupId, folderId, ActionKeys.ADD_ARTICLE) %>">
-		<liferay-portlet:renderURL var="addArticleURL" windowState="<%= LiferayWindowState.MAXIMIZED.toString() %>">
-			<portlet:param name="struts_action" value="/journal/edit_article" />
-			<portlet:param name="redirect" value="<%= currentURL %>" />
-			<portlet:param name="folderId" value="<%= String.valueOf(folderId) %>" />
-		</liferay-portlet:renderURL>
-
-		<liferay-ui:icon
-			message="basic-web-content"
-			src='<%= themeDisplay.getPathThemeImages() + "/common/history.png" %>'
-			url="<%= addArticleURL.toString() %>"
-		/>
 
 		<%
-		for (JournalStructure structure : structures) {
+		for (DDMStructure ddmStructure : ddmStructures) {
 		%>
 
 			<liferay-portlet:renderURL var="addArticleURL" windowState="<%= LiferayWindowState.MAXIMIZED.toString() %>">
 				<portlet:param name="struts_action" value="/journal/edit_article" />
 				<portlet:param name="redirect" value="<%= currentURL %>" />
+				<portlet:param name="groupId" value="<%= String.valueOf(scopeGroupId) %>" />
 				<portlet:param name="folderId" value="<%= String.valueOf(folderId) %>" />
-				<portlet:param name="structureId" value="<%= structure.getStructureId() %>" />
+				<portlet:param name="structureId" value="<%= ddmStructure.getStructureKey() %>" />
 			</liferay-portlet:renderURL>
 
 			<%
-			String structureName = HtmlUtil.escape(structure.getName(themeDisplay.getLocale()));
-
-			if (structure.getGroupId() == themeDisplay.getCompanyGroupId()) {
-				structureName += " (" + LanguageUtil.get(themeDisplay.getLocale(), "global") + ")";
-			}
+			AssetRendererFactory assetRendererFactory = AssetRendererFactoryRegistryUtil.getAssetRendererFactoryByClassName(JournalArticle.class.getName());
 			%>
 
-			<liferay-ui:icon
-				message="<%= structureName %>"
-				src='<%= themeDisplay.getPathThemeImages() + "/common/history.png" %>'
-				url="<%= addArticleURL.toString() %>"
-			/>
+			<aui:nav-item href="<%= addArticleURL %>" iconCssClass="<%= assetRendererFactory.getIconCssClass() %>" label="<%= HtmlUtil.escape(ddmStructure.getUnambiguousName(ddmStructures, themeDisplay.getScopeGroupId(), locale)) %>" localizeLabel="<%= false %>" />
 
 		<%
 		}
 		%>
 
 	</c:if>
-</liferay-ui:icon-menu>
+</aui:nav-item>

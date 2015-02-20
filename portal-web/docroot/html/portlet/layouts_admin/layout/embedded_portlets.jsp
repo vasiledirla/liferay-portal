@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,7 +17,7 @@
 <%@ include file="/html/portlet/layouts_admin/init.jsp" %>
 
 <%
-Layout selLayout = (Layout)request.getAttribute("edit_pages.jsp-selLayout");
+Layout selLayout = layoutsAdminDisplayContext.getSelLayout();
 
 List<Portlet> embeddedPortlets = (List<Portlet>)request.getAttribute("edit_pages.jsp-embeddedPortlets");
 
@@ -35,13 +35,13 @@ rowChecker.setRowIds("removeEmbeddedPortletIds");
 		rowChecker = null;
 		%>
 
-		<div class="portlet-msg-info">
+		<div class="alert alert-info">
 			<liferay-ui:message key="layout-inherits-from-a-prototype-portlets-cannot-be-manipulated" />
 		</div>
 	</c:when>
 	<c:otherwise>
-		<div class="portlet-msg-alert">
-			<liferay-ui:message key="warning-selected-portlets-will-be-removed" />
+		<div class="alert alert-block">
+			<liferay-ui:message key="warning-preferences-of-selected-portlets-will-be-reset-or-deleted" />
 		</div>
 	</c:otherwise>
 </c:choose>

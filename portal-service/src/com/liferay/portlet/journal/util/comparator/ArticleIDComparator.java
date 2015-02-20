@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,12 +15,13 @@
 package com.liferay.portlet.journal.util.comparator;
 
 import com.liferay.portal.kernel.util.OrderByComparator;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portlet.journal.model.JournalArticle;
 
 /**
  * @author Brian Wing Shun Chan
  */
-public class ArticleIDComparator extends OrderByComparator {
+public class ArticleIDComparator extends OrderByComparator<JournalArticle> {
 
 	public static final String ORDER_BY_ASC =
 		"JournalArticle.articleId ASC, JournalArticle.version ASC";
@@ -39,12 +40,11 @@ public class ArticleIDComparator extends OrderByComparator {
 	}
 
 	@Override
-	public int compare(Object obj1, Object obj2) {
-		JournalArticle article1 = (JournalArticle)obj1;
-		JournalArticle article2 = (JournalArticle)obj2;
+	public int compare(JournalArticle article1, JournalArticle article2) {
+		String articleId1 = StringUtil.toLowerCase(article1.getArticleId());
+		String articleId2 = StringUtil.toLowerCase(article2.getArticleId());
 
-		int value = article1.getArticleId().toLowerCase().compareTo(
-			article2.getArticleId().toLowerCase());
+		int value = articleId1.compareTo(articleId2);
 
 		if (value == 0) {
 			if (article1.getVersion() < article2.getVersion()) {

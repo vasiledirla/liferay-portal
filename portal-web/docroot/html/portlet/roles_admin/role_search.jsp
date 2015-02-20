@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,13 +17,13 @@
 <%@ include file="/html/portlet/roles_admin/init.jsp" %>
 
 <%
-RoleSearch searchContainer = (RoleSearch)request.getAttribute("liferay-ui:search:searchContainer");
+String cssClass = "form-search";
 
-RoleDisplayTerms displayTerms = (RoleDisplayTerms)searchContainer.getDisplayTerms();
+if (windowState.equals(WindowState.MAXIMIZED)) {
+	cssClass += " col-xs-12";
+}
 %>
 
-<span class="aui-search-bar lfr-display-terms-search">
-	<aui:input inlineField="<%= true %>" label="" name="<%= displayTerms.KEYWORDS %>" size="30" type="text" value="<%= displayTerms.getKeywords() %>" />
-
-	<aui:button type="submit" value="search" />
-</span>
+<div class="<%= cssClass %>">
+	<liferay-ui:input-search autoFocus="<%= windowState.equals(WindowState.MAXIMIZED) %>" placeholder='<%= LanguageUtil.get(locale, "keywords") %>' />
+</div>

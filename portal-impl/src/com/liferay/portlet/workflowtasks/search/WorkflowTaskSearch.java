@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -50,9 +50,16 @@ public class WorkflowTaskSearch extends SearchContainer<WorkflowTask> {
 	public WorkflowTaskSearch(
 		PortletRequest portletRequest, PortletURL iteratorURL) {
 
+		this(portletRequest, DEFAULT_CUR_PARAM, iteratorURL);
+	}
+
+	public WorkflowTaskSearch(
+		PortletRequest portletRequest, String curParam,
+		PortletURL iteratorURL) {
+
 		super(
 			portletRequest, new WorkflowTaskDisplayTerms(portletRequest),
-			new WorkflowTaskSearchTerms(portletRequest), DEFAULT_CUR_PARAM,
+			new WorkflowTaskDisplayTerms(portletRequest), curParam,
 			DEFAULT_DELTA, iteratorURL, headerNames, null);
 
 		WorkflowTaskDisplayTerms displayTerms =
@@ -66,8 +73,8 @@ public class WorkflowTaskSearch extends SearchContainer<WorkflowTask> {
 		String orderByCol = ParamUtil.getString(portletRequest, "orderByCol");
 		String orderByType = ParamUtil.getString(portletRequest, "orderByType");
 
-		OrderByComparator orderByComparator = getOrderByComparator(
-			orderByCol, orderByType);
+		OrderByComparator<WorkflowTask> orderByComparator =
+			getOrderByComparator(orderByCol, orderByType);
 
 		setOrderableHeaders(orderableHeaders);
 		setOrderByCol(orderByCol);
@@ -75,7 +82,7 @@ public class WorkflowTaskSearch extends SearchContainer<WorkflowTask> {
 		setOrderByComparator(orderByComparator);
 	}
 
-	protected OrderByComparator getOrderByComparator(
+	protected OrderByComparator<WorkflowTask> getOrderByComparator(
 		String orderByCol, String orderByType) {
 
 		boolean orderByAsc = false;
@@ -84,7 +91,7 @@ public class WorkflowTaskSearch extends SearchContainer<WorkflowTask> {
 			orderByAsc = true;
 		}
 
-		OrderByComparator orderByComparator = null;
+		OrderByComparator<WorkflowTask> orderByComparator = null;
 
 		if (orderByCol.equals("name")) {
 			orderByComparator =

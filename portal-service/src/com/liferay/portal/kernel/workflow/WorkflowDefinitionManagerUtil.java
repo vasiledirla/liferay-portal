@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,8 +17,6 @@ package com.liferay.portal.kernel.workflow;
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
 import com.liferay.portal.kernel.util.OrderByComparator;
 
-import java.io.InputStream;
-
 import java.util.List;
 
 /**
@@ -32,11 +30,11 @@ import java.util.List;
 public class WorkflowDefinitionManagerUtil {
 
 	public static WorkflowDefinition deployWorkflowDefinition(
-			long companyId, long userId, String title, InputStream inputStream)
+			long companyId, long userId, String title, byte[] bytes)
 		throws WorkflowException {
 
 		return getWorkflowDefinitionManager().deployWorkflowDefinition(
-			companyId, userId, title, inputStream);
+			companyId, userId, title, bytes);
 	}
 
 	public static int getActiveWorkflowDefinitionCount(long companyId)
@@ -56,7 +54,7 @@ public class WorkflowDefinitionManagerUtil {
 
 	public static List<WorkflowDefinition> getActiveWorkflowDefinitions(
 			long companyId, int start, int end,
-			OrderByComparator orderByComparator)
+			OrderByComparator<WorkflowDefinition> orderByComparator)
 		throws WorkflowException {
 
 		return getWorkflowDefinitionManager().getActiveWorkflowDefinitions(
@@ -65,7 +63,7 @@ public class WorkflowDefinitionManagerUtil {
 
 	public static List<WorkflowDefinition> getActiveWorkflowDefinitions(
 			long companyId, String name, int start, int end,
-			OrderByComparator orderByComparator)
+			OrderByComparator<WorkflowDefinition> orderByComparator)
 		throws WorkflowException {
 
 		return getWorkflowDefinitionManager().getActiveWorkflowDefinitions(
@@ -111,7 +109,7 @@ public class WorkflowDefinitionManagerUtil {
 
 	public static List<WorkflowDefinition> getWorkflowDefinitions(
 			long companyId, int start, int end,
-			OrderByComparator orderByComparator)
+			OrderByComparator<WorkflowDefinition> orderByComparator)
 		throws WorkflowException {
 
 		return getWorkflowDefinitionManager().getWorkflowDefinitions(
@@ -120,7 +118,7 @@ public class WorkflowDefinitionManagerUtil {
 
 	public static List<WorkflowDefinition> getWorkflowDefinitions(
 			long companyId, String name, int start, int end,
-			OrderByComparator orderByComparator)
+			OrderByComparator<WorkflowDefinition> orderByComparator)
 		throws WorkflowException {
 
 		return getWorkflowDefinitionManager().getWorkflowDefinitions(
@@ -152,10 +150,10 @@ public class WorkflowDefinitionManagerUtil {
 			companyId, userId, name, version, title);
 	}
 
-	public static void validateWorkflowDefinition(InputStream inputStream)
+	public static void validateWorkflowDefinition(byte[] bytes)
 		throws WorkflowException {
 
-		getWorkflowDefinitionManager().validateWorkflowDefinition(inputStream);
+		getWorkflowDefinitionManager().validateWorkflowDefinition(bytes);
 	}
 
 	public void setWorkflowDefinitionManager(

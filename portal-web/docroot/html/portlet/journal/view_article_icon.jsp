@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -20,19 +20,22 @@
 JournalArticle article = (JournalArticle)request.getAttribute("view_entries.jsp-article");
 
 PortletURL tempRowURL = (PortletURL)request.getAttribute("view_entries.jsp-tempRowURL");
+
+String articleImageURL = article.getArticleImageURL(themeDisplay);
 %>
 
 <liferay-ui:app-view-entry
 	actionJsp="/html/portlet/journal/article_action.jsp"
-	description="<%= article.getDescription() %>"
+	description="<%= HtmlUtil.escape(article.getDescription(locale)) %>"
 	displayStyle="icon"
-	rowCheckerId="<%= String.valueOf(article.getArticleId()) %>"
+	groupId="<%= article.getGroupId() %>"
+	rowCheckerId="<%= HtmlUtil.escape(article.getArticleId()) %>"
 	rowCheckerName="<%= JournalArticle.class.getSimpleName() %>"
-	showCheckbox="<%= JournalArticlePermission.contains(permissionChecker, article, ActionKeys.DELETE) || JournalArticlePermission.contains(permissionChecker, article, ActionKeys.UPDATE) %>"
+	showCheckbox="<%= JournalArticlePermission.contains(permissionChecker, article, ActionKeys.DELETE) || JournalArticlePermission.contains(permissionChecker, article, ActionKeys.EXPIRE) || JournalArticlePermission.contains(permissionChecker, article, ActionKeys.UPDATE) %>"
 	status="<%= article.getStatus() %>"
-	thumbnailDivStyle="height: 136px; width: 136px;"
-	thumbnailSrc='<%= themeDisplay.getPathThemeImages() + "/file_system/large/default.png" %>'
+	thumbnailDivStyle="height: 146px; width: 146px;"
+	thumbnailSrc='<%= Validator.isNotNull(articleImageURL) ? articleImageURL : themeDisplay.getPathThemeImages() + "/file_system/large/article.png" %>'
 	thumbnailStyle="max-height: 128px; max-width: 128px;"
-	title="<%= article.getTitle(locale) %>"
+	title="<%= HtmlUtil.escape(article.getTitle(locale)) %>"
 	url="<%= tempRowURL.toString() %>"
 />

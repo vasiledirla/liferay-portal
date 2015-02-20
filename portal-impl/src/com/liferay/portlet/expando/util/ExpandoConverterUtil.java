@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -24,7 +24,6 @@ import com.liferay.portlet.expando.model.ExpandoColumnConstants;
 import java.io.Serializable;
 
 import java.text.DateFormat;
-import java.text.SimpleDateFormat;
 
 import java.util.Date;
 
@@ -96,7 +95,7 @@ public class ExpandoConverterUtil {
 	public static Serializable getAttributeFromStringArray(
 		int type, String[] attribute) {
 
-		if ((attribute == null) || (attribute.length == 0)) {
+		if (ArrayUtil.isEmpty(attribute)) {
 			return null;
 		}
 
@@ -192,7 +191,7 @@ public class ExpandoConverterUtil {
 	}
 
 	private static DateFormat _getDateFormat() {
-		return new SimpleDateFormat(DateUtil.ISO_8601_PATTERN);
+		return DateUtil.getISO8601Format();
 	}
 
 }

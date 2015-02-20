@@ -7,33 +7,42 @@ AUI.add(
 
 		var SearchContainer = A.Component.create(
 			{
-				NAME: 'searchcontainer',
-
 				ATTRS: {
 					classNameHover: {
 						value: ''
 					},
+
 					hover: {
 						value: ''
 					},
+
 					id: {
 						value: ''
 					},
+
 					rowClassNameAlternate: {
 						value: ''
 					},
+
 					rowClassNameAlternateHover: {
 						value: ''
 					},
+
 					rowClassNameBody: {
 						value: ''
 					},
+
 					rowClassNameBodyHover: {
 						value: ''
 					}
 				},
 
+				NAME: 'searchcontainer',
+
 				constructor: function(config) {
+					var id = config.id;
+
+					config.boundingBox = config.boundingBox || '#' + id;
 					config.contentBox = config.contentBox || '#' + config.id + 'SearchContainer';
 
 					SearchContainer.superclass.constructor.apply(this, arguments);
@@ -73,6 +82,19 @@ AUI.add(
 						var contentBox = instance.get('contentBox');
 
 						instance._dataStore = A.one('#' + id + 'PrimaryKeys');
+
+						if (instance._dataStore) {
+							var dataStoreForm = instance._dataStore.attr('form');
+
+							if (dataStoreForm) {
+								var method = dataStoreForm.attr('method').toLowerCase();
+
+								if (method && method == 'get') {
+									instance._dataStore = null;
+								}
+							}
+						}
+
 						instance._table = contentBox.one('table');
 						instance._parentContainer = contentBox.ancestor('.lfr-search-container');
 
@@ -158,11 +180,13 @@ AUI.add(
 					addRow: function(arr, id) {
 						var instance = this;
 
-						if (id) {
-							var row = instance._table.one('.' + CSS_TEMPLATE);
+						var row;
 
-							if (row) {
-								row = row.clone();
+						if (id) {
+							var template = instance._table.one('.' + CSS_TEMPLATE);
+
+							if (template) {
+								row = template.clone();
 
 								var cells = row.all('> td');
 
@@ -170,7 +194,7 @@ AUI.add(
 
 								A.each(
 									arr,
-									function(item, index, collection) {
+									function(item, index) {
 										var cell = cells.item(index);
 
 										if (cell) {
@@ -179,7 +203,7 @@ AUI.add(
 									}
 								);
 
-								instance._table.append(row);
+								template.placeBefore(row);
 
 								row.removeClass(CSS_TEMPLATE);
 
@@ -198,6 +222,8 @@ AUI.add(
 								}
 							);
 						}
+
+						return row;
 					},
 
 					deleteRow: function(obj, id) {
@@ -207,7 +233,7 @@ AUI.add(
 							var row = null;
 
 							instance._table.all('tr').some(
-								function (item, index, collection) {
+								function(item, index) {
 									if (!item.hasClass(CSS_TEMPLATE) && index == obj) {
 										row = item;
 									}
@@ -260,6 +286,12 @@ AUI.add(
 						}
 
 						return ids;
+					},
+
+					getSize: function() {
+						var instance = this;
+
+						return instance._ids.length;
 					},
 
 					updateDataStore: function(ids) {
@@ -315,6 +347,6 @@ AUI.add(
 	},
 	'',
 	{
-		requires: ['aui-base', 'event-mouseenter']
+		requires: ['aui-base', 'aui-component', 'event-mouseenter']
 	}
 );

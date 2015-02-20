@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,7 +14,7 @@
 
 package com.liferay.portal.security.ac;
 
-import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.MapUtil;
 import com.liferay.portal.kernel.util.SetUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.security.auth.AccessControlContext;
@@ -24,7 +24,6 @@ import com.liferay.portal.security.permission.PermissionThreadLocal;
 
 import java.lang.reflect.Method;
 
-import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
@@ -37,15 +36,20 @@ import javax.servlet.http.HttpServletRequest;
  */
 public class AccessControlAdvisorImpl implements AccessControlAdvisor {
 
+	@Override
 	public void accept(Method method, AccessControlled accessControlled)
 		throws SecurityException {
 
-		checkAllowedHosts();
+		if (accessControlled.hostAllowedValidationEnabled()) {
+			checkAllowedHosts();
+		}
 
 		PermissionChecker permissionChecker =
 			PermissionThreadLocal.getPermissionChecker();
 
-		if ((permissionChecker == null) || !permissionChecker.isSignedIn()) {
+		if (!accessControlled.guestAccessEnabled() &&
+			((permissionChecker == null) || !permissionChecker.isSignedIn())) {
+
 			throw new SecurityException("Authenticated access required");
 		}
 	}
@@ -60,10 +64,10 @@ public class AccessControlAdvisorImpl implements AccessControlAdvisor {
 
 		HttpServletRequest request = accessControlContext.getRequest();
 
-		Map<String, Object> settings = accessControlContext.getSettings();
+		String hostsAllowedString = MapUtil.getString(
+			accessControlContext.getSettings(), "hosts.allowed");
 
-		String[] hostsAllowed = StringUtil.split(
-			GetterUtil.getString(settings.get("hosts.allowed")));
+		String[] hostsAllowed = StringUtil.split(hostsAllowedString);
 
 		Set<String> hostsAllowedSet = SetUtil.fromArray(hostsAllowed);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,10 +16,9 @@ package com.liferay.portal.service.impl;
 
 import com.liferay.portal.MembershipRequestCommentsException;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
-import com.liferay.portal.kernel.util.UniqueList;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.Group;
 import com.liferay.portal.model.MembershipRequest;
@@ -28,7 +27,6 @@ import com.liferay.portal.model.Resource;
 import com.liferay.portal.model.ResourceConstants;
 import com.liferay.portal.model.Role;
 import com.liferay.portal.model.RoleConstants;
-import com.liferay.portal.model.Team;
 import com.liferay.portal.model.User;
 import com.liferay.portal.model.UserGroupRole;
 import com.liferay.portal.security.permission.ActionKeys;
@@ -41,18 +39,22 @@ import com.liferay.portal.util.SubscriptionSender;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Jorge Ferrer
  */
-public class MembershipRequestLocalServiceImpl
+public class
+	MembershipRequestLocalServiceImpl
 	extends MembershipRequestLocalServiceBaseImpl {
 
+	@Override
 	public MembershipRequest addMembershipRequest(
 			long userId, long groupId, String comments,
 			ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		User user = userPersistence.findByPrimaryKey(userId);
 		Date now = new Date();
@@ -72,14 +74,15 @@ public class MembershipRequestLocalServiceImpl
 		membershipRequest.setStatusId(
 			MembershipRequestConstants.STATUS_PENDING);
 
-		membershipRequestPersistence.update(membershipRequest, false);
+		membershipRequestPersistence.update(membershipRequest);
 
 		notifyGroupAdministrators(membershipRequest, serviceContext);
 
 		return membershipRequest;
 	}
 
-	public void deleteMembershipRequests(long groupId) throws SystemException {
+	@Override
+	public void deleteMembershipRequests(long groupId) {
 		List<MembershipRequest> membershipRequests =
 			membershipRequestPersistence.findByGroupId(groupId);
 
@@ -88,9 +91,8 @@ public class MembershipRequestLocalServiceImpl
 		}
 	}
 
-	public void deleteMembershipRequests(long groupId, int statusId)
-		throws SystemException {
-
+	@Override
+	public void deleteMembershipRequests(long groupId, int statusId) {
 		List<MembershipRequest> membershipRequests =
 			membershipRequestPersistence.findByG_S(groupId, statusId);
 
@@ -99,9 +101,8 @@ public class MembershipRequestLocalServiceImpl
 		}
 	}
 
-	public void deleteMembershipRequestsByUserId(long userId)
-		throws SystemException {
-
+	@Override
+	public void deleteMembershipRequestsByUserId(long userId) {
 		List<MembershipRequest> membershipRequests =
 			membershipRequestPersistence.findByUserId(userId);
 
@@ -110,16 +111,17 @@ public class MembershipRequestLocalServiceImpl
 		}
 	}
 
+	@Override
 	public List<MembershipRequest> getMembershipRequests(
-			long userId, long groupId, int statusId)
-		throws SystemException {
+		long userId, long groupId, int statusId) {
 
 		return membershipRequestPersistence.findByG_U_S(
 			groupId, userId, statusId);
 	}
 
-	public boolean hasMembershipRequest(long userId, long groupId, int statusId)
-		throws SystemException {
+	@Override
+	public boolean hasMembershipRequest(
+		long userId, long groupId, int statusId) {
 
 		List<MembershipRequest> membershipRequests = getMembershipRequests(
 			userId, groupId, statusId);
@@ -132,22 +134,24 @@ public class MembershipRequestLocalServiceImpl
 		}
 	}
 
+	@Override
 	public List<MembershipRequest> search(
-			long groupId, int status, int start, int end)
-		throws SystemException {
+		long groupId, int status, int start, int end) {
 
 		return membershipRequestPersistence.findByG_S(
 			groupId, status, start, end);
 	}
 
-	public int searchCount(long groupId, int status) throws SystemException {
+	@Override
+	public int searchCount(long groupId, int status) {
 		return membershipRequestPersistence.countByG_S(groupId, status);
 	}
 
+	@Override
 	public void updateStatus(
 			long replierUserId, long membershipRequestId, String replyComments,
 			int statusId, boolean addUserToGroup, ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		validate(replyComments);
 
@@ -169,7 +173,7 @@ public class MembershipRequestLocalServiceImpl
 
 		membershipRequest.setStatusId(statusId);
 
-		membershipRequestPersistence.update(membershipRequest, false);
+		membershipRequestPersistence.update(membershipRequest);
 
 		if ((statusId == MembershipRequestConstants.STATUS_APPROVED) &&
 			addUserToGroup) {
@@ -189,26 +193,20 @@ public class MembershipRequestLocalServiceImpl
 	}
 
 	protected List<Long> getGroupAdministratorUserIds(long groupId)
-		throws PortalException, SystemException {
+		throws PortalException {
 
-		List<Long> userIds = new UniqueList<Long>();
+		Set<Long> userIds = new LinkedHashSet<Long>();
 
 		Group group = groupLocalService.getGroup(groupId);
 		String modelResource = Group.class.getName();
 
-		List<Role> roles = ResourceActionsUtil.getRoles(
-			group.getCompanyId(), group, modelResource, null);
+		List<Role> roles = ListUtil.copy(
+			ResourceActionsUtil.getRoles(
+				group.getCompanyId(), group, modelResource, null));
 
-		List<Team> teams = teamLocalService.getGroupTeams(groupId);
+		List<Role> teamRoles = roleLocalService.getTeamRoles(groupId);
 
-		if (teams != null) {
-			for (Team team : teams) {
-				Role role = roleLocalService.getTeamRole(
-					team.getCompanyId(), team.getTeamId());
-
-				roles.add(role);
-			}
-		}
+		roles.addAll(teamRoles);
 
 		Resource resource = resourceLocalService.getResource(
 			group.getCompanyId(), modelResource,
@@ -258,14 +256,12 @@ public class MembershipRequestLocalServiceImpl
 				currentGroupActions, currentGroupTemplateActions,
 				currentCompanyActions);
 
-			List<String> currentActions = new ArrayList<String>();
+			if (currentIndividualActions.contains(ActionKeys.ASSIGN_MEMBERS) ||
+				currentGroupActions.contains(ActionKeys.ASSIGN_MEMBERS) ||
+				currentGroupTemplateActions.contains(
+					ActionKeys.ASSIGN_MEMBERS) ||
+				currentCompanyActions.contains(ActionKeys.ASSIGN_MEMBERS)) {
 
-			currentActions.addAll(currentIndividualActions);
-			currentActions.addAll(currentGroupActions);
-			currentActions.addAll(currentGroupTemplateActions);
-			currentActions.addAll(currentCompanyActions);
-
-			if (currentActions.contains(ActionKeys.ASSIGN_MEMBERS)) {
 				List<UserGroupRole> currentUserGroupRoles =
 					userGroupRoleLocalService.getUserGroupRolesByGroupAndRole(
 						groupId, role.getRoleId());
@@ -276,14 +272,14 @@ public class MembershipRequestLocalServiceImpl
 			}
 		}
 
-		return userIds;
+		return new ArrayList<Long>(userIds);
 	}
 
 	protected void notify(
 			long userId, MembershipRequest membershipRequest,
 			String subjectProperty, String bodyProperty,
 			ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		User user = userPersistence.findByPrimaryKey(userId);
 		User requestUser = userPersistence.findByPrimaryKey(
@@ -350,7 +346,7 @@ public class MembershipRequestLocalServiceImpl
 
 	protected void notifyGroupAdministrators(
 			MembershipRequest membershipRequest, ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		List<Long> userIds = getGroupAdministratorUserIds(
 			membershipRequest.getGroupId());

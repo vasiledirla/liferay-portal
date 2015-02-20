@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,27 +14,23 @@
 
 package com.liferay.portlet.dynamicdatalists.util;
 
-import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.xml.Document;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portlet.dynamicdatalists.model.DDLRecord;
-import com.liferay.portlet.dynamicdatalists.model.DDLRecordSet;
 import com.liferay.portlet.dynamicdatalists.model.DDLRecordVersion;
 import com.liferay.portlet.dynamicdatalists.service.DDLRecordLocalServiceUtil;
-import com.liferay.portlet.dynamicdatalists.service.DDLRecordSetServiceUtil;
-import com.liferay.portlet.dynamicdatamapping.model.DDMStructure;
+import com.liferay.portlet.dynamicdatamapping.model.DDMFormField;
+import com.liferay.portlet.dynamicdatamapping.model.LocalizedValue;
 import com.liferay.portlet.dynamicdatamapping.storage.Field;
-import com.liferay.portlet.dynamicdatamapping.storage.FieldConstants;
 import com.liferay.portlet.dynamicdatamapping.storage.Fields;
 import com.liferay.portlet.dynamicdatamapping.storage.StorageEngineUtil;
 
 import java.io.Serializable;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author Marcellus Tavares
@@ -59,16 +55,10 @@ public class DDLXMLExporter extends BaseDDLExporter {
 	@Override
 	protected byte[] doExport(
 			long recordSetId, int status, int start, int end,
-			OrderByComparator orderByComparator)
+			OrderByComparator<DDLRecord> orderByComparator)
 		throws Exception {
 
-		DDLRecordSet recordSet = DDLRecordSetServiceUtil.getRecordSet(
-			recordSetId);
-
-		DDMStructure ddmStructure = recordSet.getDDMStructure();
-
-		Map<String, Map<String, String>> fieldsMap = ddmStructure.getFieldsMap(
-			LocaleUtil.toLanguageId(getLocale()));
+		List<DDMFormField> ddmFormFields = getDDMFormFields(recordSetId);
 
 		Document document = SAXReaderUtil.createDocument();
 
@@ -85,11 +75,10 @@ public class DDLXMLExporter extends BaseDDLExporter {
 			Fields fields = StorageEngineUtil.getFields(
 				recordVersion.getDDMStorageId());
 
-			for (Map<String, String> fieldMap : fieldsMap.values()) {
-				String dataType = fieldMap.get(FieldConstants.DATA_TYPE);
+			for (DDMFormField ddmFormField : ddmFormFields) {
+				LocalizedValue label = ddmFormField.getLabel();
 
-				String label = fieldMap.get(FieldConstants.LABEL);
-				String name = fieldMap.get(FieldConstants.NAME);
+				String name = ddmFormField.getName();
 
 				String value = StringPool.BLANK;
 
@@ -99,10 +88,8 @@ public class DDLXMLExporter extends BaseDDLExporter {
 					value = field.getRenderedValue(getLocale());
 				}
 
-				Serializable fieldValueSerializable =
-					FieldConstants.getSerializable(dataType, value);
-
-				addFieldElement(fieldsElement, label, fieldValueSerializable);
+				addFieldElement(
+					fieldsElement, label.getString(getLocale()), value);
 			}
 		}
 

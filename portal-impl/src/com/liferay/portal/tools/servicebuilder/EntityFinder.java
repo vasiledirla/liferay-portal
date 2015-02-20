@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -36,6 +36,18 @@ public class EntityFinder {
 		_where = where;
 		_dbIndex = dbIndex;
 		_columns = columns;
+
+		if (isCollection() && isUnique() && !hasArrayableOperator()) {
+			throw new IllegalArgumentException(
+				"A finder cannot return a Collection and be unique unless " +
+					"it has an arrayable column. See the ExpandoColumn " +
+						"service.xml declaration for an example.");
+		}
+
+		if ((!isCollection() || isUnique()) && hasCustomComparator()) {
+			throw new IllegalArgumentException(
+				"A unique finder cannot have a custom comparator");
+		}
 	}
 
 	public EntityColumn getColumn(String name) {

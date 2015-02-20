@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,11 +14,13 @@
 
 package com.liferay.portal.scripting.javascript;
 
+import com.liferay.portal.kernel.cache.PortalCache;
 import com.liferay.portal.kernel.cache.SingleVMPoolUtil;
 import com.liferay.portal.kernel.scripting.BaseScriptingExecutor;
 import com.liferay.portal.kernel.scripting.ScriptingException;
 import com.liferay.portal.kernel.util.AggregateClassLoader;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
+import com.liferay.portal.kernel.util.ArrayUtil;
+import com.liferay.portal.util.ClassLoaderUtil;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -28,6 +30,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Script;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.Wrapper;
 
 /**
  * @author Alberto Montero
@@ -36,9 +39,10 @@ public class JavaScriptExecutor extends BaseScriptingExecutor {
 
 	@Override
 	public void clearCache() {
-		SingleVMPoolUtil.clear(_CACHE_NAME);
+		_portalCache.removeAll();
 	}
 
+	@Override
 	public Map<String, Object> eval(
 			Set<String> allowedClasses, Map<String, Object> inputObjects,
 			Set<String> outputNames, String script, ClassLoader... classLoaders)
@@ -51,11 +55,10 @@ public class JavaScriptExecutor extends BaseScriptingExecutor {
 
 			Scriptable scriptable = context.initStandardObjects();
 
-			if ((classLoaders != null) && (classLoaders.length > 0)) {
+			if (ArrayUtil.isNotEmpty(classLoaders)) {
 				ClassLoader aggregateClassLoader =
 					AggregateClassLoader.getAggregateClassLoader(
-						PACLClassLoaderUtil.getPortalClassLoader(),
-						classLoaders);
+						ClassLoaderUtil.getPortalClassLoader(), classLoaders);
 
 				context.setApplicationClassLoader(aggregateClassLoader);
 			}
@@ -82,9 +85,16 @@ public class JavaScriptExecutor extends BaseScriptingExecutor {
 			Map<String, Object> outputObjects = new HashMap<String, Object>();
 
 			for (String outputName : outputNames) {
-				outputObjects.put(
-					outputName,
-					ScriptableObject.getProperty(scriptable, outputName));
+				Object property = ScriptableObject.getProperty(
+					scriptable, outputName);
+
+				if (property instanceof Wrapper) {
+					Wrapper wrapper = (Wrapper)property;
+
+					property = wrapper.unwrap();
+				}
+
+				outputObjects.put(outputName, property);
 			}
 
 			return outputObjects;
@@ -97,6 +107,7 @@ public class JavaScriptExecutor extends BaseScriptingExecutor {
 		}
 	}
 
+	@Override
 	public String getLanguage() {
 		return _LANGUAGE;
 	}
@@ -106,30 +117,30 @@ public class JavaScriptExecutor extends BaseScriptingExecutor {
 
 		String key = String.valueOf(script.hashCode());
 
-		Script compiledScript = (Script)SingleVMPoolUtil.get(_CACHE_NAME, key);
+		Script compiledScript = _portalCache.get(key);
 
-		if (compiledScript == null) {
-			try {
-				Context context = Context.enter();
-
-				if ((classLoaders != null) && (classLoaders.length > 0)) {
-					ClassLoader aggregateClassLoader =
-						AggregateClassLoader.getAggregateClassLoader(
-							PACLClassLoaderUtil.getPortalClassLoader(),
-							classLoaders);
-
-					context.setApplicationClassLoader(aggregateClassLoader);
-				}
-
-				compiledScript = context.compileString(
-					script, "script", 0, null);
-			}
-			finally {
-				Context.exit();
-			}
-
-			SingleVMPoolUtil.put(_CACHE_NAME, key, compiledScript);
+		if (compiledScript != null) {
+			return compiledScript;
 		}
+
+		try {
+			Context context = Context.enter();
+
+			if (ArrayUtil.isNotEmpty(classLoaders)) {
+				ClassLoader aggregateClassLoader =
+					AggregateClassLoader.getAggregateClassLoader(
+						ClassLoaderUtil.getPortalClassLoader(), classLoaders);
+
+				context.setApplicationClassLoader(aggregateClassLoader);
+			}
+
+			compiledScript = context.compileString(script, "script", 0, null);
+		}
+		finally {
+			Context.exit();
+		}
+
+		_portalCache.put(key, compiledScript);
 
 		return compiledScript;
 	}
@@ -138,5 +149,8 @@ public class JavaScriptExecutor extends BaseScriptingExecutor {
 		JavaScriptExecutor.class.getName();
 
 	private static final String _LANGUAGE = "javascript";
+
+	private PortalCache<String, Script> _portalCache =
+		SingleVMPoolUtil.getCache(_CACHE_NAME);
 
 }

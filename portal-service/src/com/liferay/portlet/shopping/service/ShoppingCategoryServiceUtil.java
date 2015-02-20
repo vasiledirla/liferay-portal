@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,15 +14,18 @@
 
 package com.liferay.portlet.shopping.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
 import com.liferay.portal.kernel.util.ReferenceRegistry;
 
 /**
- * The utility for the shopping category remote service. This utility wraps {@link com.liferay.portlet.shopping.service.impl.ShoppingCategoryServiceImpl} and is the primary access point for service operations in application layer code running on a remote server.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service utility for ShoppingCategory. This utility wraps
+ * {@link com.liferay.portlet.shopping.service.impl.ShoppingCategoryServiceImpl} and is the
+ * primary access point for service operations in application layer code running
+ * on a remote server. Methods of this service are expected to have security
+ * checks based on the propagated JAAS credentials because this service can be
+ * accessed remotely.
  *
  * @author Brian Wing Shun Chan
  * @see ShoppingCategoryService
@@ -30,12 +33,27 @@ import com.liferay.portal.kernel.util.ReferenceRegistry;
  * @see com.liferay.portlet.shopping.service.impl.ShoppingCategoryServiceImpl
  * @generated
  */
+@ProviderType
 public class ShoppingCategoryServiceUtil {
 	/*
 	 * NOTE FOR DEVELOPERS:
 	 *
 	 * Never modify this class directly. Add custom service methods to {@link com.liferay.portlet.shopping.service.impl.ShoppingCategoryServiceImpl} and rerun ServiceBuilder to regenerate this class.
 	 */
+	public static com.liferay.portlet.shopping.model.ShoppingCategory addCategory(
+		long parentCategoryId, java.lang.String name,
+		java.lang.String description,
+		com.liferay.portal.service.ServiceContext serviceContext)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService()
+				   .addCategory(parentCategoryId, name, description,
+			serviceContext);
+	}
+
+	public static void deleteCategory(long categoryId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		getService().deleteCategory(categoryId);
+	}
 
 	/**
 	* Returns the Spring bean ID for this bean.
@@ -44,6 +62,32 @@ public class ShoppingCategoryServiceUtil {
 	*/
 	public static java.lang.String getBeanIdentifier() {
 		return getService().getBeanIdentifier();
+	}
+
+	public static java.util.List<com.liferay.portlet.shopping.model.ShoppingCategory> getCategories(
+		long groupId) {
+		return getService().getCategories(groupId);
+	}
+
+	public static java.util.List<com.liferay.portlet.shopping.model.ShoppingCategory> getCategories(
+		long groupId, long parentCategoryId, int start, int end) {
+		return getService().getCategories(groupId, parentCategoryId, start, end);
+	}
+
+	public static int getCategoriesCount(long groupId, long parentCategoryId) {
+		return getService().getCategoriesCount(groupId, parentCategoryId);
+	}
+
+	public static com.liferay.portlet.shopping.model.ShoppingCategory getCategory(
+		long categoryId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getCategory(categoryId);
+	}
+
+	public static void getSubcategoryIds(
+		java.util.List<java.lang.Long> categoryIds, long groupId,
+		long categoryId) {
+		getService().getSubcategoryIds(categoryIds, groupId, categoryId);
 	}
 
 	/**
@@ -55,60 +99,11 @@ public class ShoppingCategoryServiceUtil {
 		getService().setBeanIdentifier(beanIdentifier);
 	}
 
-	public static com.liferay.portlet.shopping.model.ShoppingCategory addCategory(
-		long parentCategoryId, java.lang.String name,
-		java.lang.String description,
-		com.liferay.portal.service.ServiceContext serviceContext)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .addCategory(parentCategoryId, name, description,
-			serviceContext);
-	}
-
-	public static void deleteCategory(long categoryId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		getService().deleteCategory(categoryId);
-	}
-
-	public static java.util.List<com.liferay.portlet.shopping.model.ShoppingCategory> getCategories(
-		long groupId)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return getService().getCategories(groupId);
-	}
-
-	public static java.util.List<com.liferay.portlet.shopping.model.ShoppingCategory> getCategories(
-		long groupId, long parentCategoryId, int start, int end)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return getService().getCategories(groupId, parentCategoryId, start, end);
-	}
-
-	public static int getCategoriesCount(long groupId, long parentCategoryId)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return getService().getCategoriesCount(groupId, parentCategoryId);
-	}
-
-	public static com.liferay.portlet.shopping.model.ShoppingCategory getCategory(
-		long categoryId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getCategory(categoryId);
-	}
-
-	public static void getSubcategoryIds(
-		java.util.List<java.lang.Long> categoryIds, long groupId,
-		long categoryId)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		getService().getSubcategoryIds(categoryIds, groupId, categoryId);
-	}
-
 	public static com.liferay.portlet.shopping.model.ShoppingCategory updateCategory(
 		long categoryId, long parentCategoryId, java.lang.String name,
 		java.lang.String description, boolean mergeWithParentCategory,
 		com.liferay.portal.service.ServiceContext serviceContext)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
+		throws com.liferay.portal.kernel.exception.PortalException {
 		return getService()
 				   .updateCategory(categoryId, parentCategoryId, name,
 			description, mergeWithParentCategory, serviceContext);
@@ -126,8 +121,9 @@ public class ShoppingCategoryServiceUtil {
 	}
 
 	/**
-	 * @deprecated
+	 * @deprecated As of 6.2.0
 	 */
+	@Deprecated
 	public void setService(ShoppingCategoryService service) {
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,14 +16,23 @@ package com.liferay.portal.template;
 
 import com.liferay.portal.kernel.audit.AuditMessageFactoryUtil;
 import com.liferay.portal.kernel.audit.AuditRouterUtil;
+import com.liferay.portal.kernel.image.ImageToolUtil;
 import com.liferay.portal.kernel.json.JSONFactoryUtil;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.language.UnicodeLanguageUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.portlet.PortletModeFactory_IW;
+import com.liferay.portal.kernel.portlet.PortletRequestModel;
+import com.liferay.portal.kernel.portlet.PortletRequestModelFactory;
+import com.liferay.portal.kernel.portlet.WindowStateFactory_IW;
 import com.liferay.portal.kernel.servlet.BrowserSnifferUtil;
-import com.liferay.portal.kernel.templateparser.TemplateContext;
+import com.liferay.portal.kernel.template.Template;
+import com.liferay.portal.kernel.template.TemplateHandler;
+import com.liferay.portal.kernel.template.TemplateHandlerRegistryUtil;
+import com.liferay.portal.kernel.template.TemplateVariableGroup;
 import com.liferay.portal.kernel.util.ArrayUtil_IW;
+import com.liferay.portal.kernel.util.CalendarFactoryUtil;
 import com.liferay.portal.kernel.util.DateUtil_IW;
 import com.liferay.portal.kernel.util.FastDateFormatFactoryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -36,7 +45,6 @@ import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.ParamUtil_IW;
 import com.liferay.portal.kernel.util.PrefsPropsUtil;
 import com.liferay.portal.kernel.util.PropsUtil;
-import com.liferay.portal.kernel.util.Randomizer_IW;
 import com.liferay.portal.kernel.util.StaticFieldGetter;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil_IW;
@@ -46,6 +54,14 @@ import com.liferay.portal.kernel.util.Validator_IW;
 import com.liferay.portal.kernel.xml.SAXReader;
 import com.liferay.portal.model.Layout;
 import com.liferay.portal.model.Theme;
+import com.liferay.portal.service.GroupLocalService;
+import com.liferay.portal.service.GroupService;
+import com.liferay.portal.service.LayoutLocalService;
+import com.liferay.portal.service.LayoutService;
+import com.liferay.portal.service.OrganizationLocalService;
+import com.liferay.portal.service.OrganizationService;
+import com.liferay.portal.service.UserLocalService;
+import com.liferay.portal.service.UserService;
 import com.liferay.portal.service.permission.AccountPermissionUtil;
 import com.liferay.portal.service.permission.CommonPermissionUtil;
 import com.liferay.portal.service.permission.GroupPermissionUtil;
@@ -59,28 +75,32 @@ import com.liferay.portal.service.permission.UserGroupPermissionUtil;
 import com.liferay.portal.service.permission.UserPermissionUtil;
 import com.liferay.portal.theme.NavItem;
 import com.liferay.portal.theme.ThemeDisplay;
+import com.liferay.portal.util.ClassLoaderUtil;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portal.util.SessionClicks_IW;
 import com.liferay.portal.util.WebKeys;
 import com.liferay.portal.webserver.WebServerServletTokenUtil;
-import com.liferay.portlet.PortletConfigImpl;
 import com.liferay.portlet.PortletURLFactoryUtil;
+import com.liferay.portlet.documentlibrary.util.DLUtil;
+import com.liferay.portlet.dynamicdatamapping.util.DDMUtil;
 import com.liferay.portlet.expando.service.ExpandoColumnLocalService;
 import com.liferay.portlet.expando.service.ExpandoRowLocalService;
 import com.liferay.portlet.expando.service.ExpandoTableLocalService;
 import com.liferay.portlet.expando.service.ExpandoValueLocalService;
 import com.liferay.portlet.journalcontent.util.JournalContentUtil;
-import com.liferay.taglib.util.VelocityTaglib;
-import com.liferay.util.portlet.PortletRequestUtil;
+import com.liferay.taglib.util.VelocityTaglibImpl;
 
 import java.lang.reflect.Method;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
+import javax.portlet.PortletConfig;
 import javax.portlet.PortletRequest;
 import javax.portlet.PortletResponse;
 import javax.portlet.RenderRequest;
@@ -93,11 +113,264 @@ import org.apache.struts.tiles.ComponentContext;
 
 /**
  * @author Tina Tian
+ * @author Jorge Ferrer
  */
 public class TemplateContextHelper {
 
-	public Map<String, Object> getHelperUtilities() {
-		Map<String, Object> variables = new HashMap<String, Object>();
+	public static Map<String, TemplateVariableGroup> getTemplateVariableGroups(
+			long classNameId, long classPK, String language, Locale locale)
+		throws Exception {
+
+		TemplateHandler templateHandler =
+			TemplateHandlerRegistryUtil.getTemplateHandler(classNameId);
+
+		if (templateHandler == null) {
+			return Collections.emptyMap();
+		}
+
+		Map<String, TemplateVariableGroup> templateVariableGroups =
+			templateHandler.getTemplateVariableGroups(
+				classPK, language, locale);
+
+		String[] restrictedVariables = templateHandler.getRestrictedVariables(
+			language);
+
+		TemplateVariableGroup portalServicesTemplateVariableGroup =
+			new TemplateVariableGroup("portal-services", restrictedVariables);
+
+		portalServicesTemplateVariableGroup.setAutocompleteEnabled(false);
+
+		portalServicesTemplateVariableGroup.addServiceLocatorVariables(
+			GroupLocalService.class, GroupService.class,
+			LayoutLocalService.class, LayoutService.class,
+			OrganizationLocalService.class, OrganizationService.class,
+			UserLocalService.class, UserService.class);
+
+		templateVariableGroups.put(
+			portalServicesTemplateVariableGroup.getLabel(),
+			portalServicesTemplateVariableGroup);
+
+		return templateVariableGroups;
+	}
+
+	public Map<String, Object> getHelperUtilities(
+		ClassLoader classLoader, boolean restricted) {
+
+		Map<String, Object>[] helperUtilitiesArray = _helperUtilitiesMaps.get(
+			classLoader);
+
+		if (helperUtilitiesArray == null) {
+			helperUtilitiesArray = (Map<String, Object>[])new Map<?, ?>[2];
+
+			_helperUtilitiesMaps.put(classLoader, helperUtilitiesArray);
+		}
+		else {
+			Map<String, Object> helperUtilities = null;
+
+			if (restricted) {
+				helperUtilities = helperUtilitiesArray[1];
+			}
+			else {
+				helperUtilities = helperUtilitiesArray[0];
+			}
+
+			if (helperUtilities != null) {
+				return helperUtilities;
+			}
+		}
+
+		Map<String, Object> helperUtilities = new HashMap<String, Object>();
+
+		populateCommonHelperUtilities(helperUtilities);
+		populateExtraHelperUtilities(helperUtilities);
+
+		if (restricted) {
+			Set<String> restrictedVariables = getRestrictedVariables();
+
+			for (String restrictedVariable : restrictedVariables) {
+				helperUtilities.remove(restrictedVariable);
+			}
+
+			helperUtilitiesArray[1] = helperUtilities;
+		}
+		else {
+			helperUtilitiesArray[0] = helperUtilities;
+		}
+
+		return helperUtilities;
+	}
+
+	public Set<String> getRestrictedVariables() {
+		return Collections.emptySet();
+	}
+
+	public TemplateControlContext getTemplateControlContext() {
+		return _pacl.getTemplateControlContext();
+	}
+
+	public void prepare(Template template, HttpServletRequest request) {
+
+		// Request
+
+		template.put("request", request);
+
+		// Portlet config
+
+		PortletConfig portletConfig = (PortletConfig)request.getAttribute(
+			JavaConstants.JAVAX_PORTLET_CONFIG);
+
+		if (portletConfig != null) {
+			template.put("portletConfig", portletConfig);
+		}
+
+		// Render request
+
+		final PortletRequest portletRequest =
+			(PortletRequest)request.getAttribute(
+				JavaConstants.JAVAX_PORTLET_REQUEST);
+
+		if (portletRequest != null) {
+			if (portletRequest instanceof RenderRequest) {
+				template.put("renderRequest", portletRequest);
+			}
+		}
+
+		// Render response
+
+		final PortletResponse portletResponse =
+			(PortletResponse)request.getAttribute(
+				JavaConstants.JAVAX_PORTLET_RESPONSE);
+
+		if (portletResponse != null) {
+			if (portletResponse instanceof RenderResponse) {
+				template.put("renderResponse", portletResponse);
+			}
+		}
+
+		// XML request
+
+		if ((portletRequest != null) && (portletResponse != null)) {
+			template.put(
+				"portletRequestModelFactory",
+				new PortletRequestModelFactory(
+					portletRequest, portletResponse));
+
+			// Deprecated
+
+			template.put(
+				"xmlRequest",
+				new Object() {
+
+					@Override
+					public String toString() {
+						PortletRequestModel portletRequestModel =
+							new PortletRequestModel(
+								portletRequest, portletResponse);
+
+						return portletRequestModel.toXML();
+					}
+
+				}
+			);
+		}
+
+		// Theme display
+
+		ThemeDisplay themeDisplay = (ThemeDisplay)request.getAttribute(
+			WebKeys.THEME_DISPLAY);
+
+		if (themeDisplay != null) {
+			Layout layout = themeDisplay.getLayout();
+			List<Layout> layouts = themeDisplay.getLayouts();
+
+			template.put("themeDisplay", themeDisplay);
+			template.put("company", themeDisplay.getCompany());
+			template.put("user", themeDisplay.getUser());
+			template.put("realUser", themeDisplay.getRealUser());
+			template.put("layout", layout);
+			template.put("layouts", layouts);
+			template.put("plid", String.valueOf(themeDisplay.getPlid()));
+			template.put(
+				"layoutTypePortlet", themeDisplay.getLayoutTypePortlet());
+			template.put(
+				"scopeGroupId", new Long(themeDisplay.getScopeGroupId()));
+			template.put(
+				"permissionChecker", themeDisplay.getPermissionChecker());
+			template.put("locale", themeDisplay.getLocale());
+			template.put("timeZone", themeDisplay.getTimeZone());
+			template.put("colorScheme", themeDisplay.getColorScheme());
+			template.put("portletDisplay", themeDisplay.getPortletDisplay());
+
+			// Navigation items
+
+			if (layout != null) {
+				List<NavItem> navItems = NavItem.fromLayouts(
+					request, layouts, template);
+
+				template.put("navItems", navItems);
+			}
+
+			// Deprecated
+
+			template.put(
+				"portletGroupId", new Long(themeDisplay.getScopeGroupId()));
+		}
+
+		// Theme
+
+		Theme theme = (Theme)request.getAttribute(WebKeys.THEME);
+
+		if ((theme == null) && (themeDisplay != null)) {
+			theme = themeDisplay.getTheme();
+		}
+
+		if (theme != null) {
+			template.put("theme", theme);
+		}
+
+		// Tiles attributes
+
+		prepareTiles(template, request);
+
+		// Page title and subtitle
+
+		ListMergeable<String> pageTitleListMergeable =
+			(ListMergeable<String>)request.getAttribute(WebKeys.PAGE_TITLE);
+
+		if (pageTitleListMergeable != null) {
+			String pageTitle = pageTitleListMergeable.mergeToString(
+				StringPool.SPACE);
+
+			template.put("pageTitle", pageTitle);
+		}
+
+		ListMergeable<String> pageSubtitleListMergeable =
+			(ListMergeable<String>)request.getAttribute(WebKeys.PAGE_SUBTITLE);
+
+		if (pageSubtitleListMergeable != null) {
+			String pageSubtitle = pageSubtitleListMergeable.mergeToString(
+				StringPool.SPACE);
+
+			template.put("pageSubtitle", pageSubtitle);
+		}
+	}
+
+	public void removeAllHelperUtilities() {
+		_helperUtilitiesMaps.clear();
+	}
+
+	public void removeHelperUtilities(ClassLoader classLoader) {
+		_helperUtilitiesMaps.remove(classLoader);
+	}
+
+	public interface PACL {
+
+		public TemplateControlContext getTemplateControlContext();
+
+	}
+
+	protected void populateCommonHelperUtilities(
+		Map<String, Object> variables) {
 
 		// Array util
 
@@ -133,6 +406,16 @@ public class TemplateContextHelper {
 			_log.error(se, se);
 		}
 
+		// Calendar factory
+
+		try {
+			variables.put(
+				"calendarFactory", CalendarFactoryUtil.getCalendarFactory());
+		}
+		catch (SecurityException se) {
+			_log.error(se, se);
+		}
+
 		// Date format
 
 		try {
@@ -147,6 +430,24 @@ public class TemplateContextHelper {
 		// Date util
 
 		variables.put("dateUtil", DateUtil_IW.getInstance());
+
+		// Dynamic data mapping util
+
+		try {
+			variables.put("ddmUtil", DDMUtil.getDDM());
+		}
+		catch (SecurityException se) {
+			_log.error(se, se);
+		}
+
+		// Document library util
+
+		try {
+			variables.put("dlUtil", DLUtil.getDL());
+		}
+		catch (SecurityException se) {
+			_log.error(se, se);
+		}
 
 		// Expando column service
 
@@ -224,6 +525,15 @@ public class TemplateContextHelper {
 
 		try {
 			variables.put("httpUtil", HttpUtil.getHttp());
+		}
+		catch (SecurityException se) {
+			_log.error(se, se);
+		}
+
+		// Image tool util
+
+		try {
+			variables.put("imageToolUtil", ImageToolUtil.getImageTool());
 		}
 		catch (SecurityException se) {
 			_log.error(se, se);
@@ -313,22 +623,17 @@ public class TemplateContextHelper {
 			_log.error(se, se);
 		}
 
+		// Portlet mode factory
+
+		variables.put(
+			"portletModeFactory", PortletModeFactory_IW.getInstance());
+
 		// Portlet URL factory
 
 		try {
 			variables.put(
 				"portletURLFactory",
 				PortletURLFactoryUtil.getPortletURLFactory());
-		}
-		catch (SecurityException se) {
-			_log.error(se, se);
-		}
-
-		// Randomizer
-
-		try {
-			variables.put(
-				"randomizer", Randomizer_IW.getInstance().getWrappedInstance());
 		}
 		catch (SecurityException se) {
 			_log.error(se, se);
@@ -383,12 +688,12 @@ public class TemplateContextHelper {
 		// VelocityTaglib methods
 
 		try {
-			Class<?> clazz = VelocityTaglib.class;
+			Class<?> clazz = VelocityTaglibImpl.class;
 
 			Method method = clazz.getMethod(
 				"layoutIcon", new Class[] {Layout.class});
 
-			variables.put("velocityTaglib#layoutIcon", method);
+			variables.put("velocityTaglib_layoutIcon", method);
 		}
 		catch (Exception e) {
 			_log.error(e, e);
@@ -404,6 +709,11 @@ public class TemplateContextHelper {
 		catch (SecurityException se) {
 			_log.error(se, se);
 		}
+
+		// Window state factory
+
+		variables.put(
+			"windowStateFactory", WindowStateFactory_IW.getInstance());
 
 		// Permissions
 
@@ -502,6 +812,13 @@ public class TemplateContextHelper {
 
 		// Deprecated
 
+		populateDeprecatedCommonHelperUtilities(variables);
+	}
+
+	@SuppressWarnings("deprecation")
+	protected void populateDeprecatedCommonHelperUtilities(
+		Map<String, Object> variables) {
+
 		try {
 			variables.put(
 				"dateFormats",
@@ -529,168 +846,21 @@ public class TemplateContextHelper {
 			_log.error(se, se);
 		}
 
-		return variables;
-	}
+		try {
+			com.liferay.portal.kernel.util.Randomizer_IW randomizer =
+				com.liferay.portal.kernel.util.Randomizer_IW.getInstance();
 
-	public Map<String, Object> getRestrictedHelperUtilities() {
-		Map<String, Object> helperUtilities = getHelperUtilities();
-
-		Set<String> restrictedVariables = getRestrictedVariables();
-
-		for (String restrictedVariable : restrictedVariables) {
-			helperUtilities.remove(restrictedVariable);
+			variables.put("randomizer", randomizer.getWrappedInstance());
 		}
-
-		return helperUtilities;
-	}
-
-	public Set<String> getRestrictedVariables() {
-		return Collections.emptySet();
-	}
-
-	public void prepare(
-		TemplateContext templateContext, HttpServletRequest request) {
-
-		// Request
-
-		templateContext.put("request", request);
-
-		// Portlet config
-
-		PortletConfigImpl portletConfigImpl =
-			(PortletConfigImpl)request.getAttribute(
-				JavaConstants.JAVAX_PORTLET_CONFIG);
-
-		if (portletConfigImpl != null) {
-			templateContext.put("portletConfig", portletConfigImpl);
-		}
-
-		// Render request
-
-		final PortletRequest portletRequest =
-			(PortletRequest)request.getAttribute(
-				JavaConstants.JAVAX_PORTLET_REQUEST);
-
-		if (portletRequest != null) {
-			if (portletRequest instanceof RenderRequest) {
-				templateContext.put("renderRequest", portletRequest);
-			}
-		}
-
-		// Render response
-
-		final PortletResponse portletResponse =
-			(PortletResponse)request.getAttribute(
-				JavaConstants.JAVAX_PORTLET_RESPONSE);
-
-		if (portletResponse != null) {
-			if (portletResponse instanceof RenderResponse) {
-				templateContext.put("renderResponse", portletResponse);
-			}
-		}
-
-		// XML request
-
-		if ((portletRequest != null) && (portletResponse != null)) {
-			templateContext.put(
-				"xmlRequest",
-				new Object() {
-
-					@Override
-					public String toString() {
-						return PortletRequestUtil.toXML(
-							portletRequest, portletResponse);
-					}
-
-				}
-			);
-		}
-
-		// Theme display
-
-		ThemeDisplay themeDisplay = (ThemeDisplay)request.getAttribute(
-			WebKeys.THEME_DISPLAY);
-
-		if (themeDisplay != null) {
-			Layout layout = themeDisplay.getLayout();
-			List<Layout> layouts = themeDisplay.getLayouts();
-
-			templateContext.put("themeDisplay", themeDisplay);
-			templateContext.put("company", themeDisplay.getCompany());
-			templateContext.put("user", themeDisplay.getUser());
-			templateContext.put("realUser", themeDisplay.getRealUser());
-			templateContext.put("layout", layout);
-			templateContext.put("layouts", layouts);
-			templateContext.put("plid", String.valueOf(themeDisplay.getPlid()));
-			templateContext.put(
-				"layoutTypePortlet", themeDisplay.getLayoutTypePortlet());
-			templateContext.put(
-				"scopeGroupId", new Long(themeDisplay.getScopeGroupId()));
-			templateContext.put(
-				"permissionChecker", themeDisplay.getPermissionChecker());
-			templateContext.put("locale", themeDisplay.getLocale());
-			templateContext.put("timeZone", themeDisplay.getTimeZone());
-			templateContext.put("colorScheme", themeDisplay.getColorScheme());
-			templateContext.put(
-				"portletDisplay", themeDisplay.getPortletDisplay());
-
-			// Navigation items
-
-			if (layout != null) {
-				List<NavItem> navItems = NavItem.fromLayouts(
-					request, layouts, templateContext);
-
-				templateContext.put("navItems", navItems);
-			}
-
-			// Deprecated
-
-			templateContext.put(
-				"portletGroupId", new Long(themeDisplay.getScopeGroupId()));
-		}
-
-		// Theme
-
-		Theme theme = (Theme)request.getAttribute(WebKeys.THEME);
-
-		if ((theme == null) && (themeDisplay != null)) {
-			theme = themeDisplay.getTheme();
-		}
-
-		if (theme != null) {
-			templateContext.put("theme", theme);
-		}
-
-		// Tiles attributes
-
-		prepareTiles(templateContext, request);
-
-		// Page title and subtitle
-
-		ListMergeable<String> pageTitleListMergeable =
-			(ListMergeable<String>)request.getAttribute(WebKeys.PAGE_TITLE);
-
-		if (pageTitleListMergeable != null) {
-			String pageTitle = pageTitleListMergeable.mergeToString(
-				StringPool.SPACE);
-
-			templateContext.put("pageTitle", pageTitle);
-		}
-
-		ListMergeable<String> pageSubtitleListMergeable =
-			(ListMergeable<String>)request.getAttribute(WebKeys.PAGE_SUBTITLE);
-
-		if (pageSubtitleListMergeable != null) {
-			String pageSubtitle = pageSubtitleListMergeable.mergeToString(
-				StringPool.SPACE);
-
-			templateContext.put("pageSubtitle", pageSubtitle);
+		catch (SecurityException se) {
+			_log.error(se, se);
 		}
 	}
 
-	protected void prepareTiles(
-		TemplateContext templateContext, HttpServletRequest request) {
+	protected void populateExtraHelperUtilities(Map<String, Object> variables) {
+	}
 
+	protected void prepareTiles(Template template, HttpServletRequest request) {
 		ComponentContext componentContext =
 			(ComponentContext)request.getAttribute(
 				ComponentConstants.COMPONENT_CONTEXT);
@@ -706,23 +876,40 @@ public class TemplateContextHelper {
 
 		themeDisplay.setTilesTitle(tilesTitle);
 
-		templateContext.put("tilesTitle", tilesTitle);
+		template.put("tilesTitle", tilesTitle);
 
 		String tilesContent = (String)componentContext.getAttribute("content");
 
 		themeDisplay.setTilesContent(tilesContent);
 
-		templateContext.put("tilesContent", tilesContent);
+		template.put("tilesContent", tilesContent);
 
 		boolean tilesSelectable = GetterUtil.getBoolean(
 			(String)componentContext.getAttribute("selectable"));
 
 		themeDisplay.setTilesSelectable(tilesSelectable);
 
-		templateContext.put("tilesSelectable", tilesSelectable);
+		template.put("tilesSelectable", tilesSelectable);
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(
 		TemplateContextHelper.class);
+
+	private static PACL _pacl = new NoPACL();
+
+	private Map<ClassLoader, Map<String, Object>[]> _helperUtilitiesMaps =
+		new ConcurrentHashMap<ClassLoader, Map<String, Object>[]>();
+
+	private static class NoPACL implements PACL {
+
+		@Override
+		public TemplateControlContext getTemplateControlContext() {
+			ClassLoader contextClassLoader =
+				ClassLoaderUtil.getContextClassLoader();
+
+			return new TemplateControlContext(null, contextClassLoader);
+		}
+
+	}
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,15 +14,18 @@
 
 package com.liferay.portal.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
 import com.liferay.portal.kernel.util.ReferenceRegistry;
 
 /**
- * The utility for the class name remote service. This utility wraps {@link com.liferay.portal.service.impl.ClassNameServiceImpl} and is the primary access point for service operations in application layer code running on a remote server.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service utility for ClassName. This utility wraps
+ * {@link com.liferay.portal.service.impl.ClassNameServiceImpl} and is the
+ * primary access point for service operations in application layer code running
+ * on a remote server. Methods of this service are expected to have security
+ * checks based on the propagated JAAS credentials because this service can be
+ * accessed remotely.
  *
  * @author Brian Wing Shun Chan
  * @see ClassNameService
@@ -30,12 +33,25 @@ import com.liferay.portal.kernel.util.ReferenceRegistry;
  * @see com.liferay.portal.service.impl.ClassNameServiceImpl
  * @generated
  */
+@ProviderType
 public class ClassNameServiceUtil {
 	/*
 	 * NOTE FOR DEVELOPERS:
 	 *
 	 * Never modify this class directly. Add custom service methods to {@link com.liferay.portal.service.impl.ClassNameServiceImpl} and rerun ServiceBuilder to regenerate this class.
 	 */
+	public static com.liferay.portal.model.ClassName fetchClassName(
+		java.lang.String value) {
+		return getService().fetchClassName(value);
+	}
+
+	public static long fetchClassNameId(java.lang.Class<?> clazz) {
+		return getService().fetchClassNameId(clazz);
+	}
+
+	public static long fetchClassNameId(java.lang.String value) {
+		return getService().fetchClassNameId(value);
+	}
 
 	/**
 	* Returns the Spring bean ID for this bean.
@@ -55,20 +71,6 @@ public class ClassNameServiceUtil {
 		getService().setBeanIdentifier(beanIdentifier);
 	}
 
-	public static com.liferay.portal.model.ClassName fetchClassName(
-		java.lang.String value)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return getService().fetchClassName(value);
-	}
-
-	public static long fetchClassNameId(java.lang.Class<?> clazz) {
-		return getService().fetchClassNameId(clazz);
-	}
-
-	public static long fetchClassNameId(java.lang.String value) {
-		return getService().fetchClassNameId(value);
-	}
-
 	public static ClassNameService getService() {
 		if (_service == null) {
 			_service = (ClassNameService)PortalBeanLocatorUtil.locate(ClassNameService.class.getName());
@@ -81,8 +83,9 @@ public class ClassNameServiceUtil {
 	}
 
 	/**
-	 * @deprecated
+	 * @deprecated As of 6.2.0
 	 */
+	@Deprecated
 	public void setService(ClassNameService service) {
 	}
 

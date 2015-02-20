@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -31,7 +31,7 @@ import java.util.List;
 
 /**
  * <p>
- * See http://issues.liferay.com/browse/LPS-1976.
+ * See https://issues.liferay.com/browse/LPS-1976.
  * </p>
  *
  * @author Jorge Ferrer
@@ -62,7 +62,7 @@ public class AdvancedFileSystemStore extends FileSystemStore {
 	public void updateFile(
 			long companyId, long repositoryId, String fileName,
 			String newFileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		super.updateFile(companyId, repositoryId, fileName, newFileName);
 
@@ -85,8 +85,8 @@ public class AdvancedFileSystemStore extends FileSystemStore {
 					FileUtil.stripExtension(fileNameVersion) +
 						StringPool.PERIOD + _HOOK_EXTENSION);
 
-			boolean renamed = fileNameVersionFile.renameTo(
-				newFileNameVersionFile);
+			boolean renamed = FileUtil.move(
+				fileNameVersionFile, newFileNameVersionFile);
 
 			if (!renamed) {
 				throw new SystemException(
@@ -104,7 +104,7 @@ public class AdvancedFileSystemStore extends FileSystemStore {
 			return;
 		}
 
-		for (int i = 0;i < fileNameFragmentLength;i += 2) {
+		for (int i = 0; i < fileNameFragmentLength; i += 2) {
 			if ((i + 2) < fileNameFragmentLength) {
 				sb.append(fileNameFragment.substring(i, i + 2));
 				sb.append(StringPool.SLASH);
@@ -182,7 +182,7 @@ public class AdvancedFileSystemStore extends FileSystemStore {
 		if (fileNameFragment.startsWith("DLFE-")) {
 			fileNameFragment = fileNameFragment.substring(5);
 
-			sb.append("DLFE" + StringPool.SLASH);
+			sb.append("DLFE/");
 		}
 
 		buildPath(sb, fileNameFragment);
@@ -222,7 +222,7 @@ public class AdvancedFileSystemStore extends FileSystemStore {
 			if (fileNameFragment.startsWith("DLFE-")) {
 				fileNameFragment = fileNameFragment.substring(5);
 
-				sb.append("DLFE" + StringPool.SLASH);
+				sb.append("DLFE/");
 			}
 
 			buildPath(sb, fileNameFragment);

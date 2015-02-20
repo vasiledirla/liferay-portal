@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -13,6 +13,8 @@
  */
 
 package com.liferay.portal.test;
+
+import com.liferay.portal.test.runners.AspectJMockingNewJVMJUnitTestRunner;
 
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -72,7 +74,6 @@ public class AspectJMockingNewJVMJUnitTestRunnerTest {
 	private static class AdviceClass1 {
 
 		@Around("execution(* *.getValue1())")
-		@SuppressWarnings("unused")
 		public Object mockGetValue() {
 			return 3;
 		}
@@ -83,7 +84,6 @@ public class AspectJMockingNewJVMJUnitTestRunnerTest {
 	private static class AdviceClass2 {
 
 		@Around("execution(* *.getValue2())")
-		@SuppressWarnings("unused")
 		public Object mockGetValue() {
 			return 4;
 		}
@@ -94,13 +94,11 @@ public class AspectJMockingNewJVMJUnitTestRunnerTest {
 	private static class AdviceClass3 {
 
 		@Around("execution(* *.getValue1())")
-		@SuppressWarnings("unused")
 		public Object mockGetValue1() {
 			return 5;
 		}
 
 		@Around("execution(* *.getValue2())")
-		@SuppressWarnings("unused")
 		public Object mockGetValue2() {
 			throw new IllegalStateException();
 		}

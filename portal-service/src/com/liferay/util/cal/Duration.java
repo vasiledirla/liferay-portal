@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -50,8 +50,10 @@ import java.io.Serializable;
 
 /**
  * @author     Jonathan Lennox
- * @deprecated Moved to {@link com.liferay.portal.kernel.cal.Duration}
+ * @deprecated As of 6.2.0, moved to {@link
+ *             com.liferay.portal.kernel.cal.Duration}
  */
+@Deprecated
 public class Duration implements Cloneable, Serializable {
 
 	/**
@@ -59,18 +61,15 @@ public class Duration implements Cloneable, Serializable {
 	 */
 	public Duration() {
 
-		/* Zero-initialization of all fields happens by default */
+		// Zero-initialization of all fields happens by default
 
 	}
 
 	/**
 	 * Constructor Duration
 	 */
-	public Duration(int d, int h, int m, int s) {
-		_days = d;
-		_hours = h;
-		_minutes = m;
-		_seconds = s;
+	public Duration(int w) {
+		_weeks = w;
 	}
 
 	/**
@@ -83,8 +82,11 @@ public class Duration implements Cloneable, Serializable {
 	/**
 	 * Constructor Duration
 	 */
-	public Duration(int w) {
-		_weeks = w;
+	public Duration(int d, int h, int m, int s) {
+		_days = d;
+		_hours = h;
+		_minutes = m;
+		_seconds = s;
 	}
 
 	/**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,6 +15,7 @@
 package com.liferay.portal.deploy.auto;
 
 import com.liferay.portal.kernel.deploy.auto.AutoDeployException;
+import com.liferay.portal.kernel.deploy.auto.AutoDeployer;
 import com.liferay.portal.kernel.deploy.auto.BaseAutoDeployListener;
 import com.liferay.portal.kernel.deploy.auto.context.AutoDeploymentContext;
 import com.liferay.portal.kernel.log.Log;
@@ -35,7 +36,8 @@ public class PortletAutoDeployListener extends BaseAutoDeployListener {
 		_autoDeployer = new PortletAutoDeployer();
 	}
 
-	public void deploy(AutoDeploymentContext autoDeploymentContext)
+	@Override
+	public int deploy(AutoDeploymentContext autoDeploymentContext)
 		throws AutoDeployException {
 
 		File file = autoDeploymentContext.getFile();
@@ -44,18 +46,18 @@ public class PortletAutoDeployListener extends BaseAutoDeployListener {
 			_log.debug("Invoking deploy for " + file.getPath());
 		}
 
-		AutoDeployer deployer = null;
+		AutoDeployer autoDeployer = null;
 
 		if (isMatchingFile(
 				file, "WEB-INF/" + Portal.PORTLET_XML_FILE_NAME_STANDARD)) {
 
-			deployer = _autoDeployer;
+			autoDeployer = _autoDeployer;
 		}
 		else if (isMatchingFile(file, "index_mvc.jsp")) {
-			deployer = getMvcDeployer();
+			autoDeployer = getMvcDeployer();
 		}
 		else if (isMatchingFile(file, "index.php")) {
-			deployer = getPhpDeployer();
+			autoDeployer = getPhpDeployer();
 		}
 		else if (!isExtPlugin(file) && !isHookPlugin(file) &&
 				 !isMatchingFile(
@@ -67,10 +69,10 @@ public class PortletAutoDeployListener extends BaseAutoDeployListener {
 				_log.info("Deploying package as a web application");
 			}
 
-			deployer = getWaiDeployer();
+			autoDeployer = getWaiDeployer();
 		}
 		else {
-			return;
+			return AutoDeployer.CODE_NOT_APPLICABLE;
 		}
 
 		if (_log.isInfoEnabled()) {
@@ -78,16 +80,20 @@ public class PortletAutoDeployListener extends BaseAutoDeployListener {
 		}
 
 		if (_log.isDebugEnabled()) {
-			_log.debug("Using deployer " + deployer.getClass().getName());
+			_log.debug("Using deployer " + autoDeployer.getClass().getName());
 		}
 
-		int code = deployer.autoDeploy(autoDeploymentContext);
+		autoDeployer = new ThreadSafeAutoDeployer(autoDeployer);
+
+		int code = autoDeployer.autoDeploy(autoDeploymentContext);
 
 		if ((code == AutoDeployer.CODE_DEFAULT) && _log.isInfoEnabled()) {
 			_log.info(
 				"Portlets for " + file.getPath() + " copied successfully. " +
 					"Deployment will start in a few seconds.");
 		}
+
+		return code;
 	}
 
 	protected AutoDeployer getMvcDeployer() {

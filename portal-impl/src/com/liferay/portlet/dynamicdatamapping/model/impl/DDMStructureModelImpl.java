@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,8 +16,9 @@ package com.liferay.portlet.dynamicdatamapping.model.impl;
 
 import com.liferay.portal.LocaleException;
 import com.liferay.portal.kernel.bean.AutoEscapeBeanHandler;
-import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSON;
+import com.liferay.portal.kernel.lar.StagedModelType;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.LocalizationUtil;
@@ -26,8 +27,10 @@ import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.CacheModel;
+import com.liferay.portal.model.User;
 import com.liferay.portal.model.impl.BaseModelImpl;
 import com.liferay.portal.service.ServiceContext;
+import com.liferay.portal.service.UserLocalServiceUtil;
 import com.liferay.portal.util.PortalUtil;
 
 import com.liferay.portlet.dynamicdatamapping.model.DDMStructure;
@@ -46,6 +49,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  * The base model implementation for the DDMStructure service. Represents a row in the &quot;DDMStructure&quot; database table, with each column mapped to a property of this class.
@@ -78,16 +83,19 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 			{ "userName", Types.VARCHAR },
 			{ "createDate", Types.TIMESTAMP },
 			{ "modifiedDate", Types.TIMESTAMP },
+			{ "parentStructureId", Types.BIGINT },
 			{ "classNameId", Types.BIGINT },
 			{ "structureKey", Types.VARCHAR },
 			{ "name", Types.VARCHAR },
 			{ "description", Types.VARCHAR },
-			{ "xsd", Types.CLOB },
+			{ "definition", Types.CLOB },
 			{ "storageType", Types.VARCHAR },
 			{ "type_", Types.INTEGER }
 		};
-	public static final String TABLE_SQL_CREATE = "create table DDMStructure (uuid_ VARCHAR(75) null,structureId LONG not null primary key,groupId LONG,companyId LONG,userId LONG,userName VARCHAR(75) null,createDate DATE null,modifiedDate DATE null,classNameId LONG,structureKey VARCHAR(75) null,name STRING null,description STRING null,xsd TEXT null,storageType VARCHAR(75) null,type_ INTEGER)";
+	public static final String TABLE_SQL_CREATE = "create table DDMStructure (uuid_ VARCHAR(75) null,structureId LONG not null primary key,groupId LONG,companyId LONG,userId LONG,userName VARCHAR(75) null,createDate DATE null,modifiedDate DATE null,parentStructureId LONG,classNameId LONG,structureKey VARCHAR(75) null,name STRING null,description STRING null,definition TEXT null,storageType VARCHAR(75) null,type_ INTEGER)";
 	public static final String TABLE_SQL_DROP = "drop table DDMStructure";
+	public static final String ORDER_BY_JPQL = " ORDER BY ddmStructure.structureId ASC";
+	public static final String ORDER_BY_SQL = " ORDER BY DDMStructure.structureId ASC";
 	public static final String DATA_SOURCE = "liferayDataSource";
 	public static final String SESSION_FACTORY = "liferaySessionFactory";
 	public static final String TX_MANAGER = "liferayTransactionManager";
@@ -105,8 +113,10 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	public static long DESCRIPTION_COLUMN_BITMASK = 4L;
 	public static long GROUPID_COLUMN_BITMASK = 8L;
 	public static long NAME_COLUMN_BITMASK = 16L;
-	public static long STRUCTUREKEY_COLUMN_BITMASK = 32L;
-	public static long UUID_COLUMN_BITMASK = 64L;
+	public static long PARENTSTRUCTUREID_COLUMN_BITMASK = 32L;
+	public static long STRUCTUREKEY_COLUMN_BITMASK = 64L;
+	public static long UUID_COLUMN_BITMASK = 128L;
+	public static long STRUCTUREID_COLUMN_BITMASK = 256L;
 
 	/**
 	 * Converts the soap model instance into a normal model instance.
@@ -129,11 +139,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		model.setUserName(soapModel.getUserName());
 		model.setCreateDate(soapModel.getCreateDate());
 		model.setModifiedDate(soapModel.getModifiedDate());
+		model.setParentStructureId(soapModel.getParentStructureId());
 		model.setClassNameId(soapModel.getClassNameId());
 		model.setStructureKey(soapModel.getStructureKey());
 		model.setName(soapModel.getName());
 		model.setDescription(soapModel.getDescription());
-		model.setXsd(soapModel.getXsd());
+		model.setDefinition(soapModel.getDefinition());
 		model.setStorageType(soapModel.getStorageType());
 		model.setType(soapModel.getType());
 
@@ -160,32 +171,63 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		return models;
 	}
 
+	public static final String MAPPING_TABLE_DLFILEENTRYTYPES_DDMSTRUCTURES_NAME =
+		"DLFileEntryTypes_DDMStructures";
+	public static final Object[][] MAPPING_TABLE_DLFILEENTRYTYPES_DDMSTRUCTURES_COLUMNS =
+		{
+			{ "structureId", Types.BIGINT },
+			{ "fileEntryTypeId", Types.BIGINT }
+		};
+	public static final String MAPPING_TABLE_DLFILEENTRYTYPES_DDMSTRUCTURES_SQL_CREATE =
+		"create table DLFileEntryTypes_DDMStructures (structureId LONG not null,fileEntryTypeId LONG not null,primary key (structureId, fileEntryTypeId))";
+	public static final boolean FINDER_CACHE_ENABLED_DLFILEENTRYTYPES_DDMSTRUCTURES =
+		GetterUtil.getBoolean(com.liferay.portal.util.PropsUtil.get(
+				"value.object.finder.cache.enabled.DLFileEntryTypes_DDMStructures"),
+			true);
+	public static final String MAPPING_TABLE_JOURNALFOLDERS_DDMSTRUCTURES_NAME = "JournalFolders_DDMStructures";
+	public static final Object[][] MAPPING_TABLE_JOURNALFOLDERS_DDMSTRUCTURES_COLUMNS =
+		{
+			{ "structureId", Types.BIGINT },
+			{ "folderId", Types.BIGINT }
+		};
+	public static final String MAPPING_TABLE_JOURNALFOLDERS_DDMSTRUCTURES_SQL_CREATE =
+		"create table JournalFolders_DDMStructures (structureId LONG not null,folderId LONG not null,primary key (structureId, folderId))";
+	public static final boolean FINDER_CACHE_ENABLED_JOURNALFOLDERS_DDMSTRUCTURES =
+		GetterUtil.getBoolean(com.liferay.portal.util.PropsUtil.get(
+				"value.object.finder.cache.enabled.JournalFolders_DDMStructures"),
+			true);
 	public static final long LOCK_EXPIRATION_TIME = GetterUtil.getLong(com.liferay.portal.util.PropsUtil.get(
 				"lock.expiration.time.com.liferay.portlet.dynamicdatamapping.model.DDMStructure"));
 
 	public DDMStructureModelImpl() {
 	}
 
+	@Override
 	public long getPrimaryKey() {
 		return _structureId;
 	}
 
+	@Override
 	public void setPrimaryKey(long primaryKey) {
 		setStructureId(primaryKey);
 	}
 
+	@Override
 	public Serializable getPrimaryKeyObj() {
-		return new Long(_structureId);
+		return _structureId;
 	}
 
+	@Override
 	public void setPrimaryKeyObj(Serializable primaryKeyObj) {
 		setPrimaryKey(((Long)primaryKeyObj).longValue());
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return DDMStructure.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return DDMStructure.class.getName();
 	}
@@ -202,13 +244,17 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		attributes.put("userName", getUserName());
 		attributes.put("createDate", getCreateDate());
 		attributes.put("modifiedDate", getModifiedDate());
+		attributes.put("parentStructureId", getParentStructureId());
 		attributes.put("classNameId", getClassNameId());
 		attributes.put("structureKey", getStructureKey());
 		attributes.put("name", getName());
 		attributes.put("description", getDescription());
-		attributes.put("xsd", getXsd());
+		attributes.put("definition", getDefinition());
 		attributes.put("storageType", getStorageType());
 		attributes.put("type", getType());
+
+		attributes.put("entityCacheEnabled", isEntityCacheEnabled());
+		attributes.put("finderCacheEnabled", isFinderCacheEnabled());
 
 		return attributes;
 	}
@@ -263,6 +309,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 			setModifiedDate(modifiedDate);
 		}
 
+		Long parentStructureId = (Long)attributes.get("parentStructureId");
+
+		if (parentStructureId != null) {
+			setParentStructureId(parentStructureId);
+		}
+
 		Long classNameId = (Long)attributes.get("classNameId");
 
 		if (classNameId != null) {
@@ -287,10 +339,10 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 			setDescription(description);
 		}
 
-		String xsd = (String)attributes.get("xsd");
+		String definition = (String)attributes.get("definition");
 
-		if (xsd != null) {
-			setXsd(xsd);
+		if (definition != null) {
+			setDefinition(definition);
 		}
 
 		String storageType = (String)attributes.get("storageType");
@@ -307,6 +359,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public String getUuid() {
 		if (_uuid == null) {
 			return StringPool.BLANK;
@@ -316,6 +369,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public void setUuid(String uuid) {
 		if (_originalUuid == null) {
 			_originalUuid = _uuid;
@@ -329,19 +383,23 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public long getStructureId() {
 		return _structureId;
 	}
 
+	@Override
 	public void setStructureId(long structureId) {
 		_structureId = structureId;
 	}
 
 	@JSON
+	@Override
 	public long getGroupId() {
 		return _groupId;
 	}
 
+	@Override
 	public void setGroupId(long groupId) {
 		_columnBitmask |= GROUPID_COLUMN_BITMASK;
 
@@ -359,10 +417,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public long getCompanyId() {
 		return _companyId;
 	}
 
+	@Override
 	public void setCompanyId(long companyId) {
 		_columnBitmask |= COMPANYID_COLUMN_BITMASK;
 
@@ -380,23 +440,34 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public long getUserId() {
 		return _userId;
 	}
 
+	@Override
 	public void setUserId(long userId) {
 		_userId = userId;
 	}
 
-	public String getUserUuid() throws SystemException {
-		return PortalUtil.getUserValue(getUserId(), "uuid", _userUuid);
+	@Override
+	public String getUserUuid() {
+		try {
+			User user = UserLocalServiceUtil.getUserById(getUserId());
+
+			return user.getUuid();
+		}
+		catch (PortalException pe) {
+			return StringPool.BLANK;
+		}
 	}
 
+	@Override
 	public void setUserUuid(String userUuid) {
-		_userUuid = userUuid;
 	}
 
 	@JSON
+	@Override
 	public String getUserName() {
 		if (_userName == null) {
 			return StringPool.BLANK;
@@ -406,28 +477,57 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public void setUserName(String userName) {
 		_userName = userName;
 	}
 
 	@JSON
+	@Override
 	public Date getCreateDate() {
 		return _createDate;
 	}
 
+	@Override
 	public void setCreateDate(Date createDate) {
 		_createDate = createDate;
 	}
 
 	@JSON
+	@Override
 	public Date getModifiedDate() {
 		return _modifiedDate;
 	}
 
+	@Override
 	public void setModifiedDate(Date modifiedDate) {
 		_modifiedDate = modifiedDate;
 	}
 
+	@JSON
+	@Override
+	public long getParentStructureId() {
+		return _parentStructureId;
+	}
+
+	@Override
+	public void setParentStructureId(long parentStructureId) {
+		_columnBitmask |= PARENTSTRUCTUREID_COLUMN_BITMASK;
+
+		if (!_setOriginalParentStructureId) {
+			_setOriginalParentStructureId = true;
+
+			_originalParentStructureId = _parentStructureId;
+		}
+
+		_parentStructureId = parentStructureId;
+	}
+
+	public long getOriginalParentStructureId() {
+		return _originalParentStructureId;
+	}
+
+	@Override
 	public String getClassName() {
 		if (getClassNameId() <= 0) {
 			return StringPool.BLANK;
@@ -436,6 +536,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		return PortalUtil.getClassName(getClassNameId());
 	}
 
+	@Override
 	public void setClassName(String className) {
 		long classNameId = 0;
 
@@ -447,10 +548,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public long getClassNameId() {
 		return _classNameId;
 	}
 
+	@Override
 	public void setClassNameId(long classNameId) {
 		_columnBitmask |= CLASSNAMEID_COLUMN_BITMASK;
 
@@ -468,6 +571,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public String getStructureKey() {
 		if (_structureKey == null) {
 			return StringPool.BLANK;
@@ -477,6 +581,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public void setStructureKey(String structureKey) {
 		_columnBitmask |= STRUCTUREKEY_COLUMN_BITMASK;
 
@@ -492,6 +597,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public String getName() {
 		if (_name == null) {
 			return StringPool.BLANK;
@@ -501,42 +607,50 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public String getName(Locale locale) {
 		String languageId = LocaleUtil.toLanguageId(locale);
 
 		return getName(languageId);
 	}
 
+	@Override
 	public String getName(Locale locale, boolean useDefault) {
 		String languageId = LocaleUtil.toLanguageId(locale);
 
 		return getName(languageId, useDefault);
 	}
 
+	@Override
 	public String getName(String languageId) {
 		return LocalizationUtil.getLocalization(getName(), languageId);
 	}
 
+	@Override
 	public String getName(String languageId, boolean useDefault) {
 		return LocalizationUtil.getLocalization(getName(), languageId,
 			useDefault);
 	}
 
+	@Override
 	public String getNameCurrentLanguageId() {
 		return _nameCurrentLanguageId;
 	}
 
 	@JSON
+	@Override
 	public String getNameCurrentValue() {
 		Locale locale = getLocale(_nameCurrentLanguageId);
 
 		return getName(locale);
 	}
 
+	@Override
 	public Map<Locale, String> getNameMap() {
 		return LocalizationUtil.getLocalizationMap(getName());
 	}
 
+	@Override
 	public void setName(String name) {
 		_columnBitmask |= NAME_COLUMN_BITMASK;
 
@@ -547,10 +661,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		_name = name;
 	}
 
+	@Override
 	public void setName(String name, Locale locale) {
-		setName(name, locale, LocaleUtil.getDefault());
+		setName(name, locale, LocaleUtil.getSiteDefault());
 	}
 
+	@Override
 	public void setName(String name, Locale locale, Locale defaultLocale) {
 		String languageId = LocaleUtil.toLanguageId(locale);
 		String defaultLanguageId = LocaleUtil.toLanguageId(defaultLocale);
@@ -565,14 +681,17 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public void setNameCurrentLanguageId(String languageId) {
 		_nameCurrentLanguageId = languageId;
 	}
 
+	@Override
 	public void setNameMap(Map<Locale, String> nameMap) {
-		setNameMap(nameMap, LocaleUtil.getDefault());
+		setNameMap(nameMap, LocaleUtil.getSiteDefault());
 	}
 
+	@Override
 	public void setNameMap(Map<Locale, String> nameMap, Locale defaultLocale) {
 		if (nameMap == null) {
 			return;
@@ -587,6 +706,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
+	@Override
 	public String getDescription() {
 		if (_description == null) {
 			return StringPool.BLANK;
@@ -596,42 +716,50 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public String getDescription(Locale locale) {
 		String languageId = LocaleUtil.toLanguageId(locale);
 
 		return getDescription(languageId);
 	}
 
+	@Override
 	public String getDescription(Locale locale, boolean useDefault) {
 		String languageId = LocaleUtil.toLanguageId(locale);
 
 		return getDescription(languageId, useDefault);
 	}
 
+	@Override
 	public String getDescription(String languageId) {
 		return LocalizationUtil.getLocalization(getDescription(), languageId);
 	}
 
+	@Override
 	public String getDescription(String languageId, boolean useDefault) {
 		return LocalizationUtil.getLocalization(getDescription(), languageId,
 			useDefault);
 	}
 
+	@Override
 	public String getDescriptionCurrentLanguageId() {
 		return _descriptionCurrentLanguageId;
 	}
 
 	@JSON
+	@Override
 	public String getDescriptionCurrentValue() {
 		Locale locale = getLocale(_descriptionCurrentLanguageId);
 
 		return getDescription(locale);
 	}
 
+	@Override
 	public Map<Locale, String> getDescriptionMap() {
 		return LocalizationUtil.getLocalizationMap(getDescription());
 	}
 
+	@Override
 	public void setDescription(String description) {
 		_columnBitmask |= DESCRIPTION_COLUMN_BITMASK;
 
@@ -642,10 +770,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		_description = description;
 	}
 
+	@Override
 	public void setDescription(String description, Locale locale) {
-		setDescription(description, locale, LocaleUtil.getDefault());
+		setDescription(description, locale, LocaleUtil.getSiteDefault());
 	}
 
+	@Override
 	public void setDescription(String description, Locale locale,
 		Locale defaultLocale) {
 		String languageId = LocaleUtil.toLanguageId(locale);
@@ -662,14 +792,17 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public void setDescriptionCurrentLanguageId(String languageId) {
 		_descriptionCurrentLanguageId = languageId;
 	}
 
+	@Override
 	public void setDescriptionMap(Map<Locale, String> descriptionMap) {
-		setDescriptionMap(descriptionMap, LocaleUtil.getDefault());
+		setDescriptionMap(descriptionMap, LocaleUtil.getSiteDefault());
 	}
 
+	@Override
 	public void setDescriptionMap(Map<Locale, String> descriptionMap,
 		Locale defaultLocale) {
 		if (descriptionMap == null) {
@@ -686,20 +819,23 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@JSON
-	public String getXsd() {
-		if (_xsd == null) {
+	@Override
+	public String getDefinition() {
+		if (_definition == null) {
 			return StringPool.BLANK;
 		}
 		else {
-			return _xsd;
+			return _definition;
 		}
 	}
 
-	public void setXsd(String xsd) {
-		_xsd = xsd;
+	@Override
+	public void setDefinition(String definition) {
+		_definition = definition;
 	}
 
 	@JSON
+	@Override
 	public String getStorageType() {
 		if (_storageType == null) {
 			return StringPool.BLANK;
@@ -709,24 +845,34 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		}
 	}
 
+	@Override
 	public void setStorageType(String storageType) {
 		_storageType = storageType;
 	}
 
 	@JSON
+	@Override
 	public int getType() {
 		return _type;
 	}
 
+	@Override
 	public void setType(int type) {
 		_type = type;
 	}
 
-	public com.liferay.portal.kernel.xml.Document getDocument() {
+	public com.liferay.portlet.dynamicdatamapping.model.DDMForm getDDMForm() {
 		return null;
 	}
 
-	public void setDocument(com.liferay.portal.kernel.xml.Document document) {
+	public void setDDMForm(
+		com.liferay.portlet.dynamicdatamapping.model.DDMForm ddmForm) {
+	}
+
+	@Override
+	public StagedModelType getStagedModelType() {
+		return new StagedModelType(PortalUtil.getClassNameId(
+				DDMStructure.class.getName()), getClassNameId());
 	}
 
 	public long getColumnBitmask() {
@@ -746,24 +892,96 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		expandoBridge.setAttributes(serviceContext);
 	}
 
+	@Override
+	public String[] getAvailableLanguageIds() {
+		Set<String> availableLanguageIds = new TreeSet<String>();
+
+		Map<Locale, String> nameMap = getNameMap();
+
+		for (Map.Entry<Locale, String> entry : nameMap.entrySet()) {
+			Locale locale = entry.getKey();
+			String value = entry.getValue();
+
+			if (Validator.isNotNull(value)) {
+				availableLanguageIds.add(LocaleUtil.toLanguageId(locale));
+			}
+		}
+
+		Map<Locale, String> descriptionMap = getDescriptionMap();
+
+		for (Map.Entry<Locale, String> entry : descriptionMap.entrySet()) {
+			Locale locale = entry.getKey();
+			String value = entry.getValue();
+
+			if (Validator.isNotNull(value)) {
+				availableLanguageIds.add(LocaleUtil.toLanguageId(locale));
+			}
+		}
+
+		return availableLanguageIds.toArray(new String[availableLanguageIds.size()]);
+	}
+
+	@Override
+	public String getDefaultLanguageId() {
+		String xml = getName();
+
+		if (xml == null) {
+			return StringPool.BLANK;
+		}
+
+		Locale defaultLocale = LocaleUtil.getSiteDefault();
+
+		return LocalizationUtil.getDefaultLanguageId(xml, defaultLocale);
+	}
+
+	@Override
+	public void prepareLocalizedFieldsForImport() throws LocaleException {
+		Locale defaultLocale = LocaleUtil.fromLanguageId(getDefaultLanguageId());
+
+		Locale[] availableLocales = LocaleUtil.fromLanguageIds(getAvailableLanguageIds());
+
+		Locale defaultImportLocale = LocalizationUtil.getDefaultImportLocale(DDMStructure.class.getName(),
+				getPrimaryKey(), defaultLocale, availableLocales);
+
+		prepareLocalizedFieldsForImport(defaultImportLocale);
+	}
+
+	@Override
 	@SuppressWarnings("unused")
 	public void prepareLocalizedFieldsForImport(Locale defaultImportLocale)
 		throws LocaleException {
-		setName(getName(defaultImportLocale), defaultImportLocale,
-			defaultImportLocale);
-		setDescription(getDescription(defaultImportLocale),
-			defaultImportLocale, defaultImportLocale);
+		Locale defaultLocale = LocaleUtil.getSiteDefault();
+
+		String modelDefaultLanguageId = getDefaultLanguageId();
+
+		String name = getName(defaultLocale);
+
+		if (Validator.isNull(name)) {
+			setName(getName(modelDefaultLanguageId), defaultLocale);
+		}
+		else {
+			setName(getName(defaultLocale), defaultLocale, defaultLocale);
+		}
+
+		String description = getDescription(defaultLocale);
+
+		if (Validator.isNull(description)) {
+			setDescription(getDescription(modelDefaultLanguageId), defaultLocale);
+		}
+		else {
+			setDescription(getDescription(defaultLocale), defaultLocale,
+				defaultLocale);
+		}
 	}
 
 	@Override
 	public DDMStructure toEscapedModel() {
-		if (_escapedModelProxy == null) {
-			_escapedModelProxy = (DDMStructure)ProxyUtil.newProxyInstance(_classLoader,
-					_escapedModelProxyInterfaces,
-					new AutoEscapeBeanHandler(this));
+		if (_escapedModel == null) {
+			_escapedModel = (DDMStructure)ProxyUtil.newProxyInstance(_classLoader,
+					_escapedModelInterfaces, new AutoEscapeBeanHandler(this));
 		}
 
-		return _escapedModelProxy;
+		return _escapedModel;
 	}
 
 	@Override
@@ -778,11 +996,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		ddmStructureImpl.setUserName(getUserName());
 		ddmStructureImpl.setCreateDate(getCreateDate());
 		ddmStructureImpl.setModifiedDate(getModifiedDate());
+		ddmStructureImpl.setParentStructureId(getParentStructureId());
 		ddmStructureImpl.setClassNameId(getClassNameId());
 		ddmStructureImpl.setStructureKey(getStructureKey());
 		ddmStructureImpl.setName(getName());
 		ddmStructureImpl.setDescription(getDescription());
-		ddmStructureImpl.setXsd(getXsd());
+		ddmStructureImpl.setDefinition(getDefinition());
 		ddmStructureImpl.setStorageType(getStorageType());
 		ddmStructureImpl.setType(getType());
 
@@ -791,6 +1010,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		return ddmStructureImpl;
 	}
 
+	@Override
 	public int compareTo(DDMStructure ddmStructure) {
 		long primaryKey = ddmStructure.getPrimaryKey();
 
@@ -807,18 +1027,15 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 
 	@Override
 	public boolean equals(Object obj) {
-		if (obj == null) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof DDMStructure)) {
 			return false;
 		}
 
-		DDMStructure ddmStructure = null;
-
-		try {
-			ddmStructure = (DDMStructure)obj;
-		}
-		catch (ClassCastException cce) {
-			return false;
-		}
+		DDMStructure ddmStructure = (DDMStructure)obj;
 
 		long primaryKey = ddmStructure.getPrimaryKey();
 
@@ -836,6 +1053,16 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	@Override
+	public boolean isEntityCacheEnabled() {
+		return ENTITY_CACHE_ENABLED;
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return FINDER_CACHE_ENABLED;
+	}
+
+	@Override
 	public void resetOriginalValues() {
 		DDMStructureModelImpl ddmStructureModelImpl = this;
 
@@ -849,6 +1076,10 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 
 		ddmStructureModelImpl._setOriginalCompanyId = false;
 
+		ddmStructureModelImpl._originalParentStructureId = ddmStructureModelImpl._parentStructureId;
+
+		ddmStructureModelImpl._setOriginalParentStructureId = false;
+
 		ddmStructureModelImpl._originalClassNameId = ddmStructureModelImpl._classNameId;
 
 		ddmStructureModelImpl._setOriginalClassNameId = false;
@@ -858,6 +1089,8 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		ddmStructureModelImpl._originalName = ddmStructureModelImpl._name;
 
 		ddmStructureModelImpl._originalDescription = ddmStructureModelImpl._description;
+
+		setDDMForm(null);
 
 		ddmStructureModelImpl._columnBitmask = 0;
 	}
@@ -908,6 +1141,8 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 			ddmStructureCacheModel.modifiedDate = Long.MIN_VALUE;
 		}
 
+		ddmStructureCacheModel.parentStructureId = getParentStructureId();
+
 		ddmStructureCacheModel.classNameId = getClassNameId();
 
 		ddmStructureCacheModel.structureKey = getStructureKey();
@@ -934,12 +1169,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 			ddmStructureCacheModel.description = null;
 		}
 
-		ddmStructureCacheModel.xsd = getXsd();
+		ddmStructureCacheModel.definition = getDefinition();
 
-		String xsd = ddmStructureCacheModel.xsd;
+		String definition = ddmStructureCacheModel.definition;
 
-		if ((xsd != null) && (xsd.length() == 0)) {
-			ddmStructureCacheModel.xsd = null;
+		if ((definition != null) && (definition.length() == 0)) {
+			ddmStructureCacheModel.definition = null;
 		}
 
 		ddmStructureCacheModel.storageType = getStorageType();
@@ -952,14 +1187,14 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 
 		ddmStructureCacheModel.type = getType();
 
-		ddmStructureCacheModel._document = getDocument();
+		ddmStructureCacheModel._ddmForm = getDDMForm();
 
 		return ddmStructureCacheModel;
 	}
 
 	@Override
 	public String toString() {
-		StringBundler sb = new StringBundler(31);
+		StringBundler sb = new StringBundler(33);
 
 		sb.append("{uuid=");
 		sb.append(getUuid());
@@ -977,6 +1212,8 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		sb.append(getCreateDate());
 		sb.append(", modifiedDate=");
 		sb.append(getModifiedDate());
+		sb.append(", parentStructureId=");
+		sb.append(getParentStructureId());
 		sb.append(", classNameId=");
 		sb.append(getClassNameId());
 		sb.append(", structureKey=");
@@ -985,8 +1222,8 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		sb.append(getName());
 		sb.append(", description=");
 		sb.append(getDescription());
-		sb.append(", xsd=");
-		sb.append(getXsd());
+		sb.append(", definition=");
+		sb.append(getDefinition());
 		sb.append(", storageType=");
 		sb.append(getStorageType());
 		sb.append(", type=");
@@ -996,8 +1233,9 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		return sb.toString();
 	}
 
+	@Override
 	public String toXmlString() {
-		StringBundler sb = new StringBundler(49);
+		StringBundler sb = new StringBundler(52);
 
 		sb.append("<model><model-name>");
 		sb.append("com.liferay.portlet.dynamicdatamapping.model.DDMStructure");
@@ -1036,6 +1274,10 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		sb.append(getModifiedDate());
 		sb.append("]]></column-value></column>");
 		sb.append(
+			"<column><column-name>parentStructureId</column-name><column-value><![CDATA[");
+		sb.append(getParentStructureId());
+		sb.append("]]></column-value></column>");
+		sb.append(
 			"<column><column-name>classNameId</column-name><column-value><![CDATA[");
 		sb.append(getClassNameId());
 		sb.append("]]></column-value></column>");
@@ -1052,8 +1294,8 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 		sb.append(getDescription());
 		sb.append("]]></column-value></column>");
 		sb.append(
-			"<column><column-name>xsd</column-name><column-value><![CDATA[");
-		sb.append(getXsd());
+			"<column><column-name>definition</column-name><column-value><![CDATA[");
+		sb.append(getDefinition());
 		sb.append("]]></column-value></column>");
 		sb.append(
 			"<column><column-name>storageType</column-name><column-value><![CDATA[");
@@ -1070,7 +1312,7 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	}
 
 	private static ClassLoader _classLoader = DDMStructure.class.getClassLoader();
-	private static Class<?>[] _escapedModelProxyInterfaces = new Class[] {
+	private static Class<?>[] _escapedModelInterfaces = new Class[] {
 			DDMStructure.class
 		};
 	private String _uuid;
@@ -1083,10 +1325,12 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	private long _originalCompanyId;
 	private boolean _setOriginalCompanyId;
 	private long _userId;
-	private String _userUuid;
 	private String _userName;
 	private Date _createDate;
 	private Date _modifiedDate;
+	private long _parentStructureId;
+	private long _originalParentStructureId;
+	private boolean _setOriginalParentStructureId;
 	private long _classNameId;
 	private long _originalClassNameId;
 	private boolean _setOriginalClassNameId;
@@ -1098,9 +1342,9 @@ public class DDMStructureModelImpl extends BaseModelImpl<DDMStructure>
 	private String _description;
 	private String _descriptionCurrentLanguageId;
 	private String _originalDescription;
-	private String _xsd;
+	private String _definition;
 	private String _storageType;
 	private int _type;
 	private long _columnBitmask;
-	private DDMStructure _escapedModelProxy;
+	private DDMStructure _escapedModel;
 }

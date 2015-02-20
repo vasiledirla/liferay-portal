@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,9 @@
 
 package com.liferay.portlet.dynamicdatamapping.model;
 
+import aQute.bnd.annotation.ProviderType;
+
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.ModelWrapper;
 
 import java.util.HashMap;
@@ -24,24 +27,28 @@ import java.util.Map;
  * This class is a wrapper for {@link DDMStructureLink}.
  * </p>
  *
- * @author    Brian Wing Shun Chan
- * @see       DDMStructureLink
+ * @author Brian Wing Shun Chan
+ * @see DDMStructureLink
  * @generated
  */
+@ProviderType
 public class DDMStructureLinkWrapper implements DDMStructureLink,
 	ModelWrapper<DDMStructureLink> {
 	public DDMStructureLinkWrapper(DDMStructureLink ddmStructureLink) {
 		_ddmStructureLink = ddmStructureLink;
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return DDMStructureLink.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return DDMStructureLink.class.getName();
 	}
 
+	@Override
 	public Map<String, Object> getModelAttributes() {
 		Map<String, Object> attributes = new HashMap<String, Object>();
 
@@ -53,6 +60,7 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 		return attributes;
 	}
 
+	@Override
 	public void setModelAttributes(Map<String, Object> attributes) {
 		Long structureLinkId = (Long)attributes.get("structureLinkId");
 
@@ -79,40 +87,15 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 		}
 	}
 
-	/**
-	* Returns the primary key of this d d m structure link.
-	*
-	* @return the primary key of this d d m structure link
-	*/
-	public long getPrimaryKey() {
-		return _ddmStructureLink.getPrimaryKey();
+	@Override
+	public java.lang.Object clone() {
+		return new DDMStructureLinkWrapper((DDMStructureLink)_ddmStructureLink.clone());
 	}
 
-	/**
-	* Sets the primary key of this d d m structure link.
-	*
-	* @param primaryKey the primary key of this d d m structure link
-	*/
-	public void setPrimaryKey(long primaryKey) {
-		_ddmStructureLink.setPrimaryKey(primaryKey);
-	}
-
-	/**
-	* Returns the structure link ID of this d d m structure link.
-	*
-	* @return the structure link ID of this d d m structure link
-	*/
-	public long getStructureLinkId() {
-		return _ddmStructureLink.getStructureLinkId();
-	}
-
-	/**
-	* Sets the structure link ID of this d d m structure link.
-	*
-	* @param structureLinkId the structure link ID of this d d m structure link
-	*/
-	public void setStructureLinkId(long structureLinkId) {
-		_ddmStructureLink.setStructureLinkId(structureLinkId);
+	@Override
+	public int compareTo(
+		com.liferay.portlet.dynamicdatamapping.model.DDMStructureLink ddmStructureLink) {
+		return _ddmStructureLink.compareTo(ddmStructureLink);
 	}
 
 	/**
@@ -120,12 +103,9 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 	*
 	* @return the fully qualified class name of this d d m structure link
 	*/
+	@Override
 	public java.lang.String getClassName() {
 		return _ddmStructureLink.getClassName();
-	}
-
-	public void setClassName(java.lang.String className) {
-		_ddmStructureLink.setClassName(className);
 	}
 
 	/**
@@ -133,17 +113,9 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 	*
 	* @return the class name ID of this d d m structure link
 	*/
+	@Override
 	public long getClassNameId() {
 		return _ddmStructureLink.getClassNameId();
-	}
-
-	/**
-	* Sets the class name ID of this d d m structure link.
-	*
-	* @param classNameId the class name ID of this d d m structure link
-	*/
-	public void setClassNameId(long classNameId) {
-		_ddmStructureLink.setClassNameId(classNameId);
 	}
 
 	/**
@@ -151,17 +123,35 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 	*
 	* @return the class p k of this d d m structure link
 	*/
+	@Override
 	public long getClassPK() {
 		return _ddmStructureLink.getClassPK();
 	}
 
+	@Override
+	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
+		return _ddmStructureLink.getExpandoBridge();
+	}
+
 	/**
-	* Sets the class p k of this d d m structure link.
+	* Returns the primary key of this d d m structure link.
 	*
-	* @param classPK the class p k of this d d m structure link
+	* @return the primary key of this d d m structure link
 	*/
-	public void setClassPK(long classPK) {
-		_ddmStructureLink.setClassPK(classPK);
+	@Override
+	public long getPrimaryKey() {
+		return _ddmStructureLink.getPrimaryKey();
+	}
+
+	@Override
+	public java.io.Serializable getPrimaryKeyObj() {
+		return _ddmStructureLink.getPrimaryKeyObj();
+	}
+
+	@Override
+	public com.liferay.portlet.dynamicdatamapping.model.DDMStructure getStructure()
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return _ddmStructureLink.getStructure();
 	}
 
 	/**
@@ -169,64 +159,19 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 	*
 	* @return the structure ID of this d d m structure link
 	*/
+	@Override
 	public long getStructureId() {
 		return _ddmStructureLink.getStructureId();
 	}
 
 	/**
-	* Sets the structure ID of this d d m structure link.
+	* Returns the structure link ID of this d d m structure link.
 	*
-	* @param structureId the structure ID of this d d m structure link
+	* @return the structure link ID of this d d m structure link
 	*/
-	public void setStructureId(long structureId) {
-		_ddmStructureLink.setStructureId(structureId);
-	}
-
-	public boolean isNew() {
-		return _ddmStructureLink.isNew();
-	}
-
-	public void setNew(boolean n) {
-		_ddmStructureLink.setNew(n);
-	}
-
-	public boolean isCachedModel() {
-		return _ddmStructureLink.isCachedModel();
-	}
-
-	public void setCachedModel(boolean cachedModel) {
-		_ddmStructureLink.setCachedModel(cachedModel);
-	}
-
-	public boolean isEscapedModel() {
-		return _ddmStructureLink.isEscapedModel();
-	}
-
-	public java.io.Serializable getPrimaryKeyObj() {
-		return _ddmStructureLink.getPrimaryKeyObj();
-	}
-
-	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
-		_ddmStructureLink.setPrimaryKeyObj(primaryKeyObj);
-	}
-
-	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
-		return _ddmStructureLink.getExpandoBridge();
-	}
-
-	public void setExpandoBridgeAttributes(
-		com.liferay.portal.service.ServiceContext serviceContext) {
-		_ddmStructureLink.setExpandoBridgeAttributes(serviceContext);
-	}
-
 	@Override
-	public java.lang.Object clone() {
-		return new DDMStructureLinkWrapper((DDMStructureLink)_ddmStructureLink.clone());
-	}
-
-	public int compareTo(
-		com.liferay.portlet.dynamicdatamapping.model.DDMStructureLink ddmStructureLink) {
-		return _ddmStructureLink.compareTo(ddmStructureLink);
+	public long getStructureLinkId() {
+		return _ddmStructureLink.getStructureLinkId();
 	}
 
 	@Override
@@ -234,10 +179,120 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 		return _ddmStructureLink.hashCode();
 	}
 
+	@Override
+	public boolean isCachedModel() {
+		return _ddmStructureLink.isCachedModel();
+	}
+
+	@Override
+	public boolean isEscapedModel() {
+		return _ddmStructureLink.isEscapedModel();
+	}
+
+	@Override
+	public boolean isNew() {
+		return _ddmStructureLink.isNew();
+	}
+
+	@Override
+	public void persist() {
+		_ddmStructureLink.persist();
+	}
+
+	@Override
+	public void setCachedModel(boolean cachedModel) {
+		_ddmStructureLink.setCachedModel(cachedModel);
+	}
+
+	@Override
+	public void setClassName(java.lang.String className) {
+		_ddmStructureLink.setClassName(className);
+	}
+
+	/**
+	* Sets the class name ID of this d d m structure link.
+	*
+	* @param classNameId the class name ID of this d d m structure link
+	*/
+	@Override
+	public void setClassNameId(long classNameId) {
+		_ddmStructureLink.setClassNameId(classNameId);
+	}
+
+	/**
+	* Sets the class p k of this d d m structure link.
+	*
+	* @param classPK the class p k of this d d m structure link
+	*/
+	@Override
+	public void setClassPK(long classPK) {
+		_ddmStructureLink.setClassPK(classPK);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.model.BaseModel<?> baseModel) {
+		_ddmStructureLink.setExpandoBridgeAttributes(baseModel);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portlet.expando.model.ExpandoBridge expandoBridge) {
+		_ddmStructureLink.setExpandoBridgeAttributes(expandoBridge);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.service.ServiceContext serviceContext) {
+		_ddmStructureLink.setExpandoBridgeAttributes(serviceContext);
+	}
+
+	@Override
+	public void setNew(boolean n) {
+		_ddmStructureLink.setNew(n);
+	}
+
+	/**
+	* Sets the primary key of this d d m structure link.
+	*
+	* @param primaryKey the primary key of this d d m structure link
+	*/
+	@Override
+	public void setPrimaryKey(long primaryKey) {
+		_ddmStructureLink.setPrimaryKey(primaryKey);
+	}
+
+	@Override
+	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
+		_ddmStructureLink.setPrimaryKeyObj(primaryKeyObj);
+	}
+
+	/**
+	* Sets the structure ID of this d d m structure link.
+	*
+	* @param structureId the structure ID of this d d m structure link
+	*/
+	@Override
+	public void setStructureId(long structureId) {
+		_ddmStructureLink.setStructureId(structureId);
+	}
+
+	/**
+	* Sets the structure link ID of this d d m structure link.
+	*
+	* @param structureLinkId the structure link ID of this d d m structure link
+	*/
+	@Override
+	public void setStructureLinkId(long structureLinkId) {
+		_ddmStructureLink.setStructureLinkId(structureLinkId);
+	}
+
+	@Override
 	public com.liferay.portal.model.CacheModel<com.liferay.portlet.dynamicdatamapping.model.DDMStructureLink> toCacheModel() {
 		return _ddmStructureLink.toCacheModel();
 	}
 
+	@Override
 	public com.liferay.portlet.dynamicdatamapping.model.DDMStructureLink toEscapedModel() {
 		return new DDMStructureLinkWrapper(_ddmStructureLink.toEscapedModel());
 	}
@@ -247,32 +302,60 @@ public class DDMStructureLinkWrapper implements DDMStructureLink,
 		return _ddmStructureLink.toString();
 	}
 
+	@Override
+	public com.liferay.portlet.dynamicdatamapping.model.DDMStructureLink toUnescapedModel() {
+		return new DDMStructureLinkWrapper(_ddmStructureLink.toUnescapedModel());
+	}
+
+	@Override
 	public java.lang.String toXmlString() {
 		return _ddmStructureLink.toXmlString();
 	}
 
-	public void persist()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		_ddmStructureLink.persist();
-	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
 
-	public com.liferay.portlet.dynamicdatamapping.model.DDMStructure getStructure()
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return _ddmStructureLink.getStructure();
+		if (!(obj instanceof DDMStructureLinkWrapper)) {
+			return false;
+		}
+
+		DDMStructureLinkWrapper ddmStructureLinkWrapper = (DDMStructureLinkWrapper)obj;
+
+		if (Validator.equals(_ddmStructureLink,
+					ddmStructureLinkWrapper._ddmStructureLink)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
-	 * @deprecated Renamed to {@link #getWrappedModel}
+	 * @deprecated As of 6.1.0, replaced by {@link #getWrappedModel}
 	 */
+	@Deprecated
 	public DDMStructureLink getWrappedDDMStructureLink() {
 		return _ddmStructureLink;
 	}
 
+	@Override
 	public DDMStructureLink getWrappedModel() {
 		return _ddmStructureLink;
 	}
 
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return _ddmStructureLink.isEntityCacheEnabled();
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return _ddmStructureLink.isFinderCacheEnabled();
+	}
+
+	@Override
 	public void resetOriginalValues() {
 		_ddmStructureLink.resetOriginalValues();
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -62,12 +62,22 @@ public class DLProcessorRegistryUtil {
 			portletDataContext, fileEntry, importedFileEntry, fileEntryElement);
 	}
 
+	public static boolean isPreviewableSize(FileVersion fileVersion) {
+		return getDLProcessorRegistry().isPreviewableSize(fileVersion);
+	}
+
 	public static void register(DLProcessor dlProcessor) {
 		getDLProcessorRegistry().register(dlProcessor);
 	}
 
 	public static void trigger(FileEntry fileEntry, FileVersion fileVersion) {
 		getDLProcessorRegistry().trigger(fileEntry, fileVersion);
+	}
+
+	public static void trigger(
+		FileEntry fileEntry, FileVersion fileVersion, boolean trusted) {
+
+		getDLProcessorRegistry().trigger(fileEntry, fileVersion, trusted);
 	}
 
 	public static void unregister(DLProcessor dlProcessor) {

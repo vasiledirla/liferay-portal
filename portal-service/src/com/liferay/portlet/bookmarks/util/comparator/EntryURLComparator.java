@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,12 +15,13 @@
 package com.liferay.portlet.bookmarks.util.comparator;
 
 import com.liferay.portal.kernel.util.OrderByComparator;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portlet.bookmarks.model.BookmarksEntry;
 
 /**
  * @author Brian Wing Shun Chan
  */
-public class EntryURLComparator extends OrderByComparator {
+public class EntryURLComparator extends OrderByComparator<BookmarksEntry> {
 
 	public static final String ORDER_BY_ASC = "BookmarksEntry.url ASC";
 
@@ -37,12 +38,11 @@ public class EntryURLComparator extends OrderByComparator {
 	}
 
 	@Override
-	public int compare(Object obj1, Object obj2) {
-		BookmarksEntry entry1 = (BookmarksEntry)obj1;
-		BookmarksEntry entry2 = (BookmarksEntry)obj2;
+	public int compare(BookmarksEntry entry1, BookmarksEntry entry2) {
+		String url1 = StringUtil.toLowerCase(entry1.getUrl());
+		String url2 = StringUtil.toLowerCase(entry2.getUrl());
 
-		int value = entry1.getUrl().toLowerCase().compareTo(
-			entry2.getUrl().toLowerCase());
+		int value = url1.compareTo(url2);
 
 		if (_ascending) {
 			return value;

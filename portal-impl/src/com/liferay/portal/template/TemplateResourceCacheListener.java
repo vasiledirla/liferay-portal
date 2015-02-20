@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,12 +21,11 @@ import com.liferay.portal.kernel.cache.SingleVMPoolUtil;
 import com.liferay.portal.kernel.template.TemplateResource;
 import com.liferay.portal.kernel.util.StringPool;
 
-import java.io.Serializable;
-
 /**
  * @author Tina Tian
  */
-public class TemplateResourceCacheListener implements CacheListener {
+public class TemplateResourceCacheListener
+	implements CacheListener<String, TemplateResource> {
 
 	public TemplateResourceCacheListener(String templateResourceLoaderName) {
 		String cacheName = TemplateResource.class.getName();
@@ -37,61 +36,65 @@ public class TemplateResourceCacheListener implements CacheListener {
 		_portalCache = SingleVMPoolUtil.getCache(cacheName);
 	}
 
+	@Override
 	public void notifyEntryEvicted(
-			PortalCache portalCache, Serializable key, Object value)
+			PortalCache<String, TemplateResource> portalCache, String key,
+			TemplateResource templateResource)
 		throws PortalCacheException {
 
-		if (value != null) {
-			TemplateResource templateResource = (TemplateResource)value;
-
+		if (templateResource != null) {
 			_portalCache.remove(templateResource);
 		}
 	}
 
+	@Override
 	public void notifyEntryExpired(
-			PortalCache portalCache, Serializable key, Object value)
+			PortalCache<String, TemplateResource> portalCache, String key,
+			TemplateResource templateResource)
 		throws PortalCacheException {
 
-		if (value != null) {
-			TemplateResource templateResource = (TemplateResource)value;
-
+		if (templateResource != null) {
 			_portalCache.remove(templateResource);
 		}
 	}
 
+	@Override
 	public void notifyEntryPut(
-			PortalCache portalCache, Serializable key, Object value)
+			PortalCache<String, TemplateResource> portalCache, String key,
+			TemplateResource templateResource)
 		throws PortalCacheException {
 	}
 
+	@Override
 	public void notifyEntryRemoved(
-			PortalCache portalCache, Serializable key, Object value)
+			PortalCache<String, TemplateResource> portalCache, String key,
+			TemplateResource templateResource)
 		throws PortalCacheException {
 
-		if (value != null) {
-			TemplateResource templateResource = (TemplateResource)value;
-
+		if (templateResource != null) {
 			_portalCache.remove(templateResource);
 		}
 	}
 
+	@Override
 	public void notifyEntryUpdated(
-			PortalCache portalCache, Serializable key, Object value)
+			PortalCache<String, TemplateResource> portalCache, String key,
+			TemplateResource templateResource)
 		throws PortalCacheException {
 
-		if (value != null) {
-			TemplateResource templateResource = (TemplateResource)value;
-
+		if (templateResource != null) {
 			_portalCache.remove(templateResource);
 		}
 	}
 
-	public void notifyRemoveAll(PortalCache portalCache)
+	@Override
+	public void notifyRemoveAll(
+			PortalCache<String, TemplateResource> portalCache)
 		throws PortalCacheException {
 
 		_portalCache.removeAll();
 	}
 
-	private PortalCache _portalCache;
+	private PortalCache<TemplateResource, ?> _portalCache;
 
 }

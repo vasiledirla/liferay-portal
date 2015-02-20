@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,9 +14,13 @@
 
 package com.liferay.portal.kernel.template;
 
+import com.liferay.portal.kernel.configuration.Filter;
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
+import com.liferay.portal.kernel.util.PropsUtil;
+import com.liferay.portal.kernel.util.Validator;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,29 +50,56 @@ public class TemplateManagerUtil {
 		}
 	}
 
-	public static Template getTemplate(
-			String templateManagerName, TemplateResource templateResource,
-			TemplateContextType templateContextType)
-		throws TemplateException {
+	public static Set<String> getSupportedLanguageTypes(String propertyKey) {
+		Set<String> supportedLanguageTypes = _supportedLanguageTypes.get(
+			propertyKey);
 
-		TemplateManager templateManager = _getTemplateManager(
-			templateManagerName);
+		if (supportedLanguageTypes != null) {
+			return supportedLanguageTypes;
+		}
 
-		return templateManager.getTemplate(
-			templateResource, templateContextType);
+		Map<String, TemplateManager> templateManagers = _getTemplateManagers();
+
+		supportedLanguageTypes = new HashSet<String>();
+
+		for (String templateManagerName : templateManagers.keySet()) {
+			String content = PropsUtil.get(
+				propertyKey, new Filter(templateManagerName));
+
+			if (Validator.isNotNull(content)) {
+				supportedLanguageTypes.add(templateManagerName);
+			}
+		}
+
+		supportedLanguageTypes = Collections.unmodifiableSet(
+			supportedLanguageTypes);
+
+		_supportedLanguageTypes.put(propertyKey, supportedLanguageTypes);
+
+		return supportedLanguageTypes;
 	}
 
 	public static Template getTemplate(
 			String templateManagerName, TemplateResource templateResource,
-			TemplateResource errorTemplateResource,
-			TemplateContextType templateContextType)
+			boolean restricted)
+		throws TemplateException {
+
+		TemplateManager templateManager = _getTemplateManager(
+			templateManagerName);
+
+		return templateManager.getTemplate(templateResource, restricted);
+	}
+
+	public static Template getTemplate(
+			String templateManagerName, TemplateResource templateResource,
+			TemplateResource errorTemplateResource, boolean restricted)
 		throws TemplateException {
 
 		TemplateManager templateManager = _getTemplateManager(
 			templateManagerName);
 
 		return templateManager.getTemplate(
-			templateResource, errorTemplateResource, templateContextType);
+			templateResource, errorTemplateResource, restricted);
 	}
 
 	public static TemplateManager getTemplateManager(
@@ -79,9 +110,7 @@ public class TemplateManagerUtil {
 		return templateManagers.get(templateManagerName);
 	}
 
-	public static Set<String> getTemplateManagerNames(
-		String templateManagerName) {
-
+	public static Set<String> getTemplateManagerNames() {
 		Map<String, TemplateManager> templateManagers = _getTemplateManagers();
 
 		return templateManagers.keySet();
@@ -160,6 +189,8 @@ public class TemplateManagerUtil {
 		return _templateManagers;
 	}
 
+	private static Map<String, Set<String>> _supportedLanguageTypes =
+		new ConcurrentHashMap<String, Set<String>>();
 	private static Map<String, TemplateManager> _templateManagers =
 		new ConcurrentHashMap<String, TemplateManager>();
 

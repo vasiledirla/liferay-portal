@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,9 @@
 
 package com.liferay.portlet.documentlibrary.model;
 
+import aQute.bnd.annotation.ProviderType;
+
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.ModelWrapper;
 
 import java.util.Date;
@@ -25,23 +28,27 @@ import java.util.Map;
  * This class is a wrapper for {@link DLFileRank}.
  * </p>
  *
- * @author    Brian Wing Shun Chan
- * @see       DLFileRank
+ * @author Brian Wing Shun Chan
+ * @see DLFileRank
  * @generated
  */
+@ProviderType
 public class DLFileRankWrapper implements DLFileRank, ModelWrapper<DLFileRank> {
 	public DLFileRankWrapper(DLFileRank dlFileRank) {
 		_dlFileRank = dlFileRank;
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return DLFileRank.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return DLFileRank.class.getName();
 	}
 
+	@Override
 	public Map<String, Object> getModelAttributes() {
 		Map<String, Object> attributes = new HashMap<String, Object>();
 
@@ -56,6 +63,7 @@ public class DLFileRankWrapper implements DLFileRank, ModelWrapper<DLFileRank> {
 		return attributes;
 	}
 
+	@Override
 	public void setModelAttributes(Map<String, Object> attributes) {
 		Long fileRankId = (Long)attributes.get("fileRankId");
 
@@ -100,150 +108,15 @@ public class DLFileRankWrapper implements DLFileRank, ModelWrapper<DLFileRank> {
 		}
 	}
 
-	/**
-	* Returns the primary key of this document library file rank.
-	*
-	* @return the primary key of this document library file rank
-	*/
-	public long getPrimaryKey() {
-		return _dlFileRank.getPrimaryKey();
+	@Override
+	public java.lang.Object clone() {
+		return new DLFileRankWrapper((DLFileRank)_dlFileRank.clone());
 	}
 
-	/**
-	* Sets the primary key of this document library file rank.
-	*
-	* @param primaryKey the primary key of this document library file rank
-	*/
-	public void setPrimaryKey(long primaryKey) {
-		_dlFileRank.setPrimaryKey(primaryKey);
-	}
-
-	/**
-	* Returns the file rank ID of this document library file rank.
-	*
-	* @return the file rank ID of this document library file rank
-	*/
-	public long getFileRankId() {
-		return _dlFileRank.getFileRankId();
-	}
-
-	/**
-	* Sets the file rank ID of this document library file rank.
-	*
-	* @param fileRankId the file rank ID of this document library file rank
-	*/
-	public void setFileRankId(long fileRankId) {
-		_dlFileRank.setFileRankId(fileRankId);
-	}
-
-	/**
-	* Returns the group ID of this document library file rank.
-	*
-	* @return the group ID of this document library file rank
-	*/
-	public long getGroupId() {
-		return _dlFileRank.getGroupId();
-	}
-
-	/**
-	* Sets the group ID of this document library file rank.
-	*
-	* @param groupId the group ID of this document library file rank
-	*/
-	public void setGroupId(long groupId) {
-		_dlFileRank.setGroupId(groupId);
-	}
-
-	/**
-	* Returns the company ID of this document library file rank.
-	*
-	* @return the company ID of this document library file rank
-	*/
-	public long getCompanyId() {
-		return _dlFileRank.getCompanyId();
-	}
-
-	/**
-	* Sets the company ID of this document library file rank.
-	*
-	* @param companyId the company ID of this document library file rank
-	*/
-	public void setCompanyId(long companyId) {
-		_dlFileRank.setCompanyId(companyId);
-	}
-
-	/**
-	* Returns the user ID of this document library file rank.
-	*
-	* @return the user ID of this document library file rank
-	*/
-	public long getUserId() {
-		return _dlFileRank.getUserId();
-	}
-
-	/**
-	* Sets the user ID of this document library file rank.
-	*
-	* @param userId the user ID of this document library file rank
-	*/
-	public void setUserId(long userId) {
-		_dlFileRank.setUserId(userId);
-	}
-
-	/**
-	* Returns the user uuid of this document library file rank.
-	*
-	* @return the user uuid of this document library file rank
-	* @throws SystemException if a system exception occurred
-	*/
-	public java.lang.String getUserUuid()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return _dlFileRank.getUserUuid();
-	}
-
-	/**
-	* Sets the user uuid of this document library file rank.
-	*
-	* @param userUuid the user uuid of this document library file rank
-	*/
-	public void setUserUuid(java.lang.String userUuid) {
-		_dlFileRank.setUserUuid(userUuid);
-	}
-
-	/**
-	* Returns the create date of this document library file rank.
-	*
-	* @return the create date of this document library file rank
-	*/
-	public java.util.Date getCreateDate() {
-		return _dlFileRank.getCreateDate();
-	}
-
-	/**
-	* Sets the create date of this document library file rank.
-	*
-	* @param createDate the create date of this document library file rank
-	*/
-	public void setCreateDate(java.util.Date createDate) {
-		_dlFileRank.setCreateDate(createDate);
-	}
-
-	/**
-	* Returns the file entry ID of this document library file rank.
-	*
-	* @return the file entry ID of this document library file rank
-	*/
-	public long getFileEntryId() {
-		return _dlFileRank.getFileEntryId();
-	}
-
-	/**
-	* Sets the file entry ID of this document library file rank.
-	*
-	* @param fileEntryId the file entry ID of this document library file rank
-	*/
-	public void setFileEntryId(long fileEntryId) {
-		_dlFileRank.setFileEntryId(fileEntryId);
+	@Override
+	public int compareTo(
+		com.liferay.portlet.documentlibrary.model.DLFileRank dlFileRank) {
+		return _dlFileRank.compareTo(dlFileRank);
 	}
 
 	/**
@@ -251,73 +124,99 @@ public class DLFileRankWrapper implements DLFileRank, ModelWrapper<DLFileRank> {
 	*
 	* @return the active of this document library file rank
 	*/
+	@Override
 	public boolean getActive() {
 		return _dlFileRank.getActive();
 	}
 
 	/**
-	* Returns <code>true</code> if this document library file rank is active.
+	* Returns the company ID of this document library file rank.
 	*
-	* @return <code>true</code> if this document library file rank is active; <code>false</code> otherwise
+	* @return the company ID of this document library file rank
 	*/
-	public boolean isActive() {
-		return _dlFileRank.isActive();
+	@Override
+	public long getCompanyId() {
+		return _dlFileRank.getCompanyId();
 	}
 
 	/**
-	* Sets whether this document library file rank is active.
+	* Returns the create date of this document library file rank.
 	*
-	* @param active the active of this document library file rank
+	* @return the create date of this document library file rank
 	*/
-	public void setActive(boolean active) {
-		_dlFileRank.setActive(active);
+	@Override
+	public java.util.Date getCreateDate() {
+		return _dlFileRank.getCreateDate();
 	}
 
-	public boolean isNew() {
-		return _dlFileRank.isNew();
-	}
-
-	public void setNew(boolean n) {
-		_dlFileRank.setNew(n);
-	}
-
-	public boolean isCachedModel() {
-		return _dlFileRank.isCachedModel();
-	}
-
-	public void setCachedModel(boolean cachedModel) {
-		_dlFileRank.setCachedModel(cachedModel);
-	}
-
-	public boolean isEscapedModel() {
-		return _dlFileRank.isEscapedModel();
-	}
-
-	public java.io.Serializable getPrimaryKeyObj() {
-		return _dlFileRank.getPrimaryKeyObj();
-	}
-
-	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
-		_dlFileRank.setPrimaryKeyObj(primaryKeyObj);
-	}
-
+	@Override
 	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
 		return _dlFileRank.getExpandoBridge();
 	}
 
-	public void setExpandoBridgeAttributes(
-		com.liferay.portal.service.ServiceContext serviceContext) {
-		_dlFileRank.setExpandoBridgeAttributes(serviceContext);
+	/**
+	* Returns the file entry ID of this document library file rank.
+	*
+	* @return the file entry ID of this document library file rank
+	*/
+	@Override
+	public long getFileEntryId() {
+		return _dlFileRank.getFileEntryId();
+	}
+
+	/**
+	* Returns the file rank ID of this document library file rank.
+	*
+	* @return the file rank ID of this document library file rank
+	*/
+	@Override
+	public long getFileRankId() {
+		return _dlFileRank.getFileRankId();
+	}
+
+	/**
+	* Returns the group ID of this document library file rank.
+	*
+	* @return the group ID of this document library file rank
+	*/
+	@Override
+	public long getGroupId() {
+		return _dlFileRank.getGroupId();
+	}
+
+	/**
+	* Returns the primary key of this document library file rank.
+	*
+	* @return the primary key of this document library file rank
+	*/
+	@Override
+	public long getPrimaryKey() {
+		return _dlFileRank.getPrimaryKey();
 	}
 
 	@Override
-	public java.lang.Object clone() {
-		return new DLFileRankWrapper((DLFileRank)_dlFileRank.clone());
+	public java.io.Serializable getPrimaryKeyObj() {
+		return _dlFileRank.getPrimaryKeyObj();
 	}
 
-	public int compareTo(
-		com.liferay.portlet.documentlibrary.model.DLFileRank dlFileRank) {
-		return _dlFileRank.compareTo(dlFileRank);
+	/**
+	* Returns the user ID of this document library file rank.
+	*
+	* @return the user ID of this document library file rank
+	*/
+	@Override
+	public long getUserId() {
+		return _dlFileRank.getUserId();
+	}
+
+	/**
+	* Returns the user uuid of this document library file rank.
+	*
+	* @return the user uuid of this document library file rank
+	*/
+	@Override
+	public java.lang.String getUserUuid() {
+		return _dlFileRank.getUserUuid();
 	}
 
 	@Override
@@ -325,10 +224,165 @@ public class DLFileRankWrapper implements DLFileRank, ModelWrapper<DLFileRank> {
 		return _dlFileRank.hashCode();
 	}
 
+	/**
+	* Returns <code>true</code> if this document library file rank is active.
+	*
+	* @return <code>true</code> if this document library file rank is active; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isActive() {
+		return _dlFileRank.isActive();
+	}
+
+	@Override
+	public boolean isCachedModel() {
+		return _dlFileRank.isCachedModel();
+	}
+
+	@Override
+	public boolean isEscapedModel() {
+		return _dlFileRank.isEscapedModel();
+	}
+
+	@Override
+	public boolean isNew() {
+		return _dlFileRank.isNew();
+	}
+
+	@Override
+	public void persist() {
+		_dlFileRank.persist();
+	}
+
+	/**
+	* Sets whether this document library file rank is active.
+	*
+	* @param active the active of this document library file rank
+	*/
+	@Override
+	public void setActive(boolean active) {
+		_dlFileRank.setActive(active);
+	}
+
+	@Override
+	public void setCachedModel(boolean cachedModel) {
+		_dlFileRank.setCachedModel(cachedModel);
+	}
+
+	/**
+	* Sets the company ID of this document library file rank.
+	*
+	* @param companyId the company ID of this document library file rank
+	*/
+	@Override
+	public void setCompanyId(long companyId) {
+		_dlFileRank.setCompanyId(companyId);
+	}
+
+	/**
+	* Sets the create date of this document library file rank.
+	*
+	* @param createDate the create date of this document library file rank
+	*/
+	@Override
+	public void setCreateDate(java.util.Date createDate) {
+		_dlFileRank.setCreateDate(createDate);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.model.BaseModel<?> baseModel) {
+		_dlFileRank.setExpandoBridgeAttributes(baseModel);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portlet.expando.model.ExpandoBridge expandoBridge) {
+		_dlFileRank.setExpandoBridgeAttributes(expandoBridge);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.service.ServiceContext serviceContext) {
+		_dlFileRank.setExpandoBridgeAttributes(serviceContext);
+	}
+
+	/**
+	* Sets the file entry ID of this document library file rank.
+	*
+	* @param fileEntryId the file entry ID of this document library file rank
+	*/
+	@Override
+	public void setFileEntryId(long fileEntryId) {
+		_dlFileRank.setFileEntryId(fileEntryId);
+	}
+
+	/**
+	* Sets the file rank ID of this document library file rank.
+	*
+	* @param fileRankId the file rank ID of this document library file rank
+	*/
+	@Override
+	public void setFileRankId(long fileRankId) {
+		_dlFileRank.setFileRankId(fileRankId);
+	}
+
+	/**
+	* Sets the group ID of this document library file rank.
+	*
+	* @param groupId the group ID of this document library file rank
+	*/
+	@Override
+	public void setGroupId(long groupId) {
+		_dlFileRank.setGroupId(groupId);
+	}
+
+	@Override
+	public void setNew(boolean n) {
+		_dlFileRank.setNew(n);
+	}
+
+	/**
+	* Sets the primary key of this document library file rank.
+	*
+	* @param primaryKey the primary key of this document library file rank
+	*/
+	@Override
+	public void setPrimaryKey(long primaryKey) {
+		_dlFileRank.setPrimaryKey(primaryKey);
+	}
+
+	@Override
+	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
+		_dlFileRank.setPrimaryKeyObj(primaryKeyObj);
+	}
+
+	/**
+	* Sets the user ID of this document library file rank.
+	*
+	* @param userId the user ID of this document library file rank
+	*/
+	@Override
+	public void setUserId(long userId) {
+		_dlFileRank.setUserId(userId);
+	}
+
+	/**
+	* Sets the user uuid of this document library file rank.
+	*
+	* @param userUuid the user uuid of this document library file rank
+	*/
+	@Override
+	public void setUserUuid(java.lang.String userUuid) {
+		_dlFileRank.setUserUuid(userUuid);
+	}
+
+	@Override
 	public com.liferay.portal.model.CacheModel<com.liferay.portlet.documentlibrary.model.DLFileRank> toCacheModel() {
 		return _dlFileRank.toCacheModel();
 	}
 
+	@Override
 	public com.liferay.portlet.documentlibrary.model.DLFileRank toEscapedModel() {
 		return new DLFileRankWrapper(_dlFileRank.toEscapedModel());
 	}
@@ -338,26 +392,59 @@ public class DLFileRankWrapper implements DLFileRank, ModelWrapper<DLFileRank> {
 		return _dlFileRank.toString();
 	}
 
+	@Override
+	public com.liferay.portlet.documentlibrary.model.DLFileRank toUnescapedModel() {
+		return new DLFileRankWrapper(_dlFileRank.toUnescapedModel());
+	}
+
+	@Override
 	public java.lang.String toXmlString() {
 		return _dlFileRank.toXmlString();
 	}
 
-	public void persist()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		_dlFileRank.persist();
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof DLFileRankWrapper)) {
+			return false;
+		}
+
+		DLFileRankWrapper dlFileRankWrapper = (DLFileRankWrapper)obj;
+
+		if (Validator.equals(_dlFileRank, dlFileRankWrapper._dlFileRank)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
-	 * @deprecated Renamed to {@link #getWrappedModel}
+	 * @deprecated As of 6.1.0, replaced by {@link #getWrappedModel}
 	 */
+	@Deprecated
 	public DLFileRank getWrappedDLFileRank() {
 		return _dlFileRank;
 	}
 
+	@Override
 	public DLFileRank getWrappedModel() {
 		return _dlFileRank;
 	}
 
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return _dlFileRank.isEntityCacheEnabled();
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return _dlFileRank.isFinderCacheEnabled();
+	}
+
+	@Override
 	public void resetOriginalValues() {
 		_dlFileRank.resetOriginalValues();
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,10 @@
 
 package com.liferay.portlet.blogs.model;
 
+import aQute.bnd.annotation.ProviderType;
+
+import com.liferay.portal.kernel.lar.StagedModelType;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.ModelWrapper;
 
 import java.util.Date;
@@ -25,23 +29,27 @@ import java.util.Map;
  * This class is a wrapper for {@link BlogsEntry}.
  * </p>
  *
- * @author    Brian Wing Shun Chan
- * @see       BlogsEntry
+ * @author Brian Wing Shun Chan
+ * @see BlogsEntry
  * @generated
  */
+@ProviderType
 public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	public BlogsEntryWrapper(BlogsEntry blogsEntry) {
 		_blogsEntry = blogsEntry;
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return BlogsEntry.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return BlogsEntry.class.getName();
 	}
 
+	@Override
 	public Map<String, Object> getModelAttributes() {
 		Map<String, Object> attributes = new HashMap<String, Object>();
 
@@ -54,6 +62,7 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 		attributes.put("createDate", getCreateDate());
 		attributes.put("modifiedDate", getModifiedDate());
 		attributes.put("title", getTitle());
+		attributes.put("subtitle", getSubtitle());
 		attributes.put("urlTitle", getUrlTitle());
 		attributes.put("description", getDescription());
 		attributes.put("content", getContent());
@@ -72,6 +81,7 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 		return attributes;
 	}
 
+	@Override
 	public void setModelAttributes(Map<String, Object> attributes) {
 		String uuid = (String)attributes.get("uuid");
 
@@ -125,6 +135,12 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 
 		if (title != null) {
 			setTitle(title);
+		}
+
+		String subtitle = (String)attributes.get("subtitle");
+
+		if (subtitle != null) {
+			setSubtitle(subtitle);
 		}
 
 		String urlTitle = (String)attributes.get("urlTitle");
@@ -212,276 +228,14 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 		}
 	}
 
-	/**
-	* Returns the primary key of this blogs entry.
-	*
-	* @return the primary key of this blogs entry
-	*/
-	public long getPrimaryKey() {
-		return _blogsEntry.getPrimaryKey();
+	@Override
+	public java.lang.Object clone() {
+		return new BlogsEntryWrapper((BlogsEntry)_blogsEntry.clone());
 	}
 
-	/**
-	* Sets the primary key of this blogs entry.
-	*
-	* @param primaryKey the primary key of this blogs entry
-	*/
-	public void setPrimaryKey(long primaryKey) {
-		_blogsEntry.setPrimaryKey(primaryKey);
-	}
-
-	/**
-	* Returns the uuid of this blogs entry.
-	*
-	* @return the uuid of this blogs entry
-	*/
-	public java.lang.String getUuid() {
-		return _blogsEntry.getUuid();
-	}
-
-	/**
-	* Sets the uuid of this blogs entry.
-	*
-	* @param uuid the uuid of this blogs entry
-	*/
-	public void setUuid(java.lang.String uuid) {
-		_blogsEntry.setUuid(uuid);
-	}
-
-	/**
-	* Returns the entry ID of this blogs entry.
-	*
-	* @return the entry ID of this blogs entry
-	*/
-	public long getEntryId() {
-		return _blogsEntry.getEntryId();
-	}
-
-	/**
-	* Sets the entry ID of this blogs entry.
-	*
-	* @param entryId the entry ID of this blogs entry
-	*/
-	public void setEntryId(long entryId) {
-		_blogsEntry.setEntryId(entryId);
-	}
-
-	/**
-	* Returns the group ID of this blogs entry.
-	*
-	* @return the group ID of this blogs entry
-	*/
-	public long getGroupId() {
-		return _blogsEntry.getGroupId();
-	}
-
-	/**
-	* Sets the group ID of this blogs entry.
-	*
-	* @param groupId the group ID of this blogs entry
-	*/
-	public void setGroupId(long groupId) {
-		_blogsEntry.setGroupId(groupId);
-	}
-
-	/**
-	* Returns the company ID of this blogs entry.
-	*
-	* @return the company ID of this blogs entry
-	*/
-	public long getCompanyId() {
-		return _blogsEntry.getCompanyId();
-	}
-
-	/**
-	* Sets the company ID of this blogs entry.
-	*
-	* @param companyId the company ID of this blogs entry
-	*/
-	public void setCompanyId(long companyId) {
-		_blogsEntry.setCompanyId(companyId);
-	}
-
-	/**
-	* Returns the user ID of this blogs entry.
-	*
-	* @return the user ID of this blogs entry
-	*/
-	public long getUserId() {
-		return _blogsEntry.getUserId();
-	}
-
-	/**
-	* Sets the user ID of this blogs entry.
-	*
-	* @param userId the user ID of this blogs entry
-	*/
-	public void setUserId(long userId) {
-		_blogsEntry.setUserId(userId);
-	}
-
-	/**
-	* Returns the user uuid of this blogs entry.
-	*
-	* @return the user uuid of this blogs entry
-	* @throws SystemException if a system exception occurred
-	*/
-	public java.lang.String getUserUuid()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return _blogsEntry.getUserUuid();
-	}
-
-	/**
-	* Sets the user uuid of this blogs entry.
-	*
-	* @param userUuid the user uuid of this blogs entry
-	*/
-	public void setUserUuid(java.lang.String userUuid) {
-		_blogsEntry.setUserUuid(userUuid);
-	}
-
-	/**
-	* Returns the user name of this blogs entry.
-	*
-	* @return the user name of this blogs entry
-	*/
-	public java.lang.String getUserName() {
-		return _blogsEntry.getUserName();
-	}
-
-	/**
-	* Sets the user name of this blogs entry.
-	*
-	* @param userName the user name of this blogs entry
-	*/
-	public void setUserName(java.lang.String userName) {
-		_blogsEntry.setUserName(userName);
-	}
-
-	/**
-	* Returns the create date of this blogs entry.
-	*
-	* @return the create date of this blogs entry
-	*/
-	public java.util.Date getCreateDate() {
-		return _blogsEntry.getCreateDate();
-	}
-
-	/**
-	* Sets the create date of this blogs entry.
-	*
-	* @param createDate the create date of this blogs entry
-	*/
-	public void setCreateDate(java.util.Date createDate) {
-		_blogsEntry.setCreateDate(createDate);
-	}
-
-	/**
-	* Returns the modified date of this blogs entry.
-	*
-	* @return the modified date of this blogs entry
-	*/
-	public java.util.Date getModifiedDate() {
-		return _blogsEntry.getModifiedDate();
-	}
-
-	/**
-	* Sets the modified date of this blogs entry.
-	*
-	* @param modifiedDate the modified date of this blogs entry
-	*/
-	public void setModifiedDate(java.util.Date modifiedDate) {
-		_blogsEntry.setModifiedDate(modifiedDate);
-	}
-
-	/**
-	* Returns the title of this blogs entry.
-	*
-	* @return the title of this blogs entry
-	*/
-	public java.lang.String getTitle() {
-		return _blogsEntry.getTitle();
-	}
-
-	/**
-	* Sets the title of this blogs entry.
-	*
-	* @param title the title of this blogs entry
-	*/
-	public void setTitle(java.lang.String title) {
-		_blogsEntry.setTitle(title);
-	}
-
-	/**
-	* Returns the url title of this blogs entry.
-	*
-	* @return the url title of this blogs entry
-	*/
-	public java.lang.String getUrlTitle() {
-		return _blogsEntry.getUrlTitle();
-	}
-
-	/**
-	* Sets the url title of this blogs entry.
-	*
-	* @param urlTitle the url title of this blogs entry
-	*/
-	public void setUrlTitle(java.lang.String urlTitle) {
-		_blogsEntry.setUrlTitle(urlTitle);
-	}
-
-	/**
-	* Returns the description of this blogs entry.
-	*
-	* @return the description of this blogs entry
-	*/
-	public java.lang.String getDescription() {
-		return _blogsEntry.getDescription();
-	}
-
-	/**
-	* Sets the description of this blogs entry.
-	*
-	* @param description the description of this blogs entry
-	*/
-	public void setDescription(java.lang.String description) {
-		_blogsEntry.setDescription(description);
-	}
-
-	/**
-	* Returns the content of this blogs entry.
-	*
-	* @return the content of this blogs entry
-	*/
-	public java.lang.String getContent() {
-		return _blogsEntry.getContent();
-	}
-
-	/**
-	* Sets the content of this blogs entry.
-	*
-	* @param content the content of this blogs entry
-	*/
-	public void setContent(java.lang.String content) {
-		_blogsEntry.setContent(content);
-	}
-
-	/**
-	* Returns the display date of this blogs entry.
-	*
-	* @return the display date of this blogs entry
-	*/
-	public java.util.Date getDisplayDate() {
-		return _blogsEntry.getDisplayDate();
-	}
-
-	/**
-	* Sets the display date of this blogs entry.
-	*
-	* @param displayDate the display date of this blogs entry
-	*/
-	public void setDisplayDate(java.util.Date displayDate) {
-		_blogsEntry.setDisplayDate(displayDate);
+	@Override
+	public int compareTo(com.liferay.portlet.blogs.model.BlogsEntry blogsEntry) {
+		return _blogsEntry.compareTo(blogsEntry);
 	}
 
 	/**
@@ -489,26 +243,9 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the allow pingbacks of this blogs entry
 	*/
+	@Override
 	public boolean getAllowPingbacks() {
 		return _blogsEntry.getAllowPingbacks();
-	}
-
-	/**
-	* Returns <code>true</code> if this blogs entry is allow pingbacks.
-	*
-	* @return <code>true</code> if this blogs entry is allow pingbacks; <code>false</code> otherwise
-	*/
-	public boolean isAllowPingbacks() {
-		return _blogsEntry.isAllowPingbacks();
-	}
-
-	/**
-	* Sets whether this blogs entry is allow pingbacks.
-	*
-	* @param allowPingbacks the allow pingbacks of this blogs entry
-	*/
-	public void setAllowPingbacks(boolean allowPingbacks) {
-		_blogsEntry.setAllowPingbacks(allowPingbacks);
 	}
 
 	/**
@@ -516,44 +253,124 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the allow trackbacks of this blogs entry
 	*/
+	@Override
 	public boolean getAllowTrackbacks() {
 		return _blogsEntry.getAllowTrackbacks();
 	}
 
 	/**
-	* Returns <code>true</code> if this blogs entry is allow trackbacks.
-	*
-	* @return <code>true</code> if this blogs entry is allow trackbacks; <code>false</code> otherwise
+	* @deprecated As of 6.1.0, replaced by {@link #isApproved()}
 	*/
-	public boolean isAllowTrackbacks() {
-		return _blogsEntry.isAllowTrackbacks();
+	@Deprecated
+	@Override
+	public boolean getApproved() {
+		return _blogsEntry.getApproved();
 	}
 
 	/**
-	* Sets whether this blogs entry is allow trackbacks.
+	* Returns the company ID of this blogs entry.
 	*
-	* @param allowTrackbacks the allow trackbacks of this blogs entry
+	* @return the company ID of this blogs entry
 	*/
-	public void setAllowTrackbacks(boolean allowTrackbacks) {
-		_blogsEntry.setAllowTrackbacks(allowTrackbacks);
+	@Override
+	public long getCompanyId() {
+		return _blogsEntry.getCompanyId();
 	}
 
 	/**
-	* Returns the trackbacks of this blogs entry.
+	* Returns the content of this blogs entry.
 	*
-	* @return the trackbacks of this blogs entry
+	* @return the content of this blogs entry
 	*/
-	public java.lang.String getTrackbacks() {
-		return _blogsEntry.getTrackbacks();
+	@Override
+	public java.lang.String getContent() {
+		return _blogsEntry.getContent();
 	}
 
 	/**
-	* Sets the trackbacks of this blogs entry.
+	* Returns the create date of this blogs entry.
 	*
-	* @param trackbacks the trackbacks of this blogs entry
+	* @return the create date of this blogs entry
 	*/
-	public void setTrackbacks(java.lang.String trackbacks) {
-		_blogsEntry.setTrackbacks(trackbacks);
+	@Override
+	public java.util.Date getCreateDate() {
+		return _blogsEntry.getCreateDate();
+	}
+
+	/**
+	* Returns the description of this blogs entry.
+	*
+	* @return the description of this blogs entry
+	*/
+	@Override
+	public java.lang.String getDescription() {
+		return _blogsEntry.getDescription();
+	}
+
+	/**
+	* Returns the display date of this blogs entry.
+	*
+	* @return the display date of this blogs entry
+	*/
+	@Override
+	public java.util.Date getDisplayDate() {
+		return _blogsEntry.getDisplayDate();
+	}
+
+	/**
+	* Returns the entry ID of this blogs entry.
+	*
+	* @return the entry ID of this blogs entry
+	*/
+	@Override
+	public long getEntryId() {
+		return _blogsEntry.getEntryId();
+	}
+
+	@Override
+	public java.lang.String getEntryImageURL(
+		com.liferay.portal.theme.ThemeDisplay themeDisplay) {
+		return _blogsEntry.getEntryImageURL(themeDisplay);
+	}
+
+	@Override
+	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
+		return _blogsEntry.getExpandoBridge();
+	}
+
+	/**
+	* Returns the group ID of this blogs entry.
+	*
+	* @return the group ID of this blogs entry
+	*/
+	@Override
+	public long getGroupId() {
+		return _blogsEntry.getGroupId();
+	}
+
+	/**
+	* Returns the modified date of this blogs entry.
+	*
+	* @return the modified date of this blogs entry
+	*/
+	@Override
+	public java.util.Date getModifiedDate() {
+		return _blogsEntry.getModifiedDate();
+	}
+
+	/**
+	* Returns the primary key of this blogs entry.
+	*
+	* @return the primary key of this blogs entry
+	*/
+	@Override
+	public long getPrimaryKey() {
+		return _blogsEntry.getPrimaryKey();
+	}
+
+	@Override
+	public java.io.Serializable getPrimaryKeyObj() {
+		return _blogsEntry.getPrimaryKeyObj();
 	}
 
 	/**
@@ -561,26 +378,9 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the small image of this blogs entry
 	*/
+	@Override
 	public boolean getSmallImage() {
 		return _blogsEntry.getSmallImage();
-	}
-
-	/**
-	* Returns <code>true</code> if this blogs entry is small image.
-	*
-	* @return <code>true</code> if this blogs entry is small image; <code>false</code> otherwise
-	*/
-	public boolean isSmallImage() {
-		return _blogsEntry.isSmallImage();
-	}
-
-	/**
-	* Sets whether this blogs entry is small image.
-	*
-	* @param smallImage the small image of this blogs entry
-	*/
-	public void setSmallImage(boolean smallImage) {
-		_blogsEntry.setSmallImage(smallImage);
 	}
 
 	/**
@@ -588,17 +388,15 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the small image ID of this blogs entry
 	*/
+	@Override
 	public long getSmallImageId() {
 		return _blogsEntry.getSmallImageId();
 	}
 
-	/**
-	* Sets the small image ID of this blogs entry.
-	*
-	* @param smallImageId the small image ID of this blogs entry
-	*/
-	public void setSmallImageId(long smallImageId) {
-		_blogsEntry.setSmallImageId(smallImageId);
+	@Override
+	public java.lang.String getSmallImageType()
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return _blogsEntry.getSmallImageType();
 	}
 
 	/**
@@ -606,17 +404,9 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the small image u r l of this blogs entry
 	*/
+	@Override
 	public java.lang.String getSmallImageURL() {
 		return _blogsEntry.getSmallImageURL();
-	}
-
-	/**
-	* Sets the small image u r l of this blogs entry.
-	*
-	* @param smallImageURL the small image u r l of this blogs entry
-	*/
-	public void setSmallImageURL(java.lang.String smallImageURL) {
-		_blogsEntry.setSmallImageURL(smallImageURL);
 	}
 
 	/**
@@ -624,17 +414,9 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the status of this blogs entry
 	*/
+	@Override
 	public int getStatus() {
 		return _blogsEntry.getStatus();
-	}
-
-	/**
-	* Sets the status of this blogs entry.
-	*
-	* @param status the status of this blogs entry
-	*/
-	public void setStatus(int status) {
-		_blogsEntry.setStatus(status);
 	}
 
 	/**
@@ -642,37 +424,9 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the status by user ID of this blogs entry
 	*/
+	@Override
 	public long getStatusByUserId() {
 		return _blogsEntry.getStatusByUserId();
-	}
-
-	/**
-	* Sets the status by user ID of this blogs entry.
-	*
-	* @param statusByUserId the status by user ID of this blogs entry
-	*/
-	public void setStatusByUserId(long statusByUserId) {
-		_blogsEntry.setStatusByUserId(statusByUserId);
-	}
-
-	/**
-	* Returns the status by user uuid of this blogs entry.
-	*
-	* @return the status by user uuid of this blogs entry
-	* @throws SystemException if a system exception occurred
-	*/
-	public java.lang.String getStatusByUserUuid()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return _blogsEntry.getStatusByUserUuid();
-	}
-
-	/**
-	* Sets the status by user uuid of this blogs entry.
-	*
-	* @param statusByUserUuid the status by user uuid of this blogs entry
-	*/
-	public void setStatusByUserUuid(java.lang.String statusByUserUuid) {
-		_blogsEntry.setStatusByUserUuid(statusByUserUuid);
 	}
 
 	/**
@@ -680,17 +434,19 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the status by user name of this blogs entry
 	*/
+	@Override
 	public java.lang.String getStatusByUserName() {
 		return _blogsEntry.getStatusByUserName();
 	}
 
 	/**
-	* Sets the status by user name of this blogs entry.
+	* Returns the status by user uuid of this blogs entry.
 	*
-	* @param statusByUserName the status by user name of this blogs entry
+	* @return the status by user uuid of this blogs entry
 	*/
-	public void setStatusByUserName(java.lang.String statusByUserName) {
-		_blogsEntry.setStatusByUserName(statusByUserName);
+	@Override
+	public java.lang.String getStatusByUserUuid() {
+		return _blogsEntry.getStatusByUserUuid();
 	}
 
 	/**
@@ -698,24 +454,145 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return the status date of this blogs entry
 	*/
+	@Override
 	public java.util.Date getStatusDate() {
 		return _blogsEntry.getStatusDate();
 	}
 
 	/**
-	* Sets the status date of this blogs entry.
+	* Returns the subtitle of this blogs entry.
 	*
-	* @param statusDate the status date of this blogs entry
+	* @return the subtitle of this blogs entry
 	*/
-	public void setStatusDate(java.util.Date statusDate) {
-		_blogsEntry.setStatusDate(statusDate);
+	@Override
+	public java.lang.String getSubtitle() {
+		return _blogsEntry.getSubtitle();
 	}
 
 	/**
-	* @deprecated Renamed to {@link #isApproved()}
+	* Returns the title of this blogs entry.
+	*
+	* @return the title of this blogs entry
 	*/
-	public boolean getApproved() {
-		return _blogsEntry.getApproved();
+	@Override
+	public java.lang.String getTitle() {
+		return _blogsEntry.getTitle();
+	}
+
+	/**
+	* Returns the trackbacks of this blogs entry.
+	*
+	* @return the trackbacks of this blogs entry
+	*/
+	@Override
+	public java.lang.String getTrackbacks() {
+		return _blogsEntry.getTrackbacks();
+	}
+
+	/**
+	* Returns the trash entry created when this blogs entry was moved to the Recycle Bin. The trash entry may belong to one of the ancestors of this blogs entry.
+	*
+	* @return the trash entry created when this blogs entry was moved to the Recycle Bin
+	*/
+	@Override
+	public com.liferay.portlet.trash.model.TrashEntry getTrashEntry()
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return _blogsEntry.getTrashEntry();
+	}
+
+	/**
+	* Returns the class primary key of the trash entry for this blogs entry.
+	*
+	* @return the class primary key of the trash entry for this blogs entry
+	*/
+	@Override
+	public long getTrashEntryClassPK() {
+		return _blogsEntry.getTrashEntryClassPK();
+	}
+
+	/**
+	* Returns the trash handler for this blogs entry.
+	*
+	* @return the trash handler for this blogs entry
+	*/
+	@Override
+	public com.liferay.portal.kernel.trash.TrashHandler getTrashHandler() {
+		return _blogsEntry.getTrashHandler();
+	}
+
+	/**
+	* Returns the url title of this blogs entry.
+	*
+	* @return the url title of this blogs entry
+	*/
+	@Override
+	public java.lang.String getUrlTitle() {
+		return _blogsEntry.getUrlTitle();
+	}
+
+	/**
+	* Returns the user ID of this blogs entry.
+	*
+	* @return the user ID of this blogs entry
+	*/
+	@Override
+	public long getUserId() {
+		return _blogsEntry.getUserId();
+	}
+
+	/**
+	* Returns the user name of this blogs entry.
+	*
+	* @return the user name of this blogs entry
+	*/
+	@Override
+	public java.lang.String getUserName() {
+		return _blogsEntry.getUserName();
+	}
+
+	/**
+	* Returns the user uuid of this blogs entry.
+	*
+	* @return the user uuid of this blogs entry
+	*/
+	@Override
+	public java.lang.String getUserUuid() {
+		return _blogsEntry.getUserUuid();
+	}
+
+	/**
+	* Returns the uuid of this blogs entry.
+	*
+	* @return the uuid of this blogs entry
+	*/
+	@Override
+	public java.lang.String getUuid() {
+		return _blogsEntry.getUuid();
+	}
+
+	@Override
+	public int hashCode() {
+		return _blogsEntry.hashCode();
+	}
+
+	/**
+	* Returns <code>true</code> if this blogs entry is allow pingbacks.
+	*
+	* @return <code>true</code> if this blogs entry is allow pingbacks; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isAllowPingbacks() {
+		return _blogsEntry.isAllowPingbacks();
+	}
+
+	/**
+	* Returns <code>true</code> if this blogs entry is allow trackbacks.
+	*
+	* @return <code>true</code> if this blogs entry is allow trackbacks; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isAllowTrackbacks() {
+		return _blogsEntry.isAllowTrackbacks();
 	}
 
 	/**
@@ -723,8 +600,14 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is approved; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isApproved() {
 		return _blogsEntry.isApproved();
+	}
+
+	@Override
+	public boolean isCachedModel() {
+		return _blogsEntry.isCachedModel();
 	}
 
 	/**
@@ -732,6 +615,7 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is denied; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isDenied() {
 		return _blogsEntry.isDenied();
 	}
@@ -741,8 +625,14 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is a draft; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isDraft() {
 		return _blogsEntry.isDraft();
+	}
+
+	@Override
+	public boolean isEscapedModel() {
+		return _blogsEntry.isEscapedModel();
 	}
 
 	/**
@@ -750,8 +640,39 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is expired; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isExpired() {
 		return _blogsEntry.isExpired();
+	}
+
+	/**
+	* Returns <code>true</code> if this blogs entry is in the Recycle Bin.
+	*
+	* @return <code>true</code> if this blogs entry is in the Recycle Bin; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isInTrash() {
+		return _blogsEntry.isInTrash();
+	}
+
+	/**
+	* Returns <code>true</code> if the parent of this blogs entry is in the Recycle Bin.
+	*
+	* @return <code>true</code> if the parent of this blogs entry is in the Recycle Bin; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isInTrashContainer() {
+		return _blogsEntry.isInTrashContainer();
+	}
+
+	@Override
+	public boolean isInTrashExplicitly() {
+		return _blogsEntry.isInTrashExplicitly();
+	}
+
+	@Override
+	public boolean isInTrashImplicitly() {
+		return _blogsEntry.isInTrashImplicitly();
 	}
 
 	/**
@@ -759,6 +680,7 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is inactive; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isInactive() {
 		return _blogsEntry.isInactive();
 	}
@@ -768,17 +690,14 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is incomplete; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isIncomplete() {
 		return _blogsEntry.isIncomplete();
 	}
 
-	/**
-	* Returns <code>true</code> if this blogs entry is in the Recycle Bin.
-	*
-	* @return <code>true</code> if this blogs entry is in the Recycle Bin; <code>false</code> otherwise
-	*/
-	public boolean isInTrash() {
-		return _blogsEntry.isInTrash();
+	@Override
+	public boolean isNew() {
+		return _blogsEntry.isNew();
 	}
 
 	/**
@@ -786,6 +705,7 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is pending; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isPending() {
 		return _blogsEntry.isPending();
 	}
@@ -795,65 +715,345 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 	*
 	* @return <code>true</code> if this blogs entry is scheduled; <code>false</code> otherwise
 	*/
+	@Override
 	public boolean isScheduled() {
 		return _blogsEntry.isScheduled();
 	}
 
-	public boolean isNew() {
-		return _blogsEntry.isNew();
+	/**
+	* Returns <code>true</code> if this blogs entry is small image.
+	*
+	* @return <code>true</code> if this blogs entry is small image; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isSmallImage() {
+		return _blogsEntry.isSmallImage();
 	}
 
-	public void setNew(boolean n) {
-		_blogsEntry.setNew(n);
+	@Override
+	public boolean isVisible() {
+		return _blogsEntry.isVisible();
 	}
 
-	public boolean isCachedModel() {
-		return _blogsEntry.isCachedModel();
+	@Override
+	public void persist() {
+		_blogsEntry.persist();
 	}
 
+	/**
+	* Sets whether this blogs entry is allow pingbacks.
+	*
+	* @param allowPingbacks the allow pingbacks of this blogs entry
+	*/
+	@Override
+	public void setAllowPingbacks(boolean allowPingbacks) {
+		_blogsEntry.setAllowPingbacks(allowPingbacks);
+	}
+
+	/**
+	* Sets whether this blogs entry is allow trackbacks.
+	*
+	* @param allowTrackbacks the allow trackbacks of this blogs entry
+	*/
+	@Override
+	public void setAllowTrackbacks(boolean allowTrackbacks) {
+		_blogsEntry.setAllowTrackbacks(allowTrackbacks);
+	}
+
+	@Override
 	public void setCachedModel(boolean cachedModel) {
 		_blogsEntry.setCachedModel(cachedModel);
 	}
 
-	public boolean isEscapedModel() {
-		return _blogsEntry.isEscapedModel();
+	/**
+	* Sets the company ID of this blogs entry.
+	*
+	* @param companyId the company ID of this blogs entry
+	*/
+	@Override
+	public void setCompanyId(long companyId) {
+		_blogsEntry.setCompanyId(companyId);
 	}
 
-	public java.io.Serializable getPrimaryKeyObj() {
-		return _blogsEntry.getPrimaryKeyObj();
+	/**
+	* Sets the content of this blogs entry.
+	*
+	* @param content the content of this blogs entry
+	*/
+	@Override
+	public void setContent(java.lang.String content) {
+		_blogsEntry.setContent(content);
 	}
 
-	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
-		_blogsEntry.setPrimaryKeyObj(primaryKeyObj);
+	/**
+	* Sets the create date of this blogs entry.
+	*
+	* @param createDate the create date of this blogs entry
+	*/
+	@Override
+	public void setCreateDate(java.util.Date createDate) {
+		_blogsEntry.setCreateDate(createDate);
 	}
 
-	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
-		return _blogsEntry.getExpandoBridge();
+	/**
+	* Sets the description of this blogs entry.
+	*
+	* @param description the description of this blogs entry
+	*/
+	@Override
+	public void setDescription(java.lang.String description) {
+		_blogsEntry.setDescription(description);
 	}
 
+	/**
+	* Sets the display date of this blogs entry.
+	*
+	* @param displayDate the display date of this blogs entry
+	*/
+	@Override
+	public void setDisplayDate(java.util.Date displayDate) {
+		_blogsEntry.setDisplayDate(displayDate);
+	}
+
+	/**
+	* Sets the entry ID of this blogs entry.
+	*
+	* @param entryId the entry ID of this blogs entry
+	*/
+	@Override
+	public void setEntryId(long entryId) {
+		_blogsEntry.setEntryId(entryId);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.model.BaseModel<?> baseModel) {
+		_blogsEntry.setExpandoBridgeAttributes(baseModel);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portlet.expando.model.ExpandoBridge expandoBridge) {
+		_blogsEntry.setExpandoBridgeAttributes(expandoBridge);
+	}
+
+	@Override
 	public void setExpandoBridgeAttributes(
 		com.liferay.portal.service.ServiceContext serviceContext) {
 		_blogsEntry.setExpandoBridgeAttributes(serviceContext);
 	}
 
+	/**
+	* Sets the group ID of this blogs entry.
+	*
+	* @param groupId the group ID of this blogs entry
+	*/
 	@Override
-	public java.lang.Object clone() {
-		return new BlogsEntryWrapper((BlogsEntry)_blogsEntry.clone());
+	public void setGroupId(long groupId) {
+		_blogsEntry.setGroupId(groupId);
 	}
 
-	public int compareTo(com.liferay.portlet.blogs.model.BlogsEntry blogsEntry) {
-		return _blogsEntry.compareTo(blogsEntry);
+	/**
+	* Sets the modified date of this blogs entry.
+	*
+	* @param modifiedDate the modified date of this blogs entry
+	*/
+	@Override
+	public void setModifiedDate(java.util.Date modifiedDate) {
+		_blogsEntry.setModifiedDate(modifiedDate);
 	}
 
 	@Override
-	public int hashCode() {
-		return _blogsEntry.hashCode();
+	public void setNew(boolean n) {
+		_blogsEntry.setNew(n);
 	}
 
+	/**
+	* Sets the primary key of this blogs entry.
+	*
+	* @param primaryKey the primary key of this blogs entry
+	*/
+	@Override
+	public void setPrimaryKey(long primaryKey) {
+		_blogsEntry.setPrimaryKey(primaryKey);
+	}
+
+	@Override
+	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
+		_blogsEntry.setPrimaryKeyObj(primaryKeyObj);
+	}
+
+	/**
+	* Sets whether this blogs entry is small image.
+	*
+	* @param smallImage the small image of this blogs entry
+	*/
+	@Override
+	public void setSmallImage(boolean smallImage) {
+		_blogsEntry.setSmallImage(smallImage);
+	}
+
+	/**
+	* Sets the small image ID of this blogs entry.
+	*
+	* @param smallImageId the small image ID of this blogs entry
+	*/
+	@Override
+	public void setSmallImageId(long smallImageId) {
+		_blogsEntry.setSmallImageId(smallImageId);
+	}
+
+	@Override
+	public void setSmallImageType(java.lang.String smallImageType) {
+		_blogsEntry.setSmallImageType(smallImageType);
+	}
+
+	/**
+	* Sets the small image u r l of this blogs entry.
+	*
+	* @param smallImageURL the small image u r l of this blogs entry
+	*/
+	@Override
+	public void setSmallImageURL(java.lang.String smallImageURL) {
+		_blogsEntry.setSmallImageURL(smallImageURL);
+	}
+
+	/**
+	* Sets the status of this blogs entry.
+	*
+	* @param status the status of this blogs entry
+	*/
+	@Override
+	public void setStatus(int status) {
+		_blogsEntry.setStatus(status);
+	}
+
+	/**
+	* Sets the status by user ID of this blogs entry.
+	*
+	* @param statusByUserId the status by user ID of this blogs entry
+	*/
+	@Override
+	public void setStatusByUserId(long statusByUserId) {
+		_blogsEntry.setStatusByUserId(statusByUserId);
+	}
+
+	/**
+	* Sets the status by user name of this blogs entry.
+	*
+	* @param statusByUserName the status by user name of this blogs entry
+	*/
+	@Override
+	public void setStatusByUserName(java.lang.String statusByUserName) {
+		_blogsEntry.setStatusByUserName(statusByUserName);
+	}
+
+	/**
+	* Sets the status by user uuid of this blogs entry.
+	*
+	* @param statusByUserUuid the status by user uuid of this blogs entry
+	*/
+	@Override
+	public void setStatusByUserUuid(java.lang.String statusByUserUuid) {
+		_blogsEntry.setStatusByUserUuid(statusByUserUuid);
+	}
+
+	/**
+	* Sets the status date of this blogs entry.
+	*
+	* @param statusDate the status date of this blogs entry
+	*/
+	@Override
+	public void setStatusDate(java.util.Date statusDate) {
+		_blogsEntry.setStatusDate(statusDate);
+	}
+
+	/**
+	* Sets the subtitle of this blogs entry.
+	*
+	* @param subtitle the subtitle of this blogs entry
+	*/
+	@Override
+	public void setSubtitle(java.lang.String subtitle) {
+		_blogsEntry.setSubtitle(subtitle);
+	}
+
+	/**
+	* Sets the title of this blogs entry.
+	*
+	* @param title the title of this blogs entry
+	*/
+	@Override
+	public void setTitle(java.lang.String title) {
+		_blogsEntry.setTitle(title);
+	}
+
+	/**
+	* Sets the trackbacks of this blogs entry.
+	*
+	* @param trackbacks the trackbacks of this blogs entry
+	*/
+	@Override
+	public void setTrackbacks(java.lang.String trackbacks) {
+		_blogsEntry.setTrackbacks(trackbacks);
+	}
+
+	/**
+	* Sets the url title of this blogs entry.
+	*
+	* @param urlTitle the url title of this blogs entry
+	*/
+	@Override
+	public void setUrlTitle(java.lang.String urlTitle) {
+		_blogsEntry.setUrlTitle(urlTitle);
+	}
+
+	/**
+	* Sets the user ID of this blogs entry.
+	*
+	* @param userId the user ID of this blogs entry
+	*/
+	@Override
+	public void setUserId(long userId) {
+		_blogsEntry.setUserId(userId);
+	}
+
+	/**
+	* Sets the user name of this blogs entry.
+	*
+	* @param userName the user name of this blogs entry
+	*/
+	@Override
+	public void setUserName(java.lang.String userName) {
+		_blogsEntry.setUserName(userName);
+	}
+
+	/**
+	* Sets the user uuid of this blogs entry.
+	*
+	* @param userUuid the user uuid of this blogs entry
+	*/
+	@Override
+	public void setUserUuid(java.lang.String userUuid) {
+		_blogsEntry.setUserUuid(userUuid);
+	}
+
+	/**
+	* Sets the uuid of this blogs entry.
+	*
+	* @param uuid the uuid of this blogs entry
+	*/
+	@Override
+	public void setUuid(java.lang.String uuid) {
+		_blogsEntry.setUuid(uuid);
+	}
+
+	@Override
 	public com.liferay.portal.model.CacheModel<com.liferay.portlet.blogs.model.BlogsEntry> toCacheModel() {
 		return _blogsEntry.toCacheModel();
 	}
 
+	@Override
 	public com.liferay.portlet.blogs.model.BlogsEntry toEscapedModel() {
 		return new BlogsEntryWrapper(_blogsEntry.toEscapedModel());
 	}
@@ -863,40 +1063,64 @@ public class BlogsEntryWrapper implements BlogsEntry, ModelWrapper<BlogsEntry> {
 		return _blogsEntry.toString();
 	}
 
+	@Override
+	public com.liferay.portlet.blogs.model.BlogsEntry toUnescapedModel() {
+		return new BlogsEntryWrapper(_blogsEntry.toUnescapedModel());
+	}
+
+	@Override
 	public java.lang.String toXmlString() {
 		return _blogsEntry.toXmlString();
 	}
 
-	public void persist()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		_blogsEntry.persist();
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof BlogsEntryWrapper)) {
+			return false;
+		}
+
+		BlogsEntryWrapper blogsEntryWrapper = (BlogsEntryWrapper)obj;
+
+		if (Validator.equals(_blogsEntry, blogsEntryWrapper._blogsEntry)) {
+			return true;
+		}
+
+		return false;
 	}
 
-	public java.lang.String getSmallImageType()
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return _blogsEntry.getSmallImageType();
-	}
-
-	public boolean isVisible() {
-		return _blogsEntry.isVisible();
-	}
-
-	public void setSmallImageType(java.lang.String smallImageType) {
-		_blogsEntry.setSmallImageType(smallImageType);
+	@Override
+	public StagedModelType getStagedModelType() {
+		return _blogsEntry.getStagedModelType();
 	}
 
 	/**
-	 * @deprecated Renamed to {@link #getWrappedModel}
+	 * @deprecated As of 6.1.0, replaced by {@link #getWrappedModel}
 	 */
+	@Deprecated
 	public BlogsEntry getWrappedBlogsEntry() {
 		return _blogsEntry;
 	}
 
+	@Override
 	public BlogsEntry getWrappedModel() {
 		return _blogsEntry;
 	}
 
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return _blogsEntry.isEntityCacheEnabled();
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return _blogsEntry.isFinderCacheEnabled();
+	}
+
+	@Override
 	public void resetOriginalValues() {
 		_blogsEntry.resetOriginalValues();
 	}

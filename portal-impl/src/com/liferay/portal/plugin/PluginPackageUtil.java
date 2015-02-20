@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,7 +15,6 @@
 package com.liferay.portal.plugin;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.plugin.License;
@@ -35,6 +34,7 @@ import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.Http;
 import com.liferay.portal.kernel.util.HttpUtil;
 import com.liferay.portal.kernel.util.ListUtil;
+import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.PropertiesUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.ReleaseInfo;
@@ -50,7 +50,6 @@ import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portal.model.CompanyConstants;
 import com.liferay.portal.model.Plugin;
-import com.liferay.portal.util.HttpImpl;
 import com.liferay.portal.util.PrefsPropsUtil;
 import com.liferay.portal.util.PropsValues;
 
@@ -68,7 +67,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
@@ -79,9 +77,6 @@ import java.util.jar.Manifest;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.httpclient.HostConfiguration;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.apache.commons.lang.time.StopWatch;
 
 /**
@@ -91,17 +86,12 @@ import org.apache.commons.lang.time.StopWatch;
  */
 public class PluginPackageUtil {
 
-	public static final String REPOSITORY_XML_FILENAME_EXTENSION = "xml";
-
-	public static final String REPOSITORY_XML_FILENAME_PREFIX =
-		"liferay-plugin-repository";
-
 	public static void endPluginPackageInstallation(String preliminaryContext) {
 		_instance._endPluginPackageInstallation(preliminaryContext);
 	}
 
 	public static List<PluginPackage> getAllAvailablePluginPackages()
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return _instance._getAllAvailablePluginPackages();
 	}
@@ -124,7 +114,7 @@ public class PluginPackageUtil {
 
 	public static PluginPackage getLatestAvailablePluginPackage(
 			String groupId, String artifactId)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return _instance._getLatestAvailablePluginPackage(groupId, artifactId);
 	}
@@ -137,25 +127,25 @@ public class PluginPackageUtil {
 
 	public static PluginPackage getPluginPackageByModuleId(
 			String moduleId, String repositoryURL)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return _instance._getPluginPackageByModuleId(moduleId, repositoryURL);
 	}
 
 	public static PluginPackage getPluginPackageByURL(String url)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return _instance._getPluginPackageByURL(url);
 	}
 
 	public static RemotePluginPackageRepository getRepository(
 			String repositoryURL)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return _instance._getRepository(repositoryURL);
 	}
 
-	public static String[] getRepositoryURLs() throws SystemException {
+	public static String[] getRepositoryURLs() {
 		return _instance._getRepositoryURLs();
 	}
 
@@ -173,9 +163,7 @@ public class PluginPackageUtil {
 		return _instance._isCurrentVersionSupported(versions);
 	}
 
-	public static boolean isIgnored(PluginPackage pluginPackage)
-		throws SystemException {
-
+	public static boolean isIgnored(PluginPackage pluginPackage) {
 		return _instance._isIgnored(pluginPackage);
 	}
 
@@ -187,13 +175,11 @@ public class PluginPackageUtil {
 		return _instance._isInstalled(context);
 	}
 
-	public static boolean isTrusted(String repositoryURL)
-		throws SystemException {
-
+	public static boolean isTrusted(String repositoryURL) {
 		return _instance._isTrusted(repositoryURL);
 	}
 
-	public static boolean isUpdateAvailable() throws SystemException {
+	public static boolean isUpdateAvailable() {
 		return _instance._isUpdateAvailable();
 	}
 
@@ -239,16 +225,14 @@ public class PluginPackageUtil {
 		_instance._registerPluginPackageInstallation(preliminaryContext);
 	}
 
-	public static RepositoryReport reloadRepositories()
-		throws PortalException, SystemException {
-
+	public static RepositoryReport reloadRepositories() throws PortalException {
 		return _instance._reloadRepositories();
 	}
 
 	public static Hits search(
 			String keywords, String type, String tag, String license,
 			String repositoryURL, String status, int start, int end)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return _instance._search(
 			keywords, type, tag, license, repositoryURL, status, start, end);
@@ -256,7 +240,7 @@ public class PluginPackageUtil {
 
 	public static void unregisterInstalledPluginPackage(
 			PluginPackage pluginPackage)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		_instance._unregisterInstalledPluginPackage(pluginPackage);
 	}
@@ -275,7 +259,7 @@ public class PluginPackageUtil {
 	}
 
 	private void _checkRepositories(String repositoryURL)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		String[] repositoryURLs = null;
 
@@ -313,7 +297,7 @@ public class PluginPackageUtil {
 	}
 
 	private List<PluginPackage> _getAllAvailablePluginPackages()
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		List<PluginPackage> pluginPackages = new ArrayList<PluginPackage>();
 
@@ -345,7 +329,7 @@ public class PluginPackageUtil {
 
 	private List<PluginPackage> _getAvailablePluginPackages(
 			String groupId, String artifactId)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		List<PluginPackage> pluginPackages = new ArrayList<PluginPackage>();
 
@@ -385,7 +369,7 @@ public class PluginPackageUtil {
 
 	private PluginPackage _getLatestAvailablePluginPackage(
 			String groupId, String artifactId)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		List<PluginPackage> pluginPackages = _getAvailablePluginPackages(
 			groupId, artifactId);
@@ -402,7 +386,7 @@ public class PluginPackageUtil {
 
 	private PluginPackage _getPluginPackageByModuleId(
 			String moduleId, String repositoryURL)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		RemotePluginPackageRepository repository = _getRepository(
 			repositoryURL);
@@ -411,7 +395,7 @@ public class PluginPackageUtil {
 	}
 
 	private PluginPackage _getPluginPackageByURL(String url)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		String[] repositoryURLs = _getRepositoryURLs();
 
@@ -433,7 +417,7 @@ public class PluginPackageUtil {
 	}
 
 	private RemotePluginPackageRepository _getRepository(String repositoryURL)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		RemotePluginPackageRepository repository = _repositoryCache.get(
 			repositoryURL);
@@ -520,9 +504,7 @@ public class PluginPackageUtil {
 		return false;
 	}
 
-	private boolean _isIgnored(PluginPackage pluginPackage)
-		throws SystemException {
-
+	private boolean _isIgnored(PluginPackage pluginPackage) {
 		String packageId = pluginPackage.getPackageId();
 
 		String[] pluginPackagesIgnored = PrefsPropsUtil.getStringArray(
@@ -595,7 +577,7 @@ public class PluginPackageUtil {
 		}
 	}
 
-	private boolean _isUpdateAvailable() throws SystemException {
+	private boolean _isUpdateAvailable() {
 		if (!PrefsPropsUtil.getBoolean(
 				PropsKeys.PLUGIN_NOTIFICATIONS_ENABLED,
 				PropsValues.PLUGIN_NOTIFICATIONS_ENABLED)) {
@@ -635,71 +617,61 @@ public class PluginPackageUtil {
 
 		sb.append(repositoryURL);
 		sb.append(StringPool.SLASH);
-		sb.append(REPOSITORY_XML_FILENAME_PREFIX);
+		sb.append(PluginPackage.REPOSITORY_XML_FILENAME_PREFIX);
 		sb.append(StringPool.DASH);
 		sb.append(ReleaseInfo.getVersion());
 		sb.append(StringPool.PERIOD);
-		sb.append(REPOSITORY_XML_FILENAME_EXTENSION);
+		sb.append(PluginPackage.REPOSITORY_XML_FILENAME_EXTENSION);
 
 		String pluginsXmlURL = sb.toString();
 
 		try {
-			HttpImpl httpImpl = (HttpImpl)HttpUtil.getHttp();
+			Http.Options options = new Http.Options();
 
-			HostConfiguration hostConfiguration = httpImpl.getHostConfiguration(
-				pluginsXmlURL);
+			options.setLocation(pluginsXmlURL);
+			options.setPost(false);
 
-			HttpClient httpClient = httpImpl.getClient(hostConfiguration);
+			byte[] bytes = HttpUtil.URLtoByteArray(options);
 
-			httpImpl.proxifyState(httpClient.getState(), hostConfiguration);
+			Http.Response response = options.getResponse();
 
-			GetMethod getFileMethod = new GetMethod(pluginsXmlURL);
+			int responseCode = response.getResponseCode();
 
-			byte[] bytes = null;
-
-			try {
-				int responseCode = httpClient.executeMethod(
-					hostConfiguration, getFileMethod);
-
-				if (responseCode != HttpServletResponse.SC_OK) {
-					if (_log.isDebugEnabled()) {
-						_log.debug(
-							"A repository for version " +
-								ReleaseInfo.getVersion() + " was not found. " +
-									"Checking general repository");
-					}
-
-					sb.setIndex(0);
-
-					sb.append(repositoryURL);
-					sb.append(StringPool.SLASH);
-					sb.append(REPOSITORY_XML_FILENAME_PREFIX);
-					sb.append(StringPool.PERIOD);
-					sb.append(REPOSITORY_XML_FILENAME_EXTENSION);
-
-					pluginsXmlURL = sb.toString();
-
-					getFileMethod.releaseConnection();
-
-					getFileMethod = new GetMethod(pluginsXmlURL);
-
-					responseCode = httpClient.executeMethod(
-						hostConfiguration, getFileMethod);
-
-					if (responseCode != HttpServletResponse.SC_OK) {
-						throw new PluginPackageException(
-							"Unable to download file " + pluginsXmlURL +
-								" because of response code " + responseCode);
-					}
+			if (responseCode != HttpServletResponse.SC_OK) {
+				if (_log.isDebugEnabled()) {
+					_log.debug(
+						"A repository for version " +
+							ReleaseInfo.getVersion() + " was not found. " +
+								"Checking general repository");
 				}
 
-				bytes = getFileMethod.getResponseBody();
-			}
-			finally {
-				getFileMethod.releaseConnection();
+				sb.setIndex(0);
+
+				sb.append(repositoryURL);
+				sb.append(StringPool.SLASH);
+				sb.append(PluginPackage.REPOSITORY_XML_FILENAME_PREFIX);
+				sb.append(StringPool.PERIOD);
+				sb.append(PluginPackage.REPOSITORY_XML_FILENAME_EXTENSION);
+
+				pluginsXmlURL = sb.toString();
+
+				options = new Http.Options();
+
+				options.setLocation(pluginsXmlURL);
+				options.setPost(false);
+
+				bytes = HttpUtil.URLtoByteArray(options);
+
+				response = options.getResponse();
+
+				if (responseCode != HttpServletResponse.SC_OK) {
+					throw new PluginPackageException(
+						"Unable to download file " + pluginsXmlURL +
+							" because of response code " + responseCode);
+				}
 			}
 
-			if ((bytes != null) && (bytes.length > 0)) {
+			if (ArrayUtil.isNotEmpty(bytes)) {
 				repository = _parseRepositoryXml(
 					new String(bytes), repositoryURL);
 
@@ -710,11 +682,10 @@ public class PluginPackageUtil {
 
 				return repository;
 			}
-			else {
-				_lastUpdateDate = new Date();
 
-				throw new PluginPackageException("Download returned 0 bytes");
-			}
+			_lastUpdateDate = new Date();
+
+			throw new PluginPackageException("Download returned 0 bytes");
 		}
 		catch (MalformedURLException murle) {
 			_repositoryCache.remove(repositoryURL);
@@ -806,7 +777,7 @@ public class PluginPackageUtil {
 	private Date _readDate(String text) {
 		if (Validator.isNotNull(text)) {
 			DateFormat dateFormat = DateFormatFactoryUtil.getSimpleDateFormat(
-				Time.RFC822_FORMAT, Locale.US);
+				Time.RFC822_FORMAT, LocaleUtil.US);
 
 			try {
 				return dateFormat.parse(text);
@@ -860,7 +831,7 @@ public class PluginPackageUtil {
 		}
 
 		for (Element element : parentElement.elements(name)) {
-			String text = element.getText().trim().toLowerCase();
+			String text = StringUtil.toLowerCase(element.getText().trim());
 
 			list.add(text);
 		}
@@ -915,15 +886,18 @@ public class PluginPackageUtil {
 			properties.getProperty("module-group-id"));
 		String moduleArtifactId = displayPrefix + "-" + pluginType;
 
-		String moduleVersion = null;
+		String moduleVersion = GetterUtil.getString(
+			properties.getProperty("module-version"));
 
-		int moduleVersionPos = pos + pluginType.length() + 2;
+		if (Validator.isNull(moduleVersion)) {
+			int moduleVersionPos = pos + pluginType.length() + 2;
 
-		if (displayName.length() > moduleVersionPos) {
-			moduleVersion = displayName.substring(moduleVersionPos);
-		}
-		else {
-			moduleVersion = ReleaseInfo.getVersion();
+			if (displayName.length() > moduleVersionPos) {
+				moduleVersion = displayName.substring(moduleVersionPos);
+			}
+			else {
+				moduleVersion = ReleaseInfo.getVersion();
+			}
 		}
 
 		String moduleId =
@@ -966,7 +940,7 @@ public class PluginPackageUtil {
 			liferayVersions.add(liferayVersion.trim());
 		}
 
-		if (liferayVersions.size() == 0) {
+		if (liferayVersions.isEmpty()) {
 			liferayVersions.add(ReleaseInfo.getVersion() + "+");
 		}
 
@@ -1015,9 +989,8 @@ public class PluginPackageUtil {
 	}
 
 	/**
-	 * @see {@link
-	 *      com.liferay.portal.tools.deploy.BaseDeployer#readPluginPackage(
-	 *      java.io.File)}
+	 * @see com.liferay.portal.tools.deploy.BaseDeployer#readPluginPackage(
+	 *      java.io.File)
 	 */
 	private PluginPackage _readPluginPackageServletContext(
 			ServletContext servletContext)
@@ -1186,9 +1159,8 @@ public class PluginPackageUtil {
 					"recommended-deployment-context")));
 		pluginPackage.setRequiredDeploymentContexts(
 			_readList(
-				pluginPackageElement.element(
-					"required-deployment-contexts"),
-					"required-deployment-context"));
+				pluginPackageElement.element("required-deployment-contexts"),
+				"required-deployment-context"));
 		pluginPackage.setModifiedDate(
 			_readDate(pluginPackageElement.elementText("modified-date")));
 		pluginPackage.setAuthor(
@@ -1290,9 +1262,7 @@ public class PluginPackageUtil {
 			preliminaryContext);
 	}
 
-	private RepositoryReport _reloadRepositories()
-		throws PortalException, SystemException {
-
+	private RepositoryReport _reloadRepositories() throws PortalException {
 		if (_log.isInfoEnabled()) {
 			_log.info("Reloading repositories");
 		}
@@ -1316,7 +1286,6 @@ public class PluginPackageUtil {
 					"Unable to load repository " + repositoryURL + " " +
 						ppe.toString());
 			}
-
 		}
 
 		Indexer indexer = IndexerRegistryUtil.getIndexer(PluginPackage.class);
@@ -1329,7 +1298,7 @@ public class PluginPackageUtil {
 	private Hits _search(
 			String keywords, String type, String tag, String license,
 			String repositoryURL, String status, int start, int end)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		_checkRepositories(repositoryURL);
 
@@ -1365,7 +1334,7 @@ public class PluginPackageUtil {
 	}
 
 	private void _unregisterInstalledPluginPackage(PluginPackage pluginPackage)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		_installedPluginPackages.removePluginPackage(pluginPackage);
 
@@ -1408,6 +1377,7 @@ public class PluginPackageUtil {
 
 	private class UpdateAvailableRunner implements Runnable {
 
+		@Override
 		public void run() {
 			try {
 				setUpdateAvailable();
@@ -1420,14 +1390,12 @@ public class PluginPackageUtil {
 		}
 
 		protected void setUpdateAvailable() throws Exception {
-			StopWatch stopWatch = null;
+			StopWatch stopWatch = new StopWatch();
+
+			stopWatch.start();
 
 			if (_log.isInfoEnabled()) {
 				_log.info("Checking for available updates");
-
-				stopWatch = new StopWatch();
-
-				stopWatch.start();
 			}
 
 			for (PluginPackage pluginPackage :

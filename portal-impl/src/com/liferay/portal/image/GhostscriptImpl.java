@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,6 +21,7 @@ import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.process.ProcessUtil;
 import com.liferay.portal.kernel.util.OSDetector;
 import com.liferay.portal.kernel.util.StringBundler;
+import com.liferay.portal.kernel.util.StringPool;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -29,22 +30,22 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Future;
 
-import jodd.util.StringPool;
-
 /**
  * @author Ivica Cardic
  */
 public class GhostscriptImpl implements Ghostscript {
 
+	@Override
 	public Future<?> execute(List<String> commandArguments) throws Exception {
 		if (!isEnabled()) {
-			StringBundler sb = new StringBundler(5);
+			StringBundler sb = new StringBundler(6);
 
-			sb.append("Cannot execute the Ghostscript command. Please install");
-			sb.append("ImageMagick and Ghostscript and enable ImageMagick in ");
-			sb.append("portal-ext.properties or in the Server Administration ");
-			sb.append("control panel at: http://<server>/group/control_panel/");
-			sb.append("manage/-/server/external-services");
+			sb.append("Cannot execute the Ghostscript command. Please ");
+			sb.append("install ImageMagick and Ghostscript and enable ");
+			sb.append("ImageMagick in portal-ext.properties or in the Server ");
+			sb.append("Administration section of the Control Panel at: ");
+			sb.append("http://<server>/group/control_panel/manage/-/server/");
+			sb.append("external-services");
 
 			throw new IllegalStateException(sb.toString());
 		}
@@ -74,10 +75,12 @@ public class GhostscriptImpl implements Ghostscript {
 			ProcessUtil.LOGGING_OUTPUT_PROCESSOR, arguments);
 	}
 
+	@Override
 	public boolean isEnabled() {
 		return ImageMagickUtil.isEnabled();
 	}
 
+	@Override
 	public void reset() {
 		if (isEnabled()) {
 			try {
@@ -86,7 +89,7 @@ public class GhostscriptImpl implements Ghostscript {
 				_commandPath = getCommandPath();
 			}
 			catch (Exception e) {
-				_log.warn(e, e);
+				_log.error(e, e);
 			}
 		}
 	}
@@ -102,8 +105,14 @@ public class GhostscriptImpl implements Ghostscript {
 		}
 
 		if (commandPath == null) {
-			throw new FileNotFoundException(
-				"Unable to find Ghostscript command");
+			StringBundler sb = new StringBundler(4);
+
+			sb.append("Unable to find the Ghostscript command. Please verify ");
+			sb.append("the path specified in the Server Administration ");
+			sb.append("control panel at: http://<server>/group/control_panel/");
+			sb.append("manage/-/server/external-services");
+
+			throw new FileNotFoundException(sb.toString());
 		}
 
 		return commandPath;

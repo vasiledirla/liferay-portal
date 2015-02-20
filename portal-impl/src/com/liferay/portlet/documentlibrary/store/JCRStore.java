@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -64,7 +64,7 @@ public class JCRStore extends BaseStore {
 
 	@Override
 	public void addDirectory(long companyId, long repositoryId, String dirName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -108,7 +108,7 @@ public class JCRStore extends BaseStore {
 	@Override
 	public void addFile(
 			long companyId, long repositoryId, String fileName, InputStream is)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -174,7 +174,7 @@ public class JCRStore extends BaseStore {
 	}
 
 	@Override
-	public void checkRoot(long companyId) throws SystemException {
+	public void checkRoot(long companyId) {
 		Session session = null;
 
 		try {
@@ -232,7 +232,7 @@ public class JCRStore extends BaseStore {
 
 	@Override
 	public void deleteFile(long companyId, long repositoryId, String fileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -362,7 +362,7 @@ public class JCRStore extends BaseStore {
 	public void deleteFile(
 			long companyId, long repositoryId, String fileName,
 			String versionLabel)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -431,7 +431,7 @@ public class JCRStore extends BaseStore {
 	public InputStream getFileAsStream(
 			long companyId, long repositoryId, String fileName,
 			String versionLabel)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -463,9 +463,8 @@ public class JCRStore extends BaseStore {
 		}
 	}
 
-	public String[] getFileNames(long companyId, long repositoryId)
-		throws SystemException {
-
+	@Override
+	public String[] getFileNames(long companyId, long repositoryId) {
 		List<String> fileNames = new ArrayList<String>();
 
 		Session session = null;
@@ -504,7 +503,7 @@ public class JCRStore extends BaseStore {
 	@Override
 	public String[] getFileNames(
 			long companyId, long repositoryId, String dirName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		List<String> fileNames = new ArrayList<String>();
 
@@ -548,7 +547,7 @@ public class JCRStore extends BaseStore {
 
 	@Override
 	public long getFileSize(long companyId, long repositoryId, String fileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		long size;
 
@@ -574,8 +573,7 @@ public class JCRStore extends BaseStore {
 
 	@Override
 	public boolean hasDirectory(
-			long companyId, long repositoryId, String dirName)
-		throws SystemException {
+		long companyId, long repositoryId, String dirName) {
 
 		Session session = null;
 
@@ -605,7 +603,7 @@ public class JCRStore extends BaseStore {
 	public boolean hasFile(
 			long companyId, long repositoryId, String fileName,
 			String versionLabel)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		try {
 			getFileContentNode(companyId, repositoryId, fileName, versionLabel);
@@ -618,7 +616,7 @@ public class JCRStore extends BaseStore {
 	}
 
 	@Override
-	public void move(String srcDir, String destDir) throws SystemException {
+	public void move(String srcDir, String destDir) {
 		Session session = null;
 
 		try {
@@ -640,7 +638,7 @@ public class JCRStore extends BaseStore {
 	public void updateFile(
 			long companyId, long repositoryId, long newRepositoryId,
 			String fileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -695,10 +693,11 @@ public class JCRStore extends BaseStore {
 		}
 	}
 
+	@Override
 	public void updateFile(
 			long companyId, long repositoryId, String fileName,
 			String newFileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -755,7 +754,7 @@ public class JCRStore extends BaseStore {
 	public void updateFile(
 			long companyId, long repositoryId, String fileName,
 			String versionLabel, InputStream is)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Session session = null;
 
@@ -802,7 +801,7 @@ public class JCRStore extends BaseStore {
 			Version version = versionManager.checkin(contentNode.getPath());
 
 			VersionHistory versionHistory = versionManager.getVersionHistory(
-					contentNode.getPath());
+				contentNode.getPath());
 
 			versionHistory.addVersionLabel(
 				version.getName(), versionLabel,
@@ -824,7 +823,7 @@ public class JCRStore extends BaseStore {
 	protected Node getFileContentNode(
 			long companyId, long repositoryId, String fileName,
 			String versionLabel)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Node contentNode = null;
 
@@ -849,7 +848,7 @@ public class JCRStore extends BaseStore {
 	protected Node getFileContentNode(
 			Session session, long companyId, long repositoryId, String fileName,
 			String versionLabel)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		Node contentNode = null;
 

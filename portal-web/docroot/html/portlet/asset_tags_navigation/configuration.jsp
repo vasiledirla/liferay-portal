@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,32 +16,30 @@
 
 <%@ include file="/html/portlet/asset_tags_navigation/init.jsp" %>
 
-<%
-String redirect = ParamUtil.getString(request, "redirect");
-%>
+<liferay-portlet:actionURL portletConfiguration="true" var="configurationActionURL" />
 
-<liferay-portlet:actionURL portletConfiguration="true" var="configurationURL" />
+<liferay-portlet:renderURL portletConfiguration="true" var="configurationRenderURL" />
 
-<aui:form action="<%= configurationURL %>" method="post" name="fm">
+<aui:form action="<%= configurationActionURL %>" method="post" name="fm">
 	<aui:input name="<%= Constants.CMD %>" type="hidden" value="<%= Constants.UPDATE %>" />
-	<aui:input name="redirect" type="hidden" value="<%= redirect %>" />
+	<aui:input name="redirect" type="hidden" value="<%= configurationRenderURL %>" />
 
 	<aui:fieldset>
-		<ul class="lfr-tree lfr-component">
+		<ul class="lfr-tree list-unstyled">
 			<li class="tree-item">
-				<aui:input label="show-tags-with-zero-assets" name="preferences--showZeroAssetCount--" type="checkbox" value="<%= showZeroAssetCount %>" />
+				<aui:input label="show-unused-tags" name="preferences--showZeroAssetCount--" type="checkbox" value="<%= showZeroAssetCount %>" />
 			</li>
 
 			<li class="tree-item">
 				<aui:input name="preferences--showAssetCount--" type="checkbox" value="<%= showAssetCount %>" />
 
-				<ul class="lfr-tree lfr-component aui-helper-hidden" id="<portlet:namespace />assetCountOptions">
+				<ul class="hide lfr-tree list-unstyled" id="<portlet:namespace />assetCountOptions">
 					<li class="tree-item">
 						<aui:select helpMessage="asset-type-asset-count-help" label="asset-type" name="preferences--classNameId--">
 							<aui:option label="any" value="<%= classNameId == 0 %>" />
 
 							<%
-							List<AssetRendererFactory> assetRendererFactories = AssetRendererFactoryRegistryUtil.getAssetRendererFactories();
+							List<AssetRendererFactory> assetRendererFactories = ListUtil.sort(AssetRendererFactoryRegistryUtil.getAssetRendererFactories(company.getCompanyId()), new AssetRendererFactoryTypeNameComparator(locale));
 
 							for (AssetRendererFactory assetRendererFactory : assetRendererFactories) {
 							%>
@@ -58,11 +56,11 @@ String redirect = ParamUtil.getString(request, "redirect");
 			</li>
 
 			<li class="tree-item">
-				<ul class="lfr-tree lfr-component" id="<portlet:namespace />displayTemplateSettings">
+				<ul class="lfr-tree list-unstyled" id="<portlet:namespace />displayTemplateSettings">
 					<div class="display-template">
 
 						<%
-						PortletDisplayTemplateHandler portletDisplayTemplateHandler = PortletDisplayTemplateHandlerRegistryUtil.getPortletDisplayTemplateHandler(AssetTag.class.getName());
+						TemplateHandler templateHandler = TemplateHandlerRegistryUtil.getTemplateHandler(AssetTag.class.getName());
 
 						List<String> displayStyles = new ArrayList<String>();
 
@@ -70,16 +68,12 @@ String redirect = ParamUtil.getString(request, "redirect");
 						displayStyles.add("cloud");
 						%>
 
-						<liferay-ui:ddm-template-menu
-							classNameId="<%= PortalUtil.getClassNameId(portletDisplayTemplateHandler.getClassName()) %>"
-							displayStyles="<%= displayStyles %>"
-							preferenceValue="<%= displayStyle %>"
-						/>
-
 						<liferay-ui:ddm-template-selector
-							classNameId="<%= PortalUtil.getClassNameId(portletDisplayTemplateHandler.getClassName()) %>"
-							message='<%= LanguageUtil.format(pageContext, "manage-display-templates-for-x", themeDisplay.getScopeGroupName(), false) %>'
-							refreshURL="<%= currentURL %>"
+							classNameId="<%= PortalUtil.getClassNameId(templateHandler.getClassName()) %>"
+							displayStyle="<%= displayStyle %>"
+							displayStyleGroupId="<%= displayStyleGroupId %>"
+							displayStyles="<%= displayStyles %>"
+							refreshURL="<%= configurationRenderURL %>"
 						/>
 					</div>
 				</ul>
@@ -97,7 +91,7 @@ String redirect = ParamUtil.getString(request, "redirect");
 </aui:form>
 
 <aui:script use="aui-base">
-	var showAssetCount = A.one('#<portlet:namespace />showAssetCountCheckbox');
+	var showAssetCount = A.one('#<portlet:namespace />showAssetCount');
 
 	function showHiddenFields() {
 		var assetCountOptions = A.one('#<portlet:namespace />assetCountOptions');

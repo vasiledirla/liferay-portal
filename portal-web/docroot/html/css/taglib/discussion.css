@@ -1,3 +1,6 @@
+@import "compass";
+@import "mixins";
+
 .taglib-discussion {
 	table.tree-walker {
 		width: 100%;
@@ -16,7 +19,7 @@
 
 		&:after {
 			clear: both;
-			content: ".";
+			content: '';
 			display: block;
 			height: 0;
 			visibility: hidden;
@@ -30,7 +33,7 @@
 	.lfr-discussion-details {
 		width: 15%;
 
-		.aui-column-content {
+		.column-content {
 			padding: 0;
 		}
 
@@ -44,8 +47,8 @@
 
 			.user-details .user-name, .user-profile-image {
 				clear: none;
-				vertical-align: top;
 				text-align: center;
+				vertical-align: top;
 			}
 
 			.user-profile-image img {
@@ -57,7 +60,7 @@
 	.lfr-discussion-body {
 		width: 85%;
 
-		.lfr-discussion-controls .taglib-ratings .aui-rating-label-element {
+		.lfr-discussion-controls .taglib-ratings .rating-label-element {
 			padding-left: 0;
 		}
 	}
@@ -74,6 +77,8 @@
 
 	.lfr-discussion-message {
 		padding-bottom: 1em;
+
+		@include word-break(break-all);
 	}
 
 	.taglib-ratings {
@@ -95,10 +100,14 @@
 			a {
 				clip: rect(0 0 0 0);
 				position: absolute;
+
+				@include respond-to(phone, tablet) {
+					position: static;
+				}
 			}
 		}
 
-		a.aui-rating-element {
+		a.rating-element {
 			margin: 0 1px;
 		}
 	}
@@ -118,9 +127,15 @@
 			padding: 5px 5px 5px 50px;
 			position: relative;
 
-			&.lfr-discussion-form-edit {
+			&.lfr-discussion-form-edit, &.lfr-discussion-form-reply {
 				left: 0;
+				margin-left: 0;
 				padding: 5px;
+
+				textarea {
+					max-width: 100%;
+					width: 100%;
+				}
 			}
 
 			.taglib-user-display {
@@ -139,16 +154,34 @@
 				}
 			}
 
-			.aui-button-holder {
+			.button-holder {
 				margin: 5px 0 0;
 			}
 		}
 	}
 }
 
+.lfr-discussion-reply.popover {
+	max-width: none;
+
+	.lfr-discussion-reply-user-avatar {
+		float: left;
+		margin-right: 15px;
+		margin-top: 3px;
+	}
+
+	.lfr-discussion-reply-user-name {
+		font-weight: bold;
+	}
+
+	.lfr-discussion-reply-content {
+		margin-top: 5px;
+	}
+}
+
 .lfr-discussion-controls:after {
 	clear: both;
-	content: "";
+	content: '';
 	display: block;
 	height: 0;
 }
@@ -163,8 +196,8 @@
 
 .taglib-discussion {
 	table.tree-walker {
-		border-width: 0;
 		border-collapse: collapse;
+		border-width: 0;
 	}
 
 	.lfr-discussion {
@@ -188,7 +221,11 @@
 
 	.lfr-discussion-posted-on {
 		color: #999;
-		font-size: .9em;
+		font-size: 0.9em;
+
+		.lfr-discussion-parent-link {
+			cursor: pointer;
+		}
 	}
 
 	.lfr-discussion-actions li a {

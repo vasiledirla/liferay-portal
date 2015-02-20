@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -117,5 +117,7 @@ public interface BeanProperties {
 	public void setProperties(Object bean, HttpServletRequest request);
 
 	public void setProperty(Object bean, String param, Object value);
+
+	public void setPropertySilent(Object bean, String param, Object value);
 
 }

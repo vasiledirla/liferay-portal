@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,28 +14,22 @@
 
 package com.liferay.portal.verify;
 
-import com.liferay.portal.kernel.dao.db.DB;
-import com.liferay.portal.kernel.dao.db.DBFactoryUtil;
+import com.liferay.portal.kernel.dao.db.BaseDBProcess;
 import com.liferay.portal.kernel.dao.jdbc.DataAccess;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.model.ReleaseConstants;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
-
-import java.io.IOException;
+import com.liferay.portal.util.ClassLoaderUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.SQLException;
 
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import javax.naming.NamingException;
 
 /**
  * This abstract class should be extended for startup processes that verify the
@@ -45,42 +39,15 @@ import javax.naming.NamingException;
  * processes should not cause any problems if run multiple times.
  *
  * @author Alexander Chow
+ * @author Hugo Huijser
  */
-public abstract class VerifyProcess {
+public abstract class VerifyProcess extends BaseDBProcess {
 
 	public static final int ALWAYS = -1;
 
 	public static final int NEVER = 0;
 
 	public static final int ONCE = 1;
-
-	public void runSQL(String template) throws IOException, SQLException {
-		DB db = DBFactoryUtil.getDB();
-
-		db.runSQL(template);
-	}
-
-	public void runSQL(String[] templates) throws IOException, SQLException {
-		DB db = DBFactoryUtil.getDB();
-
-		db.runSQL(templates);
-	}
-
-	public void runSQLTemplate(String path)
-		throws IOException, NamingException, SQLException {
-
-		DB db = DBFactoryUtil.getDB();
-
-		db.runSQLTemplate(path);
-	}
-
-	public void runSQLTemplate(String path, boolean failOnError)
-		throws IOException, NamingException, SQLException {
-
-		DB db = DBFactoryUtil.getDB();
-
-		db.runSQLTemplate(path, failOnError);
-	}
 
 	public void verify() throws VerifyException {
 		try {
@@ -105,7 +72,8 @@ public abstract class VerifyProcess {
 	/**
 	 * @return the portal build number before {@link
 	 *         com.liferay.portal.tools.DBUpgrader} has a chance to update it to
-	 *         the value in {@link ReleaseInfo#getBuildNumber}
+	 *         the value in {@link
+	 *         com.liferay.portal.kernel.util.ReleaseInfo#getBuildNumber}
 	 */
 	protected int getBuildNumber() throws Exception {
 		Connection con = null;
@@ -137,22 +105,20 @@ public abstract class VerifyProcess {
 			return _portalTableNames;
 		}
 
-		Pattern pattern = Pattern.compile("create table (\\S*) \\(");
-
-		ClassLoader classLoader = PACLClassLoaderUtil.getContextClassLoader();
+		ClassLoader classLoader = ClassLoaderUtil.getContextClassLoader();
 
 		String sql = StringUtil.read(
 			classLoader,
 			"com/liferay/portal/tools/sql/dependencies/portal-tables.sql");
 
-		Matcher matcher = pattern.matcher(sql);
+		Matcher matcher = _createTablePattern.matcher(sql);
 
 		Set<String> tableNames = new HashSet<String>();
 
 		while (matcher.find()) {
 			String match = matcher.group(1);
 
-			tableNames.add(match.toLowerCase());
+			tableNames.add(StringUtil.toLowerCase(match));
 		}
 
 		_portalTableNames = tableNames;
@@ -163,11 +129,13 @@ public abstract class VerifyProcess {
 	protected boolean isPortalTableName(String tableName) throws Exception {
 		Set<String> portalTableNames = getPortalTableNames();
 
-		return portalTableNames.contains(tableName.toLowerCase());
+		return portalTableNames.contains(StringUtil.toLowerCase(tableName));
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(VerifyProcess.class);
 
+	private Pattern _createTablePattern = Pattern.compile(
+		"create table (\\S*) \\(");
 	private Set<String> _portalTableNames;
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -20,6 +20,7 @@ import com.liferay.portal.kernel.servlet.HttpHeaders;
 import com.liferay.portal.kernel.servlet.ServletResponseUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.webdav.WebDAVUtil;
 import com.liferay.portal.model.User;
 import com.liferay.portal.sharepoint.methods.Method;
 import com.liferay.portal.sharepoint.methods.MethodFactory;
@@ -86,6 +87,8 @@ public class SharepointServlet extends HttpServlet {
 					_log.info("Original root path " + rootPath);
 				}
 
+				rootPath = WebDAVUtil.stripManualCheckInRequiredPath(rootPath);
+				rootPath = WebDAVUtil.stripOfficeExtension(rootPath);
 				rootPath = SharepointUtil.stripService(rootPath, true);
 
 				if (_log.isInfoEnabled()) {

@@ -1,6 +1,7 @@
 AUI.add(
 	'liferay-app-view-select',
 	function(A) {
+		var AArray = A.Array;
 		var Lang = A.Lang;
 		var History = Liferay.HistoryManager;
 		var Util = Liferay.Util;
@@ -9,7 +10,7 @@ AUI.add(
 
 		var ATTR_CHECKED = 'checked';
 
-		var CSS_RESULT_ROW = '.results-row';
+		var CSS_RESULT_ROW = 'tr.selectable';
 
 		var CSS_SELECTED = 'selected';
 
@@ -17,11 +18,11 @@ AUI.add(
 
 		var DATA_REPOSITORY_ID = 'data-repository-id';
 
+		var DISPLAY_STYLE_BUTTON_GROUP = 'displayStyleButtonGroup';
+
 		var DISPLAY_STYLE_LIST = 'list';
 
 		var DISPLAY_STYLE_TOOLBAR = 'displayStyleToolbar';
-
-		var STR_ACTIVE = 'active';
 
 		var STR_CLICK = 'click';
 
@@ -96,7 +97,7 @@ AUI.add(
 
 						instance._entriesContainer = instance.byId('entriesContainer');
 
-						instance._selectAllCheckbox = instance.byId('allRowIdsCheckbox');
+						instance._selectAllCheckbox = instance.byId('allRowIds');
 
 						instance._folderContainer = instance.get('folderContainer');
 
@@ -115,7 +116,9 @@ AUI.add(
 						instance._initHover();
 
 						if (themeDisplay.isSignedIn()) {
-							instance._initSelectAllCheckbox();
+							if (instance._selectAllCheckbox) {
+								instance._initSelectAllCheckbox();
+							}
 
 							instance._initToggleSelect();
 						}
@@ -135,12 +138,14 @@ AUI.add(
 						var length = displayViews.length;
 
 						if (length > 1) {
-							var displayStyleToolbar = instance._displayStyleToolbar.getData(DISPLAY_STYLE_TOOLBAR);
+							var displayStyleButtonGroup = instance._displayStyleToolbar.getData(DISPLAY_STYLE_BUTTON_GROUP);
 
-							var displayStyle = instance._getDisplayStyle(instance._displayStyle);
+							if (displayStyleButtonGroup) {
+								var displayStyle = instance._getDisplayStyle(instance._displayStyle);
 
-							for (var i = 0; i < length; i++) {
-								displayStyleToolbar.item(i).StateInteraction.set(STR_ACTIVE, displayStyle === displayViews[i]);
+								var selectedIndex = AArray.indexOf(displayViews, displayStyle);
+
+								displayStyleButtonGroup.select(selectedIndex);
 							}
 						}
 					},
@@ -160,7 +165,7 @@ AUI.add(
 					_getSelectedFolder: function() {
 						var instance = this;
 
-						var selectedFolderNode = instance._folderContainer.one('.selected .browse-folder');
+						var selectedFolderNode = instance._folderContainer.one('.active .browse-folder');
 
 						var selectedFolderId = 0;
 						var repositoryId = 0;
@@ -261,7 +266,7 @@ AUI.add(
 
 						var selectAllCheckbox = instance._selectAllCheckbox;
 
-						for (var i = 0, length = instance._checkBoxesId.length; i < length; i++) {
+						for (var i = 0; i < instance._checkBoxesId.length; i++) {
 							Util.checkAll(instance._portletContainer, instance._checkBoxesId[i], selectAllCheckbox, CSS_RESULT_ROW);
 						}
 
@@ -300,11 +305,9 @@ AUI.add(
 							node = node.ancestor(STR_DOT + instance._displayStyleCSSClass) || node;
 
 							if (!preventUpdate) {
-								var selectElement = node.one(STR_DOT + instance._selector + ' :checkbox');
+								var selectElement = node.one(STR_DOT + instance._selector);
 
 								selectElement.attr(ATTR_CHECKED, !selectElement.attr(ATTR_CHECKED));
-
-								Util.updateCheckboxValue(selectElement);
 							}
 						}
 
@@ -329,7 +332,7 @@ AUI.add(
 
 							A.each(
 								selectedEntries,
-								function(item, index, collection) {
+								function(item, index) {
 									var entry = entriesContainer.one('input[value="' + item + '"]');
 
 									if (entry) {

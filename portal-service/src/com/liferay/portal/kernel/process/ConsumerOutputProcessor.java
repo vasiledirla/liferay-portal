@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -22,6 +22,7 @@ import java.io.InputStream;
  */
 public class ConsumerOutputProcessor implements OutputProcessor<Void, Void> {
 
+	@Override
 	public Void processStdErr(InputStream stdErrInputStream)
 		throws ProcessException {
 
@@ -30,6 +31,7 @@ public class ConsumerOutputProcessor implements OutputProcessor<Void, Void> {
 		return null;
 	}
 
+	@Override
 	public Void processStdOut(InputStream stdOutInputStream)
 		throws ProcessException {
 

@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -12,12 +12,12 @@
  * FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License for more
  * details.
  */
- --%>
+--%>
 
 <%@ include file="/html/portlet/layouts_admin/init.jsp" %>
 
 <%
-LayoutSet selLayoutSet = ((LayoutSet)request.getAttribute("edit_pages.jsp-selLayoutSet"));
+LayoutSet selLayoutSet = layoutsAdminDisplayContext.getSelLayoutSet();
 
 UnicodeProperties layoutSetTypeSettings = selLayoutSet.getSettingsProperties();
 %>

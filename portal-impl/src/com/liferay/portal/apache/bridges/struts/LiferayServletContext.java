@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -29,8 +29,8 @@ import java.util.Map;
 import java.util.Set;
 
 import javax.servlet.Filter;
-import javax.servlet.FilterRegistration.Dynamic;
 import javax.servlet.FilterRegistration;
+import javax.servlet.FilterRegistration.Dynamic;
 import javax.servlet.RequestDispatcher;
 import javax.servlet.Servlet;
 import javax.servlet.ServletContext;
@@ -47,146 +47,101 @@ public class LiferayServletContext implements ServletContext {
 
 	public LiferayServletContext(ServletContext servletContext) {
 		_servletContext = servletContext;
-
-		if (_servletContext.getMajorVersion() >= 3) {
-			_version3 = true;
-		}
 	}
 
-	public Dynamic addFilter(
-		String filterName, Class<? extends Filter> filterClass) {
-
-		if (!_version3) {
-			return null;
-		}
-
-		return _servletContext.addFilter(filterName, filterClass);
+	@Override
+	public Dynamic addFilter(String filterName, Class<? extends Filter> clazz) {
+		return _servletContext.addFilter(filterName, clazz);
 	}
 
+	@Override
 	public Dynamic addFilter(String filterName, Filter filter) {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.addFilter(filterName, filter);
 	}
 
+	@Override
 	public Dynamic addFilter(String filterName, String className) {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.addFilter(filterName, className);
 	}
 
-	public void addListener(Class<? extends EventListener> listenerClass) {
-		if (!_version3) {
-			return;
-		}
-
-		_servletContext.addListener(listenerClass);
+	@Override
+	public void addListener(Class<? extends EventListener> clazz) {
+		_servletContext.addListener(clazz);
 	}
 
+	@Override
 	public void addListener(String className) {
-		if (!_version3) {
-			return;
-		}
-
 		_servletContext.addListener(className);
 	}
 
+	@Override
 	public <T extends EventListener> void addListener(T eventListener) {
-		if (!_version3) {
-			return;
-		}
-
 		_servletContext.addListener(eventListener);
 	}
 
+	@Override
 	public ServletRegistration.Dynamic addServlet(
-		String servletName, Class<? extends Servlet> servletClass) {
+		String servletName, Class<? extends Servlet> clazz) {
 
-		if (!_version3) {
-			return null;
-		}
-
-		return _servletContext.addServlet(servletName, servletClass);
+		return _servletContext.addServlet(servletName, clazz);
 	}
 
+	@Override
 	public ServletRegistration.Dynamic addServlet(
 		String servletName, Servlet servlet) {
-
-		if (!_version3) {
-			return null;
-		}
 
 		return _servletContext.addServlet(servletName, servlet);
 	}
 
+	@Override
 	public ServletRegistration.Dynamic addServlet(
 		String servletName, String className) {
-
-		if (!_version3) {
-			return null;
-		}
 
 		return _servletContext.addServlet(servletName, className);
 	}
 
-	public <T extends Filter> T createFilter(Class<T> filterClass)
+	@Override
+	public <T extends Filter> T createFilter(Class<T> clazz)
 		throws ServletException {
 
-		if (!_version3) {
-			return null;
-		}
-
-		return _servletContext.createFilter(filterClass);
+		return _servletContext.createFilter(clazz);
 	}
 
-	public <T extends EventListener> T createListener(Class<T> listenerClass)
+	@Override
+	public <T extends EventListener> T createListener(Class<T> clazz)
 		throws ServletException {
 
-		if (!_version3) {
-			return null;
-		}
-
-		return _servletContext.createListener(listenerClass);
+		return _servletContext.createListener(clazz);
 	}
 
-	public <T extends Servlet> T createServlet(Class<T> servletClass)
+	@Override
+	public <T extends Servlet> T createServlet(Class<T> clazz)
 		throws ServletException {
 
-		if (!_version3) {
-			return null;
-		}
-
-		return _servletContext.createServlet(servletClass);
+		return _servletContext.createServlet(clazz);
 	}
 
+	@Override
 	public void declareRoles(String... roleNames) {
-		if (!_version3) {
-			return;
-		}
-
 		_servletContext.declareRoles(roleNames);
 	}
 
+	@Override
 	public Object getAttribute(String name) {
 		return _servletContext.getAttribute(name);
 	}
 
+	@Override
 	public Enumeration<String> getAttributeNames() {
 		return _servletContext.getAttributeNames();
 	}
 
+	@Override
 	public ClassLoader getClassLoader() {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getClassLoader();
 	}
 
+	@Override
 	public ServletContext getContext(String uriPath) {
 		ServletContext servletContext = _servletContext.getContext(uriPath);
 
@@ -198,86 +153,72 @@ public class LiferayServletContext implements ServletContext {
 		}
 	}
 
+	@Override
 	public String getContextPath() {
 		return ContextPathUtil.getContextPath(_servletContext);
 	}
 
+	@Override
 	public Set<SessionTrackingMode> getDefaultSessionTrackingModes() {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getDefaultSessionTrackingModes();
 	}
 
+	@Override
 	public int getEffectiveMajorVersion() {
-		if (!_version3) {
-			return 0;
-		}
-
 		return _servletContext.getEffectiveMajorVersion();
 	}
 
+	@Override
 	public int getEffectiveMinorVersion() {
-		if (!_version3) {
-			return 0;
-		}
-
 		return _servletContext.getEffectiveMinorVersion();
 	}
 
+	@Override
 	public Set<SessionTrackingMode> getEffectiveSessionTrackingModes() {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getEffectiveSessionTrackingModes();
 	}
 
+	@Override
 	public FilterRegistration getFilterRegistration(String filterName) {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getFilterRegistration(filterName);
 	}
 
+	@Override
 	public Map<String, ? extends FilterRegistration> getFilterRegistrations() {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getFilterRegistrations();
 	}
 
+	@Override
 	public String getInitParameter(String name) {
 		return _servletContext.getInitParameter(name);
 	}
 
+	@Override
 	public Enumeration<String> getInitParameterNames() {
 		return _servletContext.getInitParameterNames();
 	}
 
+	@Override
 	public JspConfigDescriptor getJspConfigDescriptor() {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getJspConfigDescriptor();
 	}
 
+	@Override
 	public int getMajorVersion() {
 		return _servletContext.getMajorVersion();
 	}
 
+	@Override
 	public String getMimeType(String file) {
 		return _servletContext.getMimeType(file);
 	}
 
+	@Override
 	public int getMinorVersion() {
 		return _servletContext.getMinorVersion();
 	}
 
+	@Override
 	public RequestDispatcher getNamedDispatcher(String name) {
 		RequestDispatcher requestDispatcher =
 			_servletContext.getNamedDispatcher(name);
@@ -290,10 +231,12 @@ public class LiferayServletContext implements ServletContext {
 		return requestDispatcher;
 	}
 
+	@Override
 	public String getRealPath(String path) {
 		return _servletContext.getRealPath(path);
 	}
 
+	@Override
 	public RequestDispatcher getRequestDispatcher(String path) {
 		RequestDispatcher requestDispatcher =
 			_servletContext.getRequestDispatcher(path);
@@ -306,110 +249,96 @@ public class LiferayServletContext implements ServletContext {
 		return requestDispatcher;
 	}
 
+	@Override
 	public URL getResource(String path) throws MalformedURLException {
 		return _servletContext.getResource(path);
 	}
 
+	@Override
 	public InputStream getResourceAsStream(String path) {
 		return _servletContext.getResourceAsStream(path);
 	}
 
+	@Override
 	public Set<String> getResourcePaths(String path) {
 		return _servletContext.getResourcePaths(path);
 	}
 
+	@Override
 	public String getServerInfo() {
 		return _servletContext.getServerInfo();
 	}
 
-	/**
-	 * @deprecated try {@link #getServletRegistration(String)}
-	 */
+	@Override
 	public Servlet getServlet(String name) {
 		return null;
 	}
 
+	@Override
 	public String getServletContextName() {
 		return _servletContext.getServletContextName();
 	}
 
-	/**
-	 * @deprecated try {@link #getServletRegistrations()}
-	 */
+	@Override
 	public Enumeration<String> getServletNames() {
 		return Collections.enumeration(new ArrayList<String>());
 	}
 
+	@Override
 	public ServletRegistration getServletRegistration(String servletName) {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getServletRegistration(servletName);
 	}
 
+	@Override
 	public Map<String, ? extends ServletRegistration>
 		getServletRegistrations() {
-
-		if (!_version3) {
-			return null;
-		}
 
 		return _servletContext.getServletRegistrations();
 	}
 
-	/**
-	 * @deprecated try {@link #getServletRegistrations()}
-	 */
+	@Override
 	public Enumeration<Servlet> getServlets() {
 		return Collections.enumeration(new ArrayList<Servlet>());
 	}
 
+	@Override
 	public SessionCookieConfig getSessionCookieConfig() {
-		if (!_version3) {
-			return null;
-		}
-
 		return _servletContext.getSessionCookieConfig();
 	}
 
-	/**
-	 * @deprecated {@link #log(String, Throwable)}
-	 */
+	@Override
 	public void log(Exception exception, String message) {
 		_servletContext.log(message, exception);
 	}
 
+	@Override
 	public void log(String message) {
 		_servletContext.log(message);
 	}
 
-	public void log(String message, Throwable throwable) {
-		_servletContext.log(message, throwable);
+	@Override
+	public void log(String message, Throwable t) {
+		_servletContext.log(message, t);
 	}
 
+	@Override
 	public void removeAttribute(String name) {
 		_servletContext.removeAttribute(name);
 	}
 
+	@Override
 	public void setAttribute(String name, Object value) {
 		_servletContext.setAttribute(name, value);
 	}
 
+	@Override
 	public boolean setInitParameter(String name, String value) {
-		if (!_version3) {
-			return false;
-		}
-
 		return _servletContext.setInitParameter(name, value);
 	}
 
+	@Override
 	public void setSessionTrackingModes(
 		Set<SessionTrackingMode> sessionTrackingModes) {
-
-		if (!_version3) {
-			return;
-		}
 
 		_servletContext.setSessionTrackingModes(sessionTrackingModes);
 	}
@@ -420,6 +349,5 @@ public class LiferayServletContext implements ServletContext {
 	}
 
 	private ServletContext _servletContext;
-	private boolean _version3;
 
 }

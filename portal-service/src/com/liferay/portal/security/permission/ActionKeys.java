@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -60,6 +60,9 @@ public class ActionKeys {
 	public static final String ADD_FOLDER = "ADD_FOLDER";
 
 	public static final String ADD_FRAMEWORK_VERSION = "ADD_FRAMEWORK_VERSION";
+
+	public static final String ADD_GENERAL_ANNOUNCEMENTS =
+		"ADD_GENERAL_ANNOUNCEMENTS";
 
 	public static final String ADD_IMAGE = "ADD_IMAGE";
 
@@ -209,11 +212,15 @@ public class ActionKeys {
 
 	public static final String MOVE_THREAD = "MOVE_THREAD";
 
+	public static final String OVERRIDE_CHECKOUT = "OVERRIDE_CHECKOUT";
+
 	public static final String PERMISSIONS = "PERMISSIONS";
 
 	public static final String PERMISSIONS_USER = "PERMISSIONS_USER";
 
 	public static final String PREFERENCES = "PREFERENCES";
+
+	public static final String PREVIEW_IN_DEVICE = "PREVIEW_IN_DEVICE";
 
 	public static final String PRINT = "PRINT";
 
@@ -246,6 +253,9 @@ public class ActionKeys {
 	public static final String VIEW_CONTROL_PANEL = "VIEW_CONTROL_PANEL";
 
 	public static final String VIEW_MEMBERS = "VIEW_MEMBERS";
+
+	public static final String VIEW_SITE_ADMINISTRATION =
+		"VIEW_SITE_ADMINISTRATION";
 
 	public static final String VIEW_STAGING = "VIEW_STAGING";
 

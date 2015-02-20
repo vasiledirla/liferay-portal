@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,7 +14,6 @@
 
 package com.liferay.portlet.social.model;
 
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.HtmlUtil;
@@ -84,6 +83,7 @@ public abstract class BaseSocialRequestInterpreter
 		}
 	}
 
+	@Override
 	public SocialRequestFeedEntry interpret(
 		SocialRequest request, ThemeDisplay themeDisplay) {
 
@@ -97,6 +97,7 @@ public abstract class BaseSocialRequestInterpreter
 		return null;
 	}
 
+	@Override
 	public boolean processConfirmation(
 		SocialRequest request, ThemeDisplay themeDisplay) {
 
@@ -111,8 +112,7 @@ public abstract class BaseSocialRequestInterpreter
 	}
 
 	public void processDuplicateRequestsFromUser(
-			SocialRequest request, int oldStatus)
-		throws SystemException {
+		SocialRequest request, int oldStatus) {
 
 		List<SocialRequest> requests = SocialRequestUtil.findByU_C_C_T_S(
 			request.getUserId(), request.getClassNameId(), request.getClassPK(),
@@ -123,13 +123,12 @@ public abstract class BaseSocialRequestInterpreter
 		for (SocialRequest curRequest : requests) {
 			curRequest.setStatus(newStatus);
 
-			SocialRequestUtil.update(curRequest, false);
+			SocialRequestUtil.update(curRequest);
 		}
 	}
 
 	public void processDuplicateRequestsToUser(
-			SocialRequest request, int oldStatus)
-		throws SystemException {
+		SocialRequest request, int oldStatus) {
 
 		List<SocialRequest> requests = SocialRequestUtil.findByC_C_T_R_S(
 			request.getClassNameId(), request.getClassPK(), request.getType(),
@@ -140,10 +139,11 @@ public abstract class BaseSocialRequestInterpreter
 		for (SocialRequest curRequest : requests) {
 			curRequest.setStatus(newStatus);
 
-			SocialRequestUtil.update(curRequest, false);
+			SocialRequestUtil.update(curRequest);
 		}
 	}
 
+	@Override
 	public boolean processRejection(
 		SocialRequest request, ThemeDisplay themeDisplay) {
 

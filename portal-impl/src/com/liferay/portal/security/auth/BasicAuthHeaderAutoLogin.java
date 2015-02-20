@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,9 +16,14 @@ package com.liferay.portal.security.auth;
 
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.servlet.HttpHeaders;
+import com.liferay.portal.kernel.spring.osgi.OSGiBeanProperties;
 import com.liferay.portal.kernel.util.Base64;
 import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.MapUtil;
+import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.util.Portal;
 import com.liferay.portlet.login.util.LoginUtil;
 
 import java.util.Properties;
@@ -60,87 +65,18 @@ import javax.servlet.http.HttpServletResponse;
  * @author Brian Wing Shun Chan
  * @author Tomas Polesovsky
  */
-public class BasicAuthHeaderAutoLogin implements AuthVerifier, AutoLogin {
+@OSGiBeanProperties(
+	portalPropertyPrefix = "auth.verifier.BasicAuthHeaderAutoLogin."
+)
+public class BasicAuthHeaderAutoLogin
+	extends BaseAutoLogin implements AuthVerifier {
 
+	@Override
 	public String getAuthType() {
 		return HttpServletRequest.BASIC_AUTH;
 	}
 
-	public String[] login(
-			HttpServletRequest request, HttpServletResponse response)
-		throws AutoLoginException {
-
-		try {
-			String[] credentials = null;
-
-			// Get the Authorization header, if one was supplied
-
-			String authorization = request.getHeader("Authorization");
-
-			if (authorization == null) {
-				return credentials;
-			}
-
-			StringTokenizer st = new StringTokenizer(authorization);
-
-			if (!st.hasMoreTokens()) {
-				return credentials;
-			}
-
-			String basic = st.nextToken();
-
-			// We only handle HTTP Basic authentication
-
-			if (!basic.equalsIgnoreCase(HttpServletRequest.BASIC_AUTH)) {
-				return credentials;
-			}
-
-			String encodedCredentials = st.nextToken();
-
-			if (_log.isDebugEnabled()) {
-				_log.debug("Encoded credentials are " + encodedCredentials);
-			}
-
-			String decodedCredentials = new String(
-				Base64.decode(encodedCredentials));
-
-			if (_log.isDebugEnabled()) {
-				_log.debug("Decoded credentials are " + decodedCredentials);
-			}
-
-			int pos = decodedCredentials.indexOf(CharPool.COLON);
-
-			if (pos == -1) {
-				return credentials;
-			}
-
-			String login = GetterUtil.getString(
-				decodedCredentials.substring(0, pos));
-			String password = decodedCredentials.substring(pos + 1);
-
-			try {
-				long userId = LoginUtil.getAuthenticatedUserId(
-					request, login, password, null);
-
-				credentials = new String[3];
-
-				credentials[0] = String.valueOf(userId);
-				credentials[1] = password;
-				credentials[2] = Boolean.TRUE.toString();
-			}
-			catch (Exception e) {
-				if (_log.isWarnEnabled()) {
-					_log.warn(login + " is not a valid login", e);
-				}
-			}
-
-			return credentials;
-		}
-		catch (Exception e) {
-			throw new AutoLoginException(e);
-		}
-	}
-
+	@Override
 	public AuthVerifierResult verify(
 			AccessControlContext accessControlContext, Properties properties)
 		throws AuthException {
@@ -157,13 +93,100 @@ public class BasicAuthHeaderAutoLogin implements AuthVerifier, AutoLogin {
 				authVerifierResult.setState(AuthVerifierResult.State.SUCCESS);
 				authVerifierResult.setUserId(Long.valueOf(credentials[0]));
 			}
+			else {
+
+				// Deprecated
+
+				boolean forcedBasicAuth = MapUtil.getBoolean(
+					accessControlContext.getSettings(), "basic_auth");
+
+				if (forcedBasicAuth) {
+					HttpServletResponse response =
+						accessControlContext.getResponse();
+
+					response.setHeader(
+						HttpHeaders.WWW_AUTHENTICATE, _BASIC_REALM);
+
+					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+					authVerifierResult.setState(
+						AuthVerifierResult.State.INVALID_CREDENTIALS);
+				}
+			}
 
 			return authVerifierResult;
 		}
-		catch (AutoLoginException e) {
-			throw new AuthException(e);
+		catch (AutoLoginException ale) {
+			throw new AuthException(ale);
 		}
 	}
+
+	@Override
+	protected String[] doLogin(
+			HttpServletRequest request, HttpServletResponse response)
+		throws Exception {
+
+		// Get the Authorization header, if one was supplied
+
+		String authorization = request.getHeader("Authorization");
+
+		if (authorization == null) {
+			return null;
+		}
+
+		StringTokenizer st = new StringTokenizer(authorization);
+
+		if (!st.hasMoreTokens()) {
+			return null;
+		}
+
+		String basic = st.nextToken();
+
+		// We only handle HTTP Basic authentication
+
+		if (!StringUtil.equalsIgnoreCase(
+				basic, HttpServletRequest.BASIC_AUTH)) {
+
+			return null;
+		}
+
+		String encodedCredentials = st.nextToken();
+
+		if (_log.isDebugEnabled()) {
+			_log.debug("Encoded credentials are " + encodedCredentials);
+		}
+
+		String decodedCredentials = new String(
+			Base64.decode(encodedCredentials));
+
+		if (_log.isDebugEnabled()) {
+			_log.debug("Decoded credentials are " + decodedCredentials);
+		}
+
+		int pos = decodedCredentials.indexOf(CharPool.COLON);
+
+		if (pos == -1) {
+			return null;
+		}
+
+		String login = GetterUtil.getString(
+			decodedCredentials.substring(0, pos));
+		String password = decodedCredentials.substring(pos + 1);
+
+		long userId = LoginUtil.getAuthenticatedUserId(
+			request, login, password, null);
+
+		String[] credentials = new String[3];
+
+		credentials[0] = String.valueOf(userId);
+		credentials[1] = password;
+		credentials[2] = Boolean.TRUE.toString();
+
+		return credentials;
+	}
+
+	private static final String _BASIC_REALM =
+		"Basic realm=\"" + Portal.PORTAL_REALM + "\"";
 
 	private static Log _log = LogFactoryUtil.getLog(
 		BasicAuthHeaderAutoLogin.class);

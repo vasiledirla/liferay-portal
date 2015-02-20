@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -46,16 +46,28 @@
 
 			assetEntryQuery.setExcludeZeroViewCount(false);
 
-			results = AssetEntryServiceUtil.getEntries(assetEntryQuery);
 			total = AssetEntryServiceUtil.getEntriesCount(assetEntryQuery);
+
+			searchContainer.setTotal(total);
+
+			assetEntryQuery.setEnd(searchContainer.getEnd());
+			assetEntryQuery.setStart(searchContainer.getStart());
+
+			results = AssetEntryServiceUtil.getEntries(assetEntryQuery);
 		}
 		else if (topLink.equals("my-posts")) {
-			results = MBThreadServiceUtil.getGroupThreads(scopeGroupId, groupThreadsUserId, WorkflowConstants.STATUS_ANY, searchContainer.getStart(), searchContainer.getEnd());
 			total = MBThreadServiceUtil.getGroupThreadsCount(scopeGroupId, groupThreadsUserId, WorkflowConstants.STATUS_ANY);
+
+			searchContainer.setTotal(total);
+
+			results = MBThreadServiceUtil.getGroupThreads(scopeGroupId, groupThreadsUserId, WorkflowConstants.STATUS_ANY, searchContainer.getStart(), searchContainer.getEnd());
 		}
 		else if (topLink.equals("my-subscriptions")) {
-			results = MBThreadServiceUtil.getGroupThreads(scopeGroupId, groupThreadsUserId, WorkflowConstants.STATUS_APPROVED, true, searchContainer.getStart(), searchContainer.getEnd());
 			total = MBThreadServiceUtil.getGroupThreadsCount(scopeGroupId, groupThreadsUserId, WorkflowConstants.STATUS_APPROVED, true);
+
+			searchContainer.setTotal(total);
+
+			results = MBThreadServiceUtil.getGroupThreads(scopeGroupId, groupThreadsUserId, WorkflowConstants.STATUS_APPROVED, true, searchContainer.getStart(), searchContainer.getEnd());
 		}
 		else if (topLink.equals("recent-posts")) {
 			Calendar calendar = Calendar.getInstance();
@@ -64,12 +76,14 @@
 
 			calendar.add(Calendar.DATE, -offset);
 
-			results = MBThreadServiceUtil.getGroupThreads(scopeGroupId, groupThreadsUserId, calendar.getTime(), WorkflowConstants.STATUS_APPROVED, searchContainer.getStart(), searchContainer.getEnd());
 			total = MBThreadServiceUtil.getGroupThreadsCount(scopeGroupId, groupThreadsUserId, calendar.getTime(), WorkflowConstants.STATUS_APPROVED);
+
+			searchContainer.setTotal(total);
+
+			results = MBThreadServiceUtil.getGroupThreads(scopeGroupId, groupThreadsUserId, calendar.getTime(), WorkflowConstants.STATUS_APPROVED, searchContainer.getStart(), searchContainer.getEnd());
 		}
 
-		pageContext.setAttribute("results", results);
-		pageContext.setAttribute("total", total);
+		searchContainer.setResults(results);
 		%>
 
 	</liferay-ui:search-container-results>
@@ -99,7 +113,6 @@
 		message = message.toEscapedModel();
 
 		row.setBold(!MBThreadFlagLocalServiceUtil.hasThreadFlag(themeDisplay.getUserId(), thread));
-		row.setObject(new Object[] {message, threadSubscriptionClassPKs});
 		row.setRestricted(!MBMessagePermission.contains(permissionChecker, message, ActionKeys.VIEW));
 		%>
 

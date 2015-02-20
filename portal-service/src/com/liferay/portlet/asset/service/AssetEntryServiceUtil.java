@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,15 +14,18 @@
 
 package com.liferay.portlet.asset.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
 import com.liferay.portal.kernel.util.ReferenceRegistry;
 
 /**
- * The utility for the asset entry remote service. This utility wraps {@link com.liferay.portlet.asset.service.impl.AssetEntryServiceImpl} and is the primary access point for service operations in application layer code running on a remote server.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service utility for AssetEntry. This utility wraps
+ * {@link com.liferay.portlet.asset.service.impl.AssetEntryServiceImpl} and is the
+ * primary access point for service operations in application layer code running
+ * on a remote server. Methods of this service are expected to have security
+ * checks based on the propagated JAAS credentials because this service can be
+ * accessed remotely.
  *
  * @author Brian Wing Shun Chan
  * @see AssetEntryService
@@ -30,6 +33,7 @@ import com.liferay.portal.kernel.util.ReferenceRegistry;
  * @see com.liferay.portlet.asset.service.impl.AssetEntryServiceImpl
  * @generated
  */
+@ProviderType
 public class AssetEntryServiceUtil {
 	/*
 	 * NOTE FOR DEVELOPERS:
@@ -46,6 +50,39 @@ public class AssetEntryServiceUtil {
 		return getService().getBeanIdentifier();
 	}
 
+	public static java.util.List<com.liferay.portlet.asset.model.AssetEntry> getCompanyEntries(
+		long companyId, int start, int end) {
+		return getService().getCompanyEntries(companyId, start, end);
+	}
+
+	public static int getCompanyEntriesCount(long companyId) {
+		return getService().getCompanyEntriesCount(companyId);
+	}
+
+	public static java.util.List<com.liferay.portlet.asset.model.AssetEntry> getEntries(
+		com.liferay.portlet.asset.service.persistence.AssetEntryQuery entryQuery)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getEntries(entryQuery);
+	}
+
+	public static int getEntriesCount(
+		com.liferay.portlet.asset.service.persistence.AssetEntryQuery entryQuery)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getEntriesCount(entryQuery);
+	}
+
+	public static com.liferay.portlet.asset.model.AssetEntry getEntry(
+		long entryId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getEntry(entryId);
+	}
+
+	public static com.liferay.portlet.asset.model.AssetEntry incrementViewCounter(
+		java.lang.String className, long classPK)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().incrementViewCounter(className, classPK);
+	}
+
 	/**
 	* Sets the Spring bean ID for this bean.
 	*
@@ -55,50 +92,37 @@ public class AssetEntryServiceUtil {
 		getService().setBeanIdentifier(beanIdentifier);
 	}
 
-	public static java.util.List<com.liferay.portlet.asset.model.AssetEntry> getCompanyEntries(
-		long companyId, int start, int end)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return getService().getCompanyEntries(companyId, start, end);
-	}
-
-	public static int getCompanyEntriesCount(long companyId)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return getService().getCompanyEntriesCount(companyId);
-	}
-
-	public static java.util.List<com.liferay.portlet.asset.model.AssetEntry> getEntries(
-		com.liferay.portlet.asset.service.persistence.AssetEntryQuery entryQuery)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getEntries(entryQuery);
-	}
-
-	public static int getEntriesCount(
-		com.liferay.portlet.asset.service.persistence.AssetEntryQuery entryQuery)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getEntriesCount(entryQuery);
-	}
-
-	public static com.liferay.portlet.asset.model.AssetEntry getEntry(
-		long entryId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getEntry(entryId);
-	}
-
-	public static com.liferay.portlet.asset.model.AssetEntry incrementViewCounter(
-		java.lang.String className, long classPK)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().incrementViewCounter(className, classPK);
+	/**
+	* @deprecated As of 6.2.0, replaced by {@link #updateEntry(long, Date,
+	Date, String, long, String, long, long[], String[], boolean,
+	Date, Date, Date, String, String, String, String, String,
+	String, int, int, Integer, boolean)}
+	*/
+	@Deprecated
+	public static com.liferay.portlet.asset.model.AssetEntry updateEntry(
+		long groupId, java.lang.String className, long classPK,
+		java.lang.String classUuid, long classTypeId, long[] categoryIds,
+		java.lang.String[] tagNames, boolean visible, java.util.Date startDate,
+		java.util.Date endDate, java.util.Date expirationDate,
+		java.lang.String mimeType, java.lang.String title,
+		java.lang.String description, java.lang.String summary,
+		java.lang.String url, java.lang.String layoutUuid, int height,
+		int width, java.lang.Integer priority, boolean sync)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService()
+				   .updateEntry(groupId, className, classPK, classUuid,
+			classTypeId, categoryIds, tagNames, visible, startDate, endDate,
+			expirationDate, mimeType, title, description, summary, url,
+			layoutUuid, height, width, priority, sync);
 	}
 
 	/**
-	* @deprecated {@link #updateEntry(long, String, long, String, long, long[],
-	String[], boolean, Date, Date, Date, String, String, String,
-	String, String, String, int, int, Integer, boolean)}
+	* @deprecated As of 6.2.0, replaced by {@link #updateEntry(long, String,
+	long, String, long, long[], String[], boolean, Date, Date,
+	Date, String, String, String, String, String, String, int,
+	int, Integer, boolean)}
 	*/
+	@Deprecated
 	public static com.liferay.portlet.asset.model.AssetEntry updateEntry(
 		long groupId, java.lang.String className, long classPK,
 		java.lang.String classUuid, long classTypeId, long[] categoryIds,
@@ -109,8 +133,7 @@ public class AssetEntryServiceUtil {
 		java.lang.String summary, java.lang.String url,
 		java.lang.String layoutUuid, int height, int width,
 		java.lang.Integer priority, boolean sync)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
+		throws com.liferay.portal.kernel.exception.PortalException {
 		return getService()
 				   .updateEntry(groupId, className, classPK, classUuid,
 			classTypeId, categoryIds, tagNames, visible, startDate, endDate,
@@ -119,21 +142,21 @@ public class AssetEntryServiceUtil {
 	}
 
 	public static com.liferay.portlet.asset.model.AssetEntry updateEntry(
-		long groupId, java.lang.String className, long classPK,
-		java.lang.String classUuid, long classTypeId, long[] categoryIds,
-		java.lang.String[] tagNames, boolean visible, java.util.Date startDate,
-		java.util.Date endDate, java.util.Date expirationDate,
-		java.lang.String mimeType, java.lang.String title,
-		java.lang.String description, java.lang.String summary,
-		java.lang.String url, java.lang.String layoutUuid, int height,
-		int width, java.lang.Integer priority, boolean sync)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
+		long groupId, java.util.Date createDate, java.util.Date modifiedDate,
+		java.lang.String className, long classPK, java.lang.String classUuid,
+		long classTypeId, long[] categoryIds, java.lang.String[] tagNames,
+		boolean visible, java.util.Date startDate, java.util.Date endDate,
+		java.util.Date expirationDate, java.lang.String mimeType,
+		java.lang.String title, java.lang.String description,
+		java.lang.String summary, java.lang.String url,
+		java.lang.String layoutUuid, int height, int width,
+		java.lang.Integer priority, boolean sync)
+		throws com.liferay.portal.kernel.exception.PortalException {
 		return getService()
-				   .updateEntry(groupId, className, classPK, classUuid,
-			classTypeId, categoryIds, tagNames, visible, startDate, endDate,
-			expirationDate, mimeType, title, description, summary, url,
-			layoutUuid, height, width, priority, sync);
+				   .updateEntry(groupId, createDate, modifiedDate, className,
+			classPK, classUuid, classTypeId, categoryIds, tagNames, visible,
+			startDate, endDate, expirationDate, mimeType, title, description,
+			summary, url, layoutUuid, height, width, priority, sync);
 	}
 
 	public static AssetEntryService getService() {
@@ -148,8 +171,9 @@ public class AssetEntryServiceUtil {
 	}
 
 	/**
-	 * @deprecated
+	 * @deprecated As of 6.2.0
 	 */
+	@Deprecated
 	public void setService(AssetEntryService service) {
 	}
 

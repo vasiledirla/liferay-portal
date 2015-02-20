@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -45,20 +45,22 @@ public class PortalBeanLocatorUtil {
 
 		Thread currentThread = Thread.currentThread();
 
-		ClassLoader contextClassLoader = currentThread.getContextClassLoader();
+		ClassLoader contextClassLoader = _pacl.getContextClassLoader(
+			currentThread);
 
-		ClassLoader beanClassLoader = beanLocator.getClassLoader();
+		ClassLoader beanClassLoader = _pacl.getBeanLocatorClassLoader(
+			beanLocator);
 
 		try {
 			if (contextClassLoader != beanClassLoader) {
-				currentThread.setContextClassLoader(beanClassLoader);
+				_pacl.setContextClassLoader(currentThread, beanClassLoader);
 			}
 
 			return beanLocator.locate(clazz);
 		}
 		finally {
 			if (contextClassLoader != beanClassLoader) {
-				currentThread.setContextClassLoader(contextClassLoader);
+				_pacl.setContextClassLoader(currentThread, contextClassLoader);
 			}
 		}
 	}
@@ -82,22 +84,28 @@ public class PortalBeanLocatorUtil {
 
 		Thread currentThread = Thread.currentThread();
 
-		ClassLoader contextClassLoader = currentThread.getContextClassLoader();
+		ClassLoader contextClassLoader = _pacl.getContextClassLoader(
+			currentThread);
 
-		ClassLoader beanClassLoader = beanLocator.getClassLoader();
+		ClassLoader beanClassLoader = _pacl.getBeanLocatorClassLoader(
+			beanLocator);
 
 		try {
 			if (contextClassLoader != beanClassLoader) {
-				currentThread.setContextClassLoader(beanClassLoader);
+				_pacl.setContextClassLoader(currentThread, beanClassLoader);
 			}
 
 			return beanLocator.locate(name);
 		}
 		finally {
 			if (contextClassLoader != beanClassLoader) {
-				currentThread.setContextClassLoader(contextClassLoader);
+				_pacl.setContextClassLoader(currentThread, contextClassLoader);
 			}
 		}
+	}
+
+	public static void reset() {
+		setBeanLocator(null);
 	}
 
 	public static void setBeanLocator(BeanLocator beanLocator) {
@@ -105,15 +113,53 @@ public class PortalBeanLocatorUtil {
 			PortalBeanLocatorUtil.class);
 
 		if (_log.isDebugEnabled()) {
-			_log.debug("Setting BeanLocator " + beanLocator.hashCode());
+			if (beanLocator == null) {
+				_log.debug("Setting BeanLocator " + beanLocator);
+			}
+			else {
+				_log.debug("Setting BeanLocator " + beanLocator.hashCode());
+			}
 		}
 
 		_beanLocator = beanLocator;
+	}
+
+	public interface PACL {
+
+		public ClassLoader getBeanLocatorClassLoader(BeanLocator beanLocator);
+
+		public ClassLoader getContextClassLoader(Thread currentThread);
+
+		public void setContextClassLoader(
+			Thread currentThread, ClassLoader classLoader);
+
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(
 		PortalBeanLocatorUtil.class);
 
 	private static BeanLocator _beanLocator;
+	private static PACL _pacl = new NoPACL();
+
+	private static class NoPACL implements PACL {
+
+		@Override
+		public ClassLoader getBeanLocatorClassLoader(BeanLocator beanLocator) {
+			return beanLocator.getClassLoader();
+		}
+
+		@Override
+		public ClassLoader getContextClassLoader(Thread currentThread) {
+			return currentThread.getContextClassLoader();
+		}
+
+		@Override
+		public void setContextClassLoader(
+			Thread currentThread, ClassLoader classLoader) {
+
+			currentThread.setContextClassLoader(classLoader);
+		}
+
+	}
 
 }

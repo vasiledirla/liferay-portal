@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,47 +19,62 @@
 <%
 String displayStyle = (String)request.getAttribute("liferay-ui:app-view-display-style:displayStyle");
 String[] displayStyles = (String[])request.getAttribute("liferay-ui:app-view-display-style:displayStyles");
+String eventName = (String)request.getAttribute("liferay-ui:app-view-display-style:eventName");
 Map<String, String> requestParams = (Map<String, String>)request.getAttribute("liferay-ui:app-view-display-style:requestParams");
 %>
 
 <c:if test="<%= displayStyles.length > 1 %>">
-	<aui:script use="aui-base,aui-toolbar">
-		var buttonRow = A.one('#<portlet:namespace />displayStyleToolbar');
+	<span class="display-style-buttons-container" id="<portlet:namespace />displayStyleButtonsContainer">
+		<div class="display-style-buttons" id="<portlet:namespace />displayStyleButtons">
+			<aui:nav-item anchorCssClass="btn btn-default" dropdown="<%= true %>" iconCssClass='<%= "icon-" + _getIcon(displayStyle) %>'>
 
-		function onButtonClick(displayStyle) {
+				<%
+				for (int i = 0; i < displayStyles.length; i++) {
+					String dataStyle = displayStyles[i];
+
+					Map<String, Object> data = new HashMap<String, Object>();
+
+					data.put("displayStyle", dataStyle);
+				%>
+
+					<aui:nav-item
+						anchorData="<%= data %>"
+						href="javascript:;"
+						iconCssClass='<%= "icon-" + _getIcon(dataStyle) %>'
+						label="<%= dataStyle %>"
+					/>
+
+				<%
+				}
+				%>
+
+			</aui:nav-item>
+		</div>
+	</span>
+</c:if>
+
+<c:if test="<%= displayStyles.length > 1 %>">
+	<aui:script use="aui-base">
+		function changeDisplayStyle(displayStyle) {
 			var config = {};
 
 			<%
-			Set<String> requestParamNames = requestParams.keySet();
+			if (requestParams != null) {
+				Set<String> requestParamNames = requestParams.keySet();
 
-			for (String requestParamName : requestParamNames) {
-				String requestParamValue = requestParams.get(requestParamName);
+				for (String requestParamName : requestParamNames) {
+					String requestParamValue = requestParams.get(requestParamName);
 			%>
 
-				config['<portlet:namespace /><%= requestParamName %>'] = '<%= requestParamValue %>';
+					config['<portlet:namespace /><%= requestParamName %>'] = '<%= HtmlUtil.escapeJS(requestParamValue) %>';
 
 			<%
+				}
 			}
 			%>
 
 			config['<portlet:namespace />displayStyle'] = displayStyle;
 			config['<portlet:namespace />saveDisplayStyle'] = true;
-
-			updateDisplayStyle(config);
-		}
-
-		function updateDisplayStyle(config) {
-			var displayStyle = config['<portlet:namespace />displayStyle'];
-
-			<%
-			for (int i = 0; i < displayStyles.length; i++) {
-			%>
-
-				displayStyleToolbar.item(<%= i %>).StateInteraction.set('active', (displayStyle === '<%= displayStyles[i] %>'));
-
-			<%
-			}
-			%>
 
 			Liferay.fire(
 				'<portlet:namespace />dataRequest',
@@ -70,49 +85,46 @@ Map<String, String> requestParams = (Map<String, String>)request.getAttribute("l
 			);
 		}
 
-		var displayStyleToolbarChildren = [];
+		var displayStyleButtonsMenu = A.one('#<portlet:namespace />displayStyleButtons .dropdown-menu');
 
-		<%
-		for (int i = 0; i < displayStyles.length; i++) {
-		%>
+		if (displayStyleButtonsMenu) {
+			displayStyleButtonsMenu.delegate(
+				'click',
+				function(event) {
+					var displayStyle = event.currentTarget.attr('data-displayStyle');
 
-			displayStyleToolbarChildren.push(
-				{
-					handler: A.bind(onButtonClick, null, '<%= displayStyles[i] %>'),
-					icon: 'display-<%= displayStyles[i] %>',
-					title: '<%= UnicodeLanguageUtil.get(pageContext, displayStyles[i] + "-view") %>'
-				}
+					if (<%= requestParams != null %>) {
+						changeDisplayStyle(displayStyle);
+					}
+					else if (<%= eventName != null %>) {
+						Liferay.fire(
+							'<%= eventName %>',
+							{
+								displayStyle: displayStyle
+							}
+						);
+					}
+				},
+				'li > a'
 			);
-
-		<%
 		}
-		%>
-
-		var displayStyleToolbar = new A.Toolbar(
-			{
-				activeState: true,
-				boundingBox: buttonRow,
-				children: displayStyleToolbarChildren
-			}
-		).render();
-
-		var index = 0;
-
-		<%
-		for (int i = 0; i < displayStyles.length; i++) {
-			if (displayStyle.equals(displayStyles[i])) {
-		%>
-
-				index = <%= i %>;
-
-		<%
-				break;
-			}
-		}
-		%>
-
-		displayStyleToolbar.item(index).StateInteraction.set('active', true);
-
-		buttonRow.setData('displayStyleToolbar', displayStyleToolbar);
 	</aui:script>
 </c:if>
+
+<%!
+private String _getIcon(String displayStyle) {
+	String displayStyleIcon = displayStyle;
+
+	if (displayStyle.equals("descriptive")) {
+		displayStyleIcon = "th-list";
+	}
+	else if (displayStyle.equals("icon")) {
+		displayStyleIcon = "th-large";
+	}
+	else if (displayStyle.equals("list")) {
+		displayStyleIcon = "align-justify";
+	}
+
+	return displayStyleIcon;
+}
+%>

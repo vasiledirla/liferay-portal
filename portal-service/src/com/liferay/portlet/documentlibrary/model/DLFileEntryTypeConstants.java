@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -25,7 +25,7 @@ public class DLFileEntryTypeConstants {
 
 	public static final long FILE_ENTRY_TYPE_ID_BASIC_DOCUMENT = 0;
 
-	public static final String NAME_BASIC_DOCUMENT = "Basic Document";
+	public static final String NAME_BASIC_DOCUMENT = "basic-document";
 
 	public static final String NAME_CONTRACT = "Contract";
 

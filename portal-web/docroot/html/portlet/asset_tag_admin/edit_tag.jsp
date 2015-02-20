@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,7 +17,7 @@
 <%@ include file="/html/portlet/asset_tag_admin/init.jsp" %>
 
 <%
-String randomNamespace = PortalUtil.generateRandomKey(request, "portlet_asset_tad_admin_edit_tag") + StringPool.UNDERLINE;
+String redirect = ParamUtil.getString(renderRequest, "redirect");
 
 AssetTag tag = (AssetTag)request.getAttribute(WebKeys.ASSET_TAG);
 
@@ -63,11 +63,16 @@ else {
 }
 %>
 
+<liferay-ui:header
+	title='<%= (tag != null) ? tag.getName() : "add-tag" %>'
+/>
+
 <portlet:actionURL var="editTagURL">
 	<portlet:param name="struts_action" value="/asset_tag_admin/edit_tag" />
+	<portlet:param name="redirect" value="<%= redirect %>" />
 </portlet:actionURL>
 
-<aui:form action="<%= editTagURL %>" cssClass="update-tag-form" method="get" name='<%= randomNamespace + "fm" %>'>
+<aui:form action="<%= editTagURL %>" name="fm">
 	<aui:input name="<%= Constants.CMD %>" type="hidden" value="<%= tag == null ? Constants.ADD : Constants.UPDATE %>" />
 
 	<aui:model-context bean="<%= tag %>" model="<%= AssetTag.class %>" />
@@ -77,85 +82,74 @@ else {
 			<div class="add-tag-layer asset-tag-layer">
 				<aui:input name="tagId" type="hidden" value="<%= tagId %>" />
 
-				<aui:input cssClass="tag-name" name="name" />
+				<aui:input autoFocus="<%= true %>" cssClass="tag-name" name="name" />
 
-				<liferay-ui:panel-container extended="<%= false %>" id="assetTagPanelContainer" persistState="<%= true %>">
-					<c:if test="<%= tag == null %>">
-						<liferay-ui:panel collapsible="<%= true %>" cssClass="tag-permissions-actions" defaultState="open" extended="<%= true %>" id="assetTagPermissionsPanel" persistState="<%= true %>" title="permissions">
-							<liferay-ui:input-permissions
-								modelName="<%= AssetTag.class.getName() %>"
-							/>
-						</liferay-ui:panel>
-					</c:if>
+				<c:if test="<%= PropsValues.ASSET_TAG_PERMISSIONS_ENABLED || PropsValues.ASSET_TAG_PROPERTIES_ENABLED %>">
+					<liferay-ui:panel-container extended="<%= false %>" id="assetTagPanelContainer" persistState="<%= true %>">
+						<c:if test="<%= PropsValues.ASSET_TAG_PERMISSIONS_ENABLED && (tag == null) %>">
+							<liferay-ui:panel collapsible="<%= true %>" cssClass="tag-permissions-actions" defaultState="open" extended="<%= true %>" id="assetTagPermissionsPanel" persistState="<%= true %>" title="permissions">
+								<liferay-ui:input-permissions
+									modelName="<%= AssetTag.class.getName() %>"
+								/>
+							</liferay-ui:panel>
+						</c:if>
 
-					<liferay-ui:panel collapsible="<%= true %>" defaultState="closed" extended="<%= true %>" helpMessage="properties-are-a-way-to-add-more-detailed-information-to-a-specific-tag" id="assetTagPropertiesPanel" persistState="<%= true %>" title="properties">
-						<aui:fieldset cssClass="tag-tagProperties" id="tagProperties">
+						<c:if test="<%= PropsValues.ASSET_TAG_PROPERTIES_ENABLED %>">
+							<liferay-ui:panel collapsible="<%= true %>" defaultState="closed" extended="<%= true %>" helpMessage="properties-are-a-way-to-add-more-detailed-information-to-a-specific-tag" id="assetTagPropertiesPanel" persistState="<%= true %>" title="properties">
+								<aui:fieldset cssClass="tag-tagProperties" id="tagProperties">
 
-							<%
-							for (int i = 0; i < tagPropertiesIndexes.length; i++) {
-								int tagPropertiesIndex = tagPropertiesIndexes[i];
+									<%
+									for (int i = 0; i < tagPropertiesIndexes.length; i++) {
+										int tagPropertiesIndex = tagPropertiesIndexes[i];
 
-								AssetTagProperty tagProperty = tagProperties.get(i);
-							%>
+										AssetTagProperty tagProperty = tagProperties.get(i);
+									%>
 
-								<aui:model-context bean="<%= tagProperty %>" model="<%= AssetTagProperty.class %>" />
+										<aui:model-context bean="<%= tagProperty %>" model="<%= AssetTagProperty.class %>" />
 
-								<div class="lfr-form-row lfr-form-row-inline">
-									<div class="row-fields">
-										<aui:input fieldParam='<%= "key" + tagPropertiesIndex %>' id='<%= "key" + tagPropertiesIndex %>' name="key" />
+										<div class="lfr-form-row lfr-form-row-inline">
+											<div class="row-fields">
+												<aui:input fieldParam='<%= "key" + tagPropertiesIndex %>' id='<%= "key" + tagPropertiesIndex %>' name="key" />
 
-										<aui:input fieldParam='<%= "value" + tagPropertiesIndex %>' id='<%= "value" + tagPropertiesIndex %>' name="value" />
-									</div>
-								</div>
+												<aui:input fieldParam='<%= "value" + tagPropertiesIndex %>' id='<%= "value" + tagPropertiesIndex %>' name="value" />
+											</div>
+										</div>
 
-							<%
-							}
-							%>
+									<%
+									}
+									%>
 
-							<aui:input name="tagPropertiesIndexes" type="hidden" value="<%= StringUtil.merge(tagPropertiesIndexes) %>" />
-						</aui:fieldset>
-					</liferay-ui:panel>
-				</liferay-ui:panel-container>
+									<aui:input name="tagPropertiesIndexes" type="hidden" value="<%= StringUtil.merge(tagPropertiesIndexes) %>" />
+								</aui:fieldset>
+							</liferay-ui:panel>
+						</c:if>
+					</liferay-ui:panel-container>
+				</c:if>
 
 				<aui:button-row>
 					<aui:button type="submit" />
 
-					<c:if test="<%= tag != null %>">
-						<c:if test="<%= permissionChecker.hasPermission(scopeGroupId, AssetTag.class.getName(), tag.getTagId(), ActionKeys.DELETE) %>">
-							<aui:button id="deleteTagButton" value="delete" />
-						</c:if>
-
-						<c:if test="<%= permissionChecker.hasPermission(scopeGroupId, AssetTag.class.getName(), tag.getTagId(), ActionKeys.PERMISSIONS) %>">
-							<liferay-security:permissionsURL
-								modelResource="<%= AssetTag.class.getName() %>"
-								modelResourceDescription="<%= tag.getName() %>"
-								resourcePrimKey="<%= String.valueOf(tag.getTagId()) %>"
-								var="permissionsURL"
-								windowState="<%= LiferayWindowState.POP_UP.toString() %>"
-							/>
-
-							<aui:button data-url="<%= permissionsURL %>" id="updateTagPermissions" value="permissions" />
-						</c:if>
-					</c:if>
-
-					<aui:button cssClass="close-panel" type="cancel" value="close" />
+					<aui:button href="<%= redirect %>" type="cancel" />
 				</aui:button-row>
 			</div>
 		</div>
 	</aui:fieldset>
 </aui:form>
 
-<aui:script use="liferay-auto-fields">
-	var autoFields = new Liferay.AutoFields(
-		{
-			contentBox: 'fieldset#<portlet:namespace />tagProperties',
-			fieldIndexes: '<portlet:namespace />tagPropertiesIndexes'
+<c:if test="<%= PropsValues.ASSET_TAG_PROPERTIES_ENABLED %>">
+	<aui:script use="liferay-auto-fields">
+		var autoFields = new Liferay.AutoFields(
+			{
+				contentBox: 'fieldset#<portlet:namespace />tagProperties',
+				fieldIndexes: '<portlet:namespace />tagPropertiesIndexes',
+				namespace: '<portlet:namespace />'
+			}
+		).render();
+
+		var tagPropertiesTrigger = A.one('fieldset#<portlet:namespace />tagProperties');
+
+		if (tagPropertiesTrigger) {
+			tagPropertiesTrigger.setData('autoFieldsInstance', autoFields);
 		}
-	).render();
-
-	var tagPropertiesTrigger = A.one('fieldset#<portlet:namespace />tagProperties');
-
-	if (tagPropertiesTrigger) {
-		tagPropertiesTrigger.setData('autoFieldsInstance', autoFields);
-	}
-</aui:script>
+	</aui:script>
+</c:if>

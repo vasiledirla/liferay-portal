@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -43,11 +43,13 @@ public class ContentHits {
 		List<Document> docs = new ArrayList<Document>();
 		List<Float> scores = new ArrayList<Float>();
 
-		for (int i = 0; i < hits.getLength(); i++) {
+		Document[] docsArray = hits.getDocs();
+
+		for (int i = 0; i < docsArray.length; i++) {
 			Document doc = hits.doc(i);
 
+			String articleId = doc.get(Field.ARTICLE_ID);
 			long articleGroupId = GetterUtil.getLong(doc.get(Field.GROUP_ID));
-			String articleId = doc.get("articleId");
 
 			int layoutIdsCount =
 				JournalContentSearchLocalServiceUtil.getLayoutIdsCount(

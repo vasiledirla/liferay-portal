@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,10 +14,9 @@
 
 package com.liferay.portal.kernel.util;
 
-import com.liferay.portal.kernel.test.TestCase;
-import com.liferay.portal.upload.LiferayFileUpload;
-
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import org.springframework.mock.web.MockHttpSession;
@@ -25,35 +24,47 @@ import org.springframework.mock.web.MockHttpSession;
 /**
  * @author Sergio González
  */
-public class ProgressTrackerTest extends TestCase {
+public class ProgressTrackerTest {
 
+	@Before
+	public void setUp() throws Exception {
+		_mockHttpSession = new MockHttpSession();
+
+		_mockInstallProcess = new MockInstallProcess(_mockHttpSession);
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		_mockInstallProcess.finish();
+	}
+
+	@Test
 	public void testGetMessage() throws Exception {
 		_mockInstallProcess.initialize();
 
-		ProgressTracker progressTracker = getAttribute(
-			LiferayFileUpload.PERCENT);
+		ProgressTracker progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertEquals(StringPool.BLANK, progressTracker.getMessage());
 
 		_mockInstallProcess.download();
 
-		progressTracker = getAttribute(LiferayFileUpload.PERCENT);
+		progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertEquals("downloading", progressTracker.getMessage());
 	}
 
+	@Test
 	public void testGetPercent() throws Exception {
 		_mockInstallProcess.initialize();
 
-		ProgressTracker progressTracker = getAttribute(
-			LiferayFileUpload.PERCENT);
+		ProgressTracker progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertEquals(0, progressTracker.getPercent());
 
 		_mockInstallProcess.download();
 		_mockInstallProcess.copy();
 
-		progressTracker = getAttribute(LiferayFileUpload.PERCENT);
+		progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertEquals(progressTracker.getPercent(), 50);
 	}
@@ -62,8 +73,7 @@ public class ProgressTrackerTest extends TestCase {
 	public void testGetStatus() throws Exception {
 		_mockInstallProcess.initialize();
 
-		ProgressTracker progressTracker = getAttribute(
-			LiferayFileUpload.PERCENT);
+		ProgressTracker progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		_mockInstallProcess.download();
 		_mockInstallProcess.copy();
@@ -76,14 +86,13 @@ public class ProgressTrackerTest extends TestCase {
 	public void testInitializeAndFinish() throws Exception {
 		_mockInstallProcess.initialize();
 
-		ProgressTracker progressTracker = getAttribute(
-			LiferayFileUpload.PERCENT);
+		ProgressTracker progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertNotNull(progressTracker);
 
 		_mockInstallProcess.finish();
 
-		progressTracker = getAttribute(LiferayFileUpload.PERCENT);
+		progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertNull(progressTracker);
 	}
@@ -92,8 +101,7 @@ public class ProgressTrackerTest extends TestCase {
 	public void testInitialStatus() throws Exception {
 		_mockInstallProcess.initialize();
 
-		ProgressTracker progressTracker = getAttribute(
-			LiferayFileUpload.PERCENT);
+		ProgressTracker progressTracker = getAttribute(ProgressTracker.PERCENT);
 
 		Assert.assertEquals(
 			ProgressStatusConstants.PREPARED, progressTracker.getStatus());
@@ -109,18 +117,6 @@ public class ProgressTrackerTest extends TestCase {
 		return progressTracker;
 	}
 
-	@Override
-	protected void setUp() throws Exception {
-		_mockHttpSession = new MockHttpSession();
-
-		_mockInstallProcess = new MockInstallProcess(_mockHttpSession);
-	}
-
-	@Override
-	protected void tearDown() throws Exception {
-		_mockInstallProcess.finish();
-	}
-
 	private MockHttpSession _mockHttpSession;
 	private MockInstallProcess _mockInstallProcess;
 
@@ -128,7 +124,7 @@ public class ProgressTrackerTest extends TestCase {
 
 		public MockInstallProcess(MockHttpSession mockHttpSession) {
 			ProgressTracker progressTracker = new ProgressTracker(
-				mockHttpSession, ProgressTrackerTest.class.getName());
+				ProgressTrackerTest.class.getName());
 
 			progressTracker.addProgress(
 				ProgressStatusConstants.DOWNLOADING, 25, "downloading");
@@ -147,11 +143,11 @@ public class ProgressTrackerTest extends TestCase {
 		}
 
 		public void finish() {
-			_progressTracker.finish();
+			_progressTracker.finish(_mockHttpSession);
 		}
 
 		public void initialize() {
-			_progressTracker.initialize();
+			_progressTracker.initialize(_mockHttpSession);
 		}
 
 		private ProgressTracker _progressTracker;

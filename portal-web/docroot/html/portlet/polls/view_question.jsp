@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -27,7 +27,7 @@ List<PollsChoice> choices = PollsChoiceLocalServiceUtil.getChoices(question.getQ
 
 boolean hasVoted = PollsUtil.hasVoted(request, question.getQuestionId());
 
-boolean viewResults = ParamUtil.getBoolean(request, "viewResults", false);
+boolean viewResults = ParamUtil.getBoolean(request, "viewResults");
 
 if (viewResults && !PollsQuestionPermission.contains(permissionChecker, question, ActionKeys.UPDATE)) {
 	viewResults = false;
@@ -41,6 +41,7 @@ if (viewResults && !PollsQuestionPermission.contains(permissionChecker, question
 <aui:form action="<%= viewQuestionActionURL %>" method="post" name="fm">
 	<portlet:renderURL var="viewQuestionRenderURL">
 		<portlet:param name="struts_action" value="/polls/view_question" />
+		<portlet:param name="redirect" value="<%= redirect %>" />
 		<portlet:param name="questionId" value="<%= String.valueOf(question.getQuestionId()) %>" />
 	</portlet:renderURL>
 
@@ -52,14 +53,14 @@ if (viewResults && !PollsQuestionPermission.contains(permissionChecker, question
 	<liferay-ui:error exception="<%= NoSuchChoiceException.class %>" message="please-select-an-option" />
 
 	<aui:fieldset>
- 		<liferay-ui:header
+		<liferay-ui:header
 			backURL="<%= redirect %>"
 			escapeXml="<%= false %>"
 			localizeTitle="<%= false %>"
 			title="<%= question.getTitle(locale) %>"
 		/>
 
-		<span style="font-size: x-small;">
+		<span>
 			<%= StringUtil.replace(question.getDescription(locale), StringPool.NEW_LINE, "<br />") %>
 		</span>
 
@@ -91,7 +92,7 @@ if (viewResults && !PollsQuestionPermission.contains(permissionChecker, question
 					</portlet:renderURL>
 
 					<liferay-ui:icon
-						image="view"
+						iconCssClass="icon-search"
 						label="<%= true %>"
 						message="view-results"
 						url="<%= viewResultsURL %>"
@@ -99,7 +100,7 @@ if (viewResults && !PollsQuestionPermission.contains(permissionChecker, question
 				</c:if>
 
 				<aui:button-row>
-					<aui:button type="submit" value="vote" />
+					<aui:button type="submit" value="vote[action]" />
 
 					<aui:button href="<%= redirect %>" type="cancel" />
 				</aui:button-row>
@@ -128,7 +129,7 @@ if (viewResults && !PollsQuestionPermission.contains(permissionChecker, question
 
 				<%
 				PortalUtil.addPortletBreadcrumbEntry(request, HtmlUtil.unescape(question.getTitle(locale)), viewQuestionURL.toString());
-				PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(pageContext, "results"), currentURL);
+				PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(request, "results"), currentURL);
 				%>
 
 			</c:otherwise>

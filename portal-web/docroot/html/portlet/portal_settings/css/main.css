@@ -2,11 +2,11 @@
 	.available-languages {
 		margin-top: 1em;
 
-		.aui-fieldset-legend {
+		.fieldset-legend {
 			font-size: 100%;
 		}
 
-		.aui-legend {
+		.legend {
 			border-bottom-width: 0;
 		}
 
@@ -14,5 +14,13 @@
 			padding: 0;
 			padding-bottom: 0.5em;
 		}
+	}
+
+	.maps-google-maps-api-key {
+		margin-left: 20px;
+	}
+
+	.social-interactions-users, .social-interactions-social-relations {
+		margin-left: 20px;
 	}
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,10 +14,7 @@
 
 package com.liferay.portal.deploy.hot;
 
-import com.liferay.portal.dao.orm.hibernate.region.LiferayEhcacheRegionFactory;
-import com.liferay.portal.dao.orm.hibernate.region.SingletonLiferayEhcacheRegionFactory;
-import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
-import com.liferay.portal.kernel.cache.PortalCacheManager;
+import com.liferay.portal.cache.configurator.util.PortalCacheConfiguratorUtil;
 import com.liferay.portal.kernel.configuration.Configuration;
 import com.liferay.portal.kernel.configuration.ConfigurationFactoryUtil;
 import com.liferay.portal.kernel.deploy.hot.BaseHotDeployListener;
@@ -27,13 +24,14 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.plugin.PluginPackage;
 import com.liferay.portal.kernel.servlet.ServletContextPool;
-import com.liferay.portal.kernel.util.AggregateClassLoader;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.plugin.PluginPackageUtil;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
 import com.liferay.portal.service.ServiceComponentLocalServiceUtil;
+import com.liferay.portal.service.configuration.ServiceComponentConfiguration;
+import com.liferay.portal.service.configuration.servlet.ServletServiceContextComponentConfiguration;
+import com.liferay.util.log4j.Log4JUtil;
 import com.liferay.util.portlet.PortletProps;
 
 import java.lang.reflect.Method;
@@ -52,6 +50,7 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 	public static final String SERVICE_BUILDER_PROPERTIES =
 		"SERVICE_BUILDER_PROPERTIES";
 
+	@Override
 	public void invokeDeploy(HotDeployEvent hotDeployEvent)
 		throws HotDeployException {
 
@@ -64,6 +63,7 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 		}
 	}
 
+	@Override
 	public void invokeUndeploy(HotDeployEvent hotDeployEvent)
 		throws HotDeployException {
 
@@ -77,11 +77,12 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 	}
 
 	protected void destroyServiceComponent(
-			ServletContext servletContext, ClassLoader classLoader)
+			ServiceComponentConfiguration serviceComponentConfiguration,
+			ClassLoader classLoader)
 		throws Exception {
 
 		ServiceComponentLocalServiceUtil.destroyServiceComponent(
-			servletContext, classLoader);
+			serviceComponentConfiguration, classLoader);
 	}
 
 	protected void doInvokeDeploy(HotDeployEvent hotDeployEvent)
@@ -118,8 +119,8 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 
 		ClassLoader classLoader = hotDeployEvent.getContextClassLoader();
 
+		initLogger(classLoader);
 		initPortletProps(classLoader);
-
 		initServiceComponent(servletContext, classLoader);
 
 		registerClpMessageListeners(servletContext, classLoader);
@@ -141,7 +142,7 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 		String servletContextName = servletContext.getServletContextName();
 
 		if (_log.isDebugEnabled()) {
-			_log.debug("Invoking deploy for " + servletContextName);
+			_log.debug("Invoking undeploy for " + servletContextName);
 		}
 
 		PluginPackage pluginPackage =
@@ -158,7 +159,8 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 		ServletContextPool.remove(servletContextName);
 
 		destroyServiceComponent(
-			servletContext, hotDeployEvent.getContextClassLoader());
+			new ServletServiceContextComponentConfiguration(servletContext),
+			hotDeployEvent.getContextClassLoader());
 
 		unregisterClpMessageListeners(servletContext);
 
@@ -167,6 +169,24 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 				"Plugin package " + pluginPackage.getModuleId() +
 					" unregistered successfully");
 		}
+	}
+
+	protected URL getPortalCacheConfigurationURL(
+		Configuration configuration, ClassLoader classLoader,
+		String configLocation) {
+
+		String cacheConfigurationLocation = configuration.get(configLocation);
+
+		if (Validator.isNull(cacheConfigurationLocation)) {
+			return null;
+		}
+
+		return classLoader.getResource(cacheConfigurationLocation);
+	}
+
+	protected void initLogger(ClassLoader classLoader) {
+		Log4JUtil.configureLog4J(
+			classLoader.getResource("META-INF/portal-log4j.xml"));
 	}
 
 	protected void initPortletProps(ClassLoader classLoader) throws Exception {
@@ -203,7 +223,7 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 		Properties serviceBuilderProperties =
 			serviceBuilderPropertiesConfiguration.getProperties();
 
-		if (serviceBuilderProperties.size() == 0) {
+		if (serviceBuilderProperties.isEmpty()) {
 			return;
 		}
 
@@ -231,7 +251,8 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 		}
 
 		ServiceComponentLocalServiceUtil.initServiceComponent(
-			servletContext, classLoader, buildNamespace, buildNumber, buildDate,
+			new ServletServiceContextComponentConfiguration(servletContext),
+			classLoader, buildNamespace, buildNumber, buildDate,
 			buildAutoUpgrade);
 	}
 
@@ -251,103 +272,23 @@ public class PluginPackageHotDeployListener extends BaseHotDeployListener {
 			return;
 		}
 
-		String cacheConfigurationLocation = portletPropertiesConfiguration.get(
-			PropsKeys.EHCACHE_SINGLE_VM_CONFIG_LOCATION);
+		PortalCacheConfiguratorUtil.reconfigureCaches(
+			classLoader,
+			getPortalCacheConfigurationURL(
+				portletPropertiesConfiguration, classLoader,
+				PropsKeys.EHCACHE_SINGLE_VM_CONFIG_LOCATION));
 
-		reconfigureCaches(
-			classLoader, cacheConfigurationLocation,
-			_SINGLE_VM_PORTAL_CACHE_MANAGER_BEAN_NAME);
+		PortalCacheConfiguratorUtil.reconfigureCaches(
+			classLoader,
+			getPortalCacheConfigurationURL(
+				portletPropertiesConfiguration, classLoader,
+				PropsKeys.EHCACHE_MULTI_VM_CONFIG_LOCATION));
 
-		String clusterCacheConfigurationLocation =
-			portletPropertiesConfiguration.get(
-				PropsKeys.EHCACHE_MULTI_VM_CONFIG_LOCATION);
-
-		reconfigureCaches(
-			classLoader, clusterCacheConfigurationLocation,
-			_MULTI_VM_PORTAL_CACHE_MANAGER_BEAN_NAME);
-
-		String hibernateCacheConfigurationPath =
-			portletPropertiesConfiguration.get(
-				PropsKeys.NET_SF_EHCACHE_CONFIGURATION_RESOURCE_NAME);
-
-		reconfigureHibernateCache(classLoader, hibernateCacheConfigurationPath);
+		PortalCacheConfiguratorUtil.reconfigureHibernateCache(
+			getPortalCacheConfigurationURL(
+				portletPropertiesConfiguration, classLoader,
+				PropsKeys.NET_SF_EHCACHE_CONFIGURATION_RESOURCE_NAME));
 	}
-
-	protected void reconfigureCaches(
-			ClassLoader classLoader, String cacheConfigurationPath,
-			String portalCacheManagerBeanId)
-		throws Exception {
-
-		if (Validator.isNull(cacheConfigurationPath)) {
-			return;
-		}
-
-		URL cacheConfigurationURL = classLoader.getResource(
-			cacheConfigurationPath);
-
-		if (cacheConfigurationURL == null) {
-			return;
-		}
-
-		ClassLoader aggregateClassLoader =
-			AggregateClassLoader.getAggregateClassLoader(
-				new ClassLoader[] {
-					PACLClassLoaderUtil.getPortalClassLoader(), classLoader
-				});
-
-		ClassLoader contextClassLoader =
-			PACLClassLoaderUtil.getContextClassLoader();
-
-		try {
-			PACLClassLoaderUtil.setContextClassLoader(aggregateClassLoader);
-
-			PortalCacheManager portalCacheManager =
-				(PortalCacheManager)PortalBeanLocatorUtil.locate(
-					portalCacheManagerBeanId);
-
-			if (_log.isInfoEnabled()) {
-				_log.info(
-					"Reconfiguring caches in cache manager " +
-						portalCacheManagerBeanId + " using " +
-							cacheConfigurationURL);
-			}
-
-			portalCacheManager.reconfigureCaches(cacheConfigurationURL);
-		}
-		finally {
-			PACLClassLoaderUtil.setContextClassLoader(contextClassLoader);
-		}
-	}
-
-	protected void reconfigureHibernateCache(
-		ClassLoader classLoader, String hibernateCacheConfigurationPath) {
-
-		if (Validator.isNull(hibernateCacheConfigurationPath)) {
-			return;
-		}
-
-		LiferayEhcacheRegionFactory liferayEhcacheRegionFactory =
-			SingletonLiferayEhcacheRegionFactory.getInstance();
-
-		URL configurationFile = classLoader.getResource(
-			hibernateCacheConfigurationPath);
-
-		if (Validator.isNotNull(configurationFile)) {
-			if (_log.isInfoEnabled()) {
-				_log.info(
-					"Reconfiguring Hibernate caches using " +
-						configurationFile);
-			}
-
-			liferayEhcacheRegionFactory.reconfigureCaches(configurationFile);
-		}
-	}
-
-	private static final String _MULTI_VM_PORTAL_CACHE_MANAGER_BEAN_NAME =
-		"com.liferay.portal.kernel.cache.MultiVMPortalCacheManager";
-
-	private static final String _SINGLE_VM_PORTAL_CACHE_MANAGER_BEAN_NAME =
-		"com.liferay.portal.kernel.cache.SingleVMPortalCacheManager";
 
 	private static Log _log = LogFactoryUtil.getLog(
 		PluginPackageHotDeployListener.class);

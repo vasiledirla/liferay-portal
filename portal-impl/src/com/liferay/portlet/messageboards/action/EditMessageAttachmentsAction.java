@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,7 +15,6 @@
 package com.liferay.portlet.messageboards.action;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ParamUtil;
@@ -23,7 +22,6 @@ import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.security.auth.PrincipalException;
 import com.liferay.portal.struts.PortletAction;
 import com.liferay.portlet.messageboards.NoSuchMessageException;
-import com.liferay.portlet.messageboards.model.MBMessage;
 import com.liferay.portlet.messageboards.service.MBMessageLocalServiceUtil;
 import com.liferay.portlet.messageboards.service.MBMessageServiceUtil;
 
@@ -44,8 +42,9 @@ public class EditMessageAttachmentsAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
@@ -56,9 +55,6 @@ public class EditMessageAttachmentsAction extends PortletAction {
 			}
 			else if (cmd.equals(Constants.EMPTY_TRASH)) {
 				emptyTrash(actionRequest);
-			}
-			else if (cmd.equals(Constants.MOVE_FROM_TRASH)) {
-				moveAttachmentFromTrash(actionRequest);
 			}
 
 			if (Validator.isNotNull(cmd)) {
@@ -82,8 +78,9 @@ public class EditMessageAttachmentsAction extends PortletAction {
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		try {
@@ -95,20 +92,22 @@ public class EditMessageAttachmentsAction extends PortletAction {
 
 				SessionErrors.add(renderRequest, e.getClass());
 
-				return mapping.findForward("portlet.message_boards.error");
+				return actionMapping.findForward(
+					"portlet.message_boards.error");
 			}
 			else {
 				throw e;
 			}
 		}
 
-		return mapping.findForward(getForward(
-			renderRequest,
-			"portlet.message_boards.view_deleted_message_attachments"));
+		return actionMapping.findForward(
+			getForward(
+				renderRequest,
+				"portlet.message_boards.view_deleted_message_attachments"));
 	}
 
 	protected void deleteAttachment(ActionRequest actionRequest)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		long messageId = ParamUtil.getLong(actionRequest, "messageId");
 
@@ -121,23 +120,6 @@ public class EditMessageAttachmentsAction extends PortletAction {
 		long messageId = ParamUtil.getLong(actionRequest, "messageId");
 
 		MBMessageServiceUtil.deleteMessageAttachments(messageId);
-	}
-
-	protected void moveAttachmentFromTrash(ActionRequest actionRequest)
-		throws PortalException, SystemException {
-
-		long messageId = ParamUtil.getLong(actionRequest, "messageId");
-
-		String fileName = ParamUtil.getString(actionRequest, "fileName");
-
-		MBMessageLocalServiceUtil.moveMessageAttachmentFromTrash(
-			messageId, fileName);
-
-		MBMessage message = MBMessageServiceUtil.getMessage(messageId);
-
-		message.setAttachments(true);
-
-		MBMessageLocalServiceUtil.updateMBMessage(message, false);
 	}
 
 }

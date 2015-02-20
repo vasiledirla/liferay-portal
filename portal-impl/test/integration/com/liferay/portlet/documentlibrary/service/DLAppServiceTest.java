@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,9 +14,15 @@
 
 package com.liferay.portlet.documentlibrary.service;
 
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.messaging.DestinationNames;
+import com.liferay.portal.kernel.messaging.Message;
+import com.liferay.portal.kernel.messaging.MessageBusUtil;
+import com.liferay.portal.kernel.messaging.MessageListener;
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.repository.model.Folder;
 import com.liferay.portal.kernel.search.Document;
 import com.liferay.portal.kernel.search.Field;
 import com.liferay.portal.kernel.search.Hits;
@@ -24,6 +30,8 @@ import com.liferay.portal.kernel.search.Indexer;
 import com.liferay.portal.kernel.search.IndexerRegistryUtil;
 import com.liferay.portal.kernel.search.QueryConfig;
 import com.liferay.portal.kernel.search.SearchContext;
+import com.liferay.portal.kernel.test.AssertUtils;
+import com.liferay.portal.kernel.test.ExecutionTestListeners;
 import com.liferay.portal.kernel.util.ContentTypes;
 import com.liferay.portal.kernel.util.FileUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
@@ -34,50 +42,50 @@ import com.liferay.portal.model.User;
 import com.liferay.portal.security.permission.DoAsUserThread;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.ServiceTestUtil;
-import com.liferay.portal.test.AssertUtils;
-import com.liferay.portal.test.EnvironmentExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayIntegrationJUnitTestRunner;
-import com.liferay.portal.util.TestPropsValues;
+import com.liferay.portal.test.DeleteAfterTestRun;
+import com.liferay.portal.test.Sync;
+import com.liferay.portal.test.SynchronousDestinationExecutionTestListener;
+import com.liferay.portal.test.listeners.MainServletExecutionTestListener;
+import com.liferay.portal.test.log.ExpectedLog;
+import com.liferay.portal.test.log.ExpectedLogs;
+import com.liferay.portal.test.log.ExpectedType;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.util.test.RandomTestUtil;
+import com.liferay.portal.util.test.ServiceContextTestUtil;
+import com.liferay.portal.util.test.UserTestUtil;
 import com.liferay.portlet.asset.model.AssetEntry;
 import com.liferay.portlet.asset.service.AssetEntryLocalServiceUtil;
 import com.liferay.portlet.documentlibrary.DuplicateFileException;
 import com.liferay.portlet.documentlibrary.model.DLFileEntryConstants;
+import com.liferay.portlet.documentlibrary.model.DLFolderConstants;
+import com.liferay.portlet.documentlibrary.model.DLSyncConstants;
+import com.liferay.portlet.documentlibrary.util.test.DLAppTestUtil;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
 
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import org.hibernate.util.JDBCExceptionReporter;
 
 import org.junit.After;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
  * @author Alexander Chow
  */
-@ExecutionTestListeners(listeners = {EnvironmentExecutionTestListener.class})
+@ExecutionTestListeners(
+	listeners = {
+		MainServletExecutionTestListener.class,
+		SynchronousDestinationExecutionTestListener.class
+	})
 @RunWith(LiferayIntegrationJUnitTestRunner.class)
+@Sync
 public class DLAppServiceTest extends BaseDLAppTestCase {
-
-	@Before
-	@Override
-	public void setUp() throws Exception {
-		super.setUp();
-
-		_userIds = new long[ServiceTestUtil.THREAD_COUNT];
-
-		for (int i = 0 ; i < ServiceTestUtil.THREAD_COUNT; i++) {
-			User user = ServiceTestUtil.addUser(
-				"DLAppServiceTest" + (i + 1), false,
-				new long[] {TestPropsValues.getGroupId()});
-
-			_userIds[i] = user.getUserId();
-		}
-	}
 
 	@After
 	@Override
@@ -90,19 +98,57 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 	}
 
 	@Test
-	public void testAddFileEntriesConcurrently() throws Exception {
-		DoAsUserThread[] doAsUserThreads =
-			new DoAsUserThread[ServiceTestUtil.THREAD_COUNT];
+	public void testAddAssetEntryWhenAddingFolder() throws PortalException {
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
 
-		_fileEntryIds = new long[ServiceTestUtil.THREAD_COUNT];
+		Folder folder = DLAppServiceUtil.addFolder(
+			group.getGroupId(), parentFolder.getFolderId(),
+			RandomTestUtil.randomString(), StringPool.BLANK, serviceContext);
+
+		AssetEntry assetEntry = AssetEntryLocalServiceUtil.fetchEntry(
+			DLFolderConstants.getClassName(), folder.getFolderId());
+
+		Assert.assertNotNull(assetEntry);
+	}
+
+	@ExpectedLogs(
+		expectedLogs = {
+			@ExpectedLog(
+				expectedLog =
+					"Deadlock found when trying to get lock; try restarting " +
+						"transaction",
+				expectedType = ExpectedType.EXACT),
+			@ExpectedLog(
+				expectedLog = "Duplicate entry ",
+				expectedType = ExpectedType.PREFIX)
+		},
+		level = "ERROR", loggerClass = JDBCExceptionReporter.class
+	)
+	@Test
+	public void testAddFileEntriesConcurrently() throws Exception {
+		_users = new User[ServiceTestUtil.THREAD_COUNT];
+
+		for (int i = 0; i < ServiceTestUtil.THREAD_COUNT; i++) {
+			User user = UserTestUtil.addUser(
+				"DLAppServiceTest" + (i + 1), group.getGroupId());
+
+			_users[i] = user;
+		}
+
+		DoAsUserThread[] doAsUserThreads = new DoAsUserThread[_users.length];
+
+		_fileEntryIds = new long[_users.length];
 
 		for (int i = 0; i < 2; i++) {
 			for (int j = 0; j < doAsUserThreads.length; j++) {
 				if (i == 0) {
-					doAsUserThreads[j] = new AddFileEntryThread(_userIds[j], j);
+					doAsUserThreads[j] = new AddFileEntryThread(
+						_users[j].getUserId(), j);
 				}
 				else {
-					doAsUserThreads[j] = new GetFileEntryThread(_userIds[j], j);
+					doAsUserThreads[j] = new GetFileEntryThread(
+						_users[j].getUserId(), j);
 				}
 			}
 
@@ -123,8 +169,7 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 			}
 
 			String message =
-				"Only " + successCount + " out of " +
-					ServiceTestUtil.THREAD_COUNT;
+				"Only " + successCount + " out of " + _users.length;
 
 			if (i == 0) {
 				message += " threads added file entries successfully";
@@ -133,13 +178,16 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 				message += " threads retrieved file entries successfully";
 			}
 
-			Assert.assertTrue(
-				message, successCount == ServiceTestUtil.THREAD_COUNT);
+			Assert.assertTrue(message, successCount == _users.length);
 		}
 	}
 
 	@Test
 	public void testAddFileEntryWithDuplicateName() throws Exception {
+		_fileEntry = DLAppTestUtil.addFileEntry(
+			group.getGroupId(), parentFolder.getFolderId(),
+			"Test DLAppService.txt");
+
 		addFileEntry(false);
 
 		try {
@@ -170,17 +218,18 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 		String description = StringPool.BLANK;
 		String changeLog = StringPool.BLANK;
 
-		ServiceContext serviceContext = new ServiceContext();
+		_fileEntry = DLAppTestUtil.addFileEntry(
+			group.getGroupId(), folderId, "Test DLAppService.txt");
 
-		serviceContext.setAddGroupPermissions(true);
-		serviceContext.setAddGuestPermissions(true);
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
 
 		try {
 			String name = "InvalidMime.txt";
 			byte[] bytes = CONTENT.getBytes();
 
 			FileEntry fileEntry = DLAppServiceUtil.addFileEntry(
-				TestPropsValues.getGroupId(), folderId, name,
+				group.getGroupId(), folderId, name,
 				ContentTypes.APPLICATION_OCTET_STREAM, name, description,
 				changeLog, bytes, serviceContext);
 
@@ -204,24 +253,21 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 	}
 
 	@Test
-	public void testAddNullFileEntry() throws Exception {
+	public void testAddFileEntryWithNullBytes() throws Exception {
 		long folderId = parentFolder.getFolderId();
 		String description = StringPool.BLANK;
 		String changeLog = StringPool.BLANK;
 
-		ServiceContext serviceContext = new ServiceContext();
-
-		serviceContext.setAddGroupPermissions(true);
-		serviceContext.setAddGuestPermissions(true);
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
 
 		try {
 			String name = "Bytes-null.txt";
 			byte[] bytes = null;
 
 			FileEntry fileEntry = DLAppServiceUtil.addFileEntry(
-				TestPropsValues.getGroupId(), folderId, name,
-				ContentTypes.TEXT_PLAIN, name, description, changeLog, bytes,
-				serviceContext);
+				group.getGroupId(), folderId, name, ContentTypes.TEXT_PLAIN,
+				name, description, changeLog, bytes, serviceContext);
 
 			DLAppServiceUtil.updateFileEntry(
 				fileEntry.getFileEntryId(), name, ContentTypes.TEXT_PLAIN, name,
@@ -240,15 +286,24 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 				"Unable to pass null byte[] " +
 					StackTraceUtil.getStackTrace(e));
 		}
+	}
+
+	@Test
+	public void testAddFileEntryWithNullFile() throws Exception {
+		long folderId = parentFolder.getFolderId();
+		String description = StringPool.BLANK;
+		String changeLog = StringPool.BLANK;
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
 
 		try {
 			String name = "File-null.txt";
 			File file = null;
 
 			FileEntry fileEntry = DLAppServiceUtil.addFileEntry(
-				TestPropsValues.getGroupId(), folderId, name,
-				ContentTypes.TEXT_PLAIN, name, description, changeLog, file,
-				serviceContext);
+				group.getGroupId(), folderId, name, ContentTypes.TEXT_PLAIN,
+				name, description, changeLog, file, serviceContext);
 
 			DLAppServiceUtil.updateFileEntry(
 				fileEntry.getFileEntryId(), name, ContentTypes.TEXT_PLAIN, name,
@@ -272,15 +327,24 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 			Assert.fail(
 				"Unable to pass null File " + StackTraceUtil.getStackTrace(e));
 		}
+	}
+
+	@Test
+	public void testAddFileEntryWithNullInputStream() throws Exception {
+		long folderId = parentFolder.getFolderId();
+		String description = StringPool.BLANK;
+		String changeLog = StringPool.BLANK;
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
 
 		try {
 			String name = "IS-null.txt";
 			InputStream is = null;
 
 			FileEntry fileEntry = DLAppServiceUtil.addFileEntry(
-				TestPropsValues.getGroupId(), folderId, name,
-				ContentTypes.TEXT_PLAIN, name, description, changeLog, is, 0,
-				serviceContext);
+				group.getGroupId(), folderId, name, ContentTypes.TEXT_PLAIN,
+				name, description, changeLog, is, 0, serviceContext);
 
 			DLAppServiceUtil.updateFileEntry(
 				fileEntry.getFileEntryId(), name, ContentTypes.TEXT_PLAIN, name,
@@ -310,39 +374,34 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 	}
 
 	@Test
-	public void testAsstTags() throws Exception {
+	public void testAssetTags() throws Exception {
 		long folderId = parentFolder.getFolderId();
 		String name = "TestTags.txt";
 		String description = StringPool.BLANK;
 		String changeLog = StringPool.BLANK;
 		byte[] bytes = CONTENT.getBytes();
 
-		ServiceContext serviceContext = new ServiceContext();
-
-		serviceContext.setAddGroupPermissions(true);
-		serviceContext.setAddGuestPermissions(true);
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
 
 		String[] assetTagNames = new String[] {"hello", "world"};
 
 		serviceContext.setAssetTagNames(assetTagNames);
 
 		FileEntry fileEntry = DLAppServiceUtil.addFileEntry(
-			TestPropsValues.getGroupId(), folderId, name,
-			ContentTypes.TEXT_PLAIN, name, description, changeLog, bytes,
-			serviceContext);
+			group.getGroupId(), folderId, name, ContentTypes.TEXT_PLAIN, name,
+			description, changeLog, bytes, serviceContext);
 
 		AssetEntry assetEntry = AssetEntryLocalServiceUtil.fetchEntry(
 			DLFileEntryConstants.getClassName(), fileEntry.getFileEntryId());
 
 		AssertUtils.assertEqualsSorted(assetTagNames, assetEntry.getTagNames());
 
-		Thread.sleep(1000 * TestPropsValues.JUNIT_DELAY_FACTOR);
-
 		_fileEntry = fileEntry;
 
-		search(false, "hello", true);
-		search(false, "world", true);
-		search(false, "liferay", false);
+		search(_fileEntry, false, "hello", true);
+		search(_fileEntry, false, "world", true);
+		search(_fileEntry, false, "liferay", false);
 
 		assetTagNames = new String[] {"hello", "world", "liferay"};
 
@@ -357,17 +416,54 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 
 		AssertUtils.assertEqualsSorted(assetTagNames, assetEntry.getTagNames());
 
-		Thread.sleep(1000 * TestPropsValues.JUNIT_DELAY_FACTOR);
-
 		_fileEntry = fileEntry;
 
-		search(false, "hello", true);
-		search(false, "world", true);
-		search(false, "liferay", true);
+		search(_fileEntry, false, "hello", true);
+		search(_fileEntry, false, "world", true);
+		search(_fileEntry, false, "liferay", true);
 
 		DLAppServiceUtil.deleteFileEntry(_fileEntry.getFileEntryId());
 
 		_fileEntry = null;
+	}
+
+	@Test
+	public void testFireSyncEventWhenAddingFolder() throws Exception {
+		AtomicInteger counter = registerDLSyncEventProcessorMessageListener(
+			DLSyncConstants.EVENT_ADD);
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
+
+		DLAppServiceUtil.addFolder(
+			group.getGroupId(), parentFolder.getFolderId(),
+			RandomTestUtil.randomString(), StringPool.BLANK, serviceContext);
+
+		Assert.assertEquals(1, counter.get());
+	}
+
+	@Test
+	public void testFireSyncEventWhenCopyingFolder() throws Exception {
+		AtomicInteger counter = registerDLSyncEventProcessorMessageListener(
+			DLSyncConstants.EVENT_ADD);
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
+
+		Folder folder = DLAppServiceUtil.addFolder(
+			group.getGroupId(), parentFolder.getFolderId(),
+			RandomTestUtil.randomString(), StringPool.BLANK, serviceContext);
+
+		DLAppServiceUtil.addFolder(
+			group.getGroupId(), folder.getFolderId(),
+			RandomTestUtil.randomString(), StringPool.BLANK, serviceContext);
+
+		DLAppServiceUtil.copyFolder(
+			folder.getRepositoryId(), folder.getFolderId(),
+			parentFolder.getParentFolderId(), folder.getName(),
+			folder.getDescription(), serviceContext);
+
+		Assert.assertEquals(4, counter.get());
 	}
 
 	@Test
@@ -381,10 +477,21 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 	}
 
 	@Test
+	public void testUpdateDefaultParentFolder() throws Exception {
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
+
+		DLAppServiceUtil.updateFolder(
+			DLFolderConstants.DEFAULT_PARENT_FOLDER_ID,
+			RandomTestUtil.randomString(), StringPool.BLANK, serviceContext);
+	}
+
+	@Test
 	public void testVersionLabel() throws Exception {
 		String fileName = "TestVersion.txt";
 
-		FileEntry fileEntry = addFileEntry(false, fileName);
+		FileEntry fileEntry = DLAppTestUtil.addFileEntry(
+			group.getGroupId(), parentFolder.getFolderId(), fileName);
 
 		Assert.assertEquals(
 			"Version label incorrect after add", "1.0", fileEntry.getVersion());
@@ -404,21 +511,50 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 	}
 
 	protected FileEntry addFileEntry(boolean rootFolder) throws Exception {
-		_fileEntry = addFileEntry(rootFolder, "Title.txt");
+		long folderId = DLFolderConstants.DEFAULT_PARENT_FOLDER_ID;
 
-		return _fileEntry;
+		if (!rootFolder) {
+			folderId = parentFolder.getFolderId();
+		}
+
+		return DLAppTestUtil.addFileEntry(
+			group.getGroupId(), folderId, "Title.txt");
+	}
+
+	protected AtomicInteger registerDLSyncEventProcessorMessageListener(
+		final String targetEvent) {
+
+		final AtomicInteger counter = new AtomicInteger();
+
+		MessageBusUtil.registerMessageListener(
+			DestinationNames.DOCUMENT_LIBRARY_SYNC_EVENT_PROCESSOR,
+			new MessageListener() {
+
+				@Override
+				public void receive(Message message) {
+					Object event = message.get("event");
+
+					if (targetEvent.equals(event)) {
+						counter.incrementAndGet();
+					}
+				}
+
+			});
+
+		return counter;
 	}
 
 	protected void search(
-			boolean rootFolder, String keywords, boolean assertTrue)
+			FileEntry fileEntry, boolean rootFolder, String keywords,
+			boolean assertTrue)
 		throws Exception {
 
 		SearchContext searchContext = new SearchContext();
 
 		searchContext.setAttribute("paginationType", "regular");
-		searchContext.setCompanyId(_fileEntry.getCompanyId());
-		searchContext.setFolderIds(new long[] {_fileEntry.getFolderId()});
-		searchContext.setGroupIds(new long[] {_fileEntry.getRepositoryId()});
+		searchContext.setCompanyId(fileEntry.getCompanyId());
+		searchContext.setFolderIds(new long[] {fileEntry.getFolderId()});
+		searchContext.setGroupIds(new long[] {fileEntry.getRepositoryId()});
 		searchContext.setKeywords(keywords);
 
 		QueryConfig queryConfig = new QueryConfig();
@@ -441,7 +577,7 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 			long fileEntryId = GetterUtil.getLong(
 				document.get(Field.ENTRY_CLASS_PK));
 
-			if (fileEntryId == _fileEntry.getFileEntryId()) {
+			if (fileEntryId == fileEntry.getFileEntryId()) {
 				found = true;
 
 				break;
@@ -468,30 +604,30 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 	}
 
 	protected void searchFile(boolean rootFolder) throws Exception {
-		addFileEntry(rootFolder);
+		FileEntry fileEntry = addFileEntry(rootFolder);
 
-		Thread.sleep(1000 * TestPropsValues.JUNIT_DELAY_FACTOR);
+		search(fileEntry, rootFolder, "title", true);
+		search(fileEntry, rootFolder, "content", true);
 
-		search(rootFolder, "title", true);
-		search(rootFolder, "content", true);
-
-		DLAppServiceUtil.deleteFileEntry(_fileEntry.getFileEntryId());
-
-		_fileEntry = null;
+		DLAppServiceUtil.deleteFileEntry(fileEntry.getFileEntryId());
 	}
 
 	protected FileEntry updateFileEntry(
 			long fileEntryId, String fileName, boolean majorVersion)
 		throws Exception {
 
-		return updateFileEntry(fileEntryId, fileName, fileName, majorVersion);
+		return DLAppTestUtil.updateFileEntry(
+			group.getGroupId(), fileEntryId, fileName, fileName, majorVersion,
+			true, true);
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(DLAppServiceTest.class);
 
 	private FileEntry _fileEntry;
 	private long[] _fileEntryIds;
-	private long[] _userIds;
+
+	@DeleteAfterTestRun
+	private User[] _users;
 
 	private class AddFileEntryThread extends DoAsUserThread {
 
@@ -509,12 +645,15 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 		@Override
 		protected void doRun() throws Exception {
 			try {
-				FileEntry fileEntry = addFileEntry(
-					false, "Test-" + _index + ".txt");
+				FileEntry fileEntry = DLAppTestUtil.addFileEntry(
+					group.getGroupId(), parentFolder.getFolderId(),
+					"Test-" + _index + ".txt");
 
 				_fileEntryIds[_index] = fileEntry.getFileEntryId();
 
-				_log.debug("Added file " + _index);
+				if (_log.isDebugEnabled()) {
+					_log.debug("Added file " + _index);
+				}
 
 				_success = true;
 			}
@@ -552,7 +691,9 @@ public class DLAppServiceTest extends BaseDLAppTestCase {
 				String content = StringUtil.read(is);
 
 				if (CONTENT.equals(content)) {
-					_log.debug("Retrieved file " + _index);
+					if (_log.isDebugEnabled()) {
+						_log.debug("Retrieved file " + _index);
+					}
 
 					_success = true;
 				}

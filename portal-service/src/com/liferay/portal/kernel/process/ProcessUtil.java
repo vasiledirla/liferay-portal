@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -35,6 +35,9 @@ import java.util.concurrent.TimeoutException;
  * @author Shuyang Zhou
  */
 public class ProcessUtil {
+
+	public static final CollectorOutputProcessor COLLECTOR_OUTPUT_PROCESSOR =
+		new CollectorOutputProcessor();
 
 	public static final ConsumerOutputProcessor CONSUMER_OUTPUT_PROCESSOR =
 		new ConsumerOutputProcessor();
@@ -78,8 +81,8 @@ public class ProcessUtil {
 					"Cancelled execution because of a concurrent destroy", ree);
 			}
 		}
-		catch (IOException e) {
-			throw new ProcessException(e);
+		catch (IOException ioe) {
+			throw new ProcessException(ioe);
 		}
 	}
 
@@ -134,6 +137,7 @@ public class ProcessUtil {
 			_process = process;
 		}
 
+		@Override
 		public boolean cancel(boolean mayInterruptIfRunning) {
 			if (_stdOutFuture.isCancelled() || _stdOutFuture.isDone()) {
 				return false;
@@ -146,6 +150,7 @@ public class ProcessUtil {
 			return true;
 		}
 
+		@Override
 		public ObjectValuePair<O, E> get()
 			throws ExecutionException, InterruptedException {
 
@@ -155,6 +160,7 @@ public class ProcessUtil {
 			return new ObjectValuePair<O, E>(stdOutResult, stdErrResult);
 		}
 
+		@Override
 		public ObjectValuePair<O, E> get(long timeout, TimeUnit unit)
 			throws ExecutionException, InterruptedException, TimeoutException {
 
@@ -172,17 +178,19 @@ public class ProcessUtil {
 			return new ObjectValuePair<O, E>(stdOutResult, stdErrResult);
 		}
 
+		@Override
 		public boolean isCancelled() {
 			return _stdOutFuture.isCancelled();
 		}
 
+		@Override
 		public boolean isDone() {
 			return _stdOutFuture.isDone();
 		}
 
+		private final Process _process;
 		private final Future<E> _stdErrFuture;
 		private final Future<O> _stdOutFuture;
-		private final Process _process;
 
 	}
 
@@ -195,6 +203,7 @@ public class ProcessUtil {
 			_process = process;
 		}
 
+		@Override
 		public T call() throws Exception {
 			return _outputProcessor.processStdErr(_process.getErrorStream());
 		}
@@ -213,6 +222,7 @@ public class ProcessUtil {
 			_process = process;
 		}
 
+		@Override
 		public T call() throws Exception {
 			try {
 				return _outputProcessor.processStdOut(
@@ -223,8 +233,7 @@ public class ProcessUtil {
 					int exitCode = _process.waitFor();
 
 					if (exitCode != 0) {
-						throw new ProcessException(
-							"Subprocess terminated with exit code " + exitCode);
+						throw new TerminationProcessException(exitCode);
 					}
 				}
 				catch (InterruptedException ie) {

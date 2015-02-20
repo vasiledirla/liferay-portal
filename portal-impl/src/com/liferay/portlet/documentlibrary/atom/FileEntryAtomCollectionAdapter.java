@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -28,8 +28,8 @@ import com.liferay.portal.kernel.util.MimeTypesUtil;
 import com.liferay.portal.kernel.util.StreamUtil;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.util.PortletKeys;
-import com.liferay.portlet.bookmarks.util.comparator.EntryNameComparator;
 import com.liferay.portlet.documentlibrary.service.DLAppServiceUtil;
+import com.liferay.portlet.documentlibrary.util.comparator.RepositoryModelNameComparator;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -45,10 +45,12 @@ import java.util.List;
 public class FileEntryAtomCollectionAdapter
 	extends BaseMediaAtomCollectionAdapter<FileEntry> {
 
+	@Override
 	public String getCollectionName() {
 		return COLLECTION_NAME;
 	}
 
+	@Override
 	public List<String> getEntryAuthors(FileEntry fileEntry) {
 		List<String> authors = new ArrayList<String>();
 
@@ -57,6 +59,7 @@ public class FileEntryAtomCollectionAdapter
 		return authors;
 	}
 
+	@Override
 	public AtomEntryContent getEntryContent(
 		FileEntry fileEntry, AtomRequestContext atomRequestContext) {
 
@@ -74,22 +77,27 @@ public class FileEntryAtomCollectionAdapter
 		return atomEntryContent;
 	}
 
+	@Override
 	public String getEntryId(FileEntry fileEntry) {
 		return String.valueOf(fileEntry.getPrimaryKey());
 	}
 
+	@Override
 	public String getEntrySummary(FileEntry fileEntry) {
 		return fileEntry.getDescription();
 	}
 
+	@Override
 	public String getEntryTitle(FileEntry fileEntry) {
 		return fileEntry.getTitle();
 	}
 
+	@Override
 	public Date getEntryUpdated(FileEntry fileEntry) {
 		return fileEntry.getModifiedDate();
 	}
 
+	@Override
 	public String getFeedTitle(AtomRequestContext atomRequestContext) {
 		return AtomUtil.createFeedTitleFromPortletName(
 			atomRequestContext, PortletKeys.DOCUMENT_LIBRARY) + " files";
@@ -164,7 +172,8 @@ public class FileEntryAtomCollectionAdapter
 
 		return DLAppServiceUtil.getFileEntries(
 			repositoryId, folderId, atomPager.getStart(),
-			atomPager.getEnd() + 1, new EntryNameComparator());
+			atomPager.getEnd() + 1,
+			new RepositoryModelNameComparator<FileEntry>());
 	}
 
 	@Override

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -41,7 +41,7 @@ public class RestrictPortletContainerWrapper implements PortletContainer {
 		PortletContainer portletContainer) {
 
 		if ((PropsValues.LAYOUT_PARALLEL_RENDER_ENABLE &&
-				ServerDetector.isTomcat()) ||
+			 ServerDetector.isTomcat()) ||
 			PropsValues.PORTLET_CONTAINER_RESTRICT) {
 
 			portletContainer = new RestrictPortletContainerWrapper(
@@ -55,12 +55,14 @@ public class RestrictPortletContainerWrapper implements PortletContainer {
 		_portletContainer = portletContainer;
 	}
 
+	@Override
 	public void preparePortlet(HttpServletRequest request, Portlet portlet)
 		throws PortletContainerException {
 
 		_portletContainer.preparePortlet(request, portlet);
 	}
 
+	@Override
 	public ActionResult processAction(
 			HttpServletRequest request, HttpServletResponse response,
 			Portlet portlet)
@@ -77,6 +79,7 @@ public class RestrictPortletContainerWrapper implements PortletContainer {
 		}
 	}
 
+	@Override
 	public List<Event> processEvent(
 			HttpServletRequest request, HttpServletResponse response,
 			Portlet portlet, Layout layout, Event event)
@@ -94,6 +97,7 @@ public class RestrictPortletContainerWrapper implements PortletContainer {
 		}
 	}
 
+	@Override
 	public void render(
 			HttpServletRequest request, HttpServletResponse response,
 			Portlet portlet)
@@ -114,8 +118,8 @@ public class RestrictPortletContainerWrapper implements PortletContainer {
 			}
 		}
 		else {
-			restrictPortletServletRequest =
-				new RestrictPortletServletRequest(request);
+			restrictPortletServletRequest = new RestrictPortletServletRequest(
+				request);
 		}
 
 		try {
@@ -149,6 +153,7 @@ public class RestrictPortletContainerWrapper implements PortletContainer {
 		}
 	}
 
+	@Override
 	public void serveResource(
 			HttpServletRequest request, HttpServletResponse response,
 			Portlet portlet)

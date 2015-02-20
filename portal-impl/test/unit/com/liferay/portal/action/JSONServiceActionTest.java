@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -23,6 +23,8 @@ import java.lang.reflect.Type;
 
 import junit.framework.TestCase;
 
+import org.junit.Test;
+
 import org.springframework.mock.web.MockHttpServletRequest;
 
 /**
@@ -32,9 +34,12 @@ public class JSONServiceActionTest extends TestCase {
 
 	@Override
 	public void setUp() throws Exception {
-		new JSONFactoryUtil().setJSONFactory(new JSONFactoryImpl());
+		JSONFactoryUtil jsonFactoryUtil = new JSONFactoryUtil();
+
+		jsonFactoryUtil.setJSONFactory(new JSONFactoryImpl());
 	}
 
+	@Test
 	public void testGetArgumentValue() throws Exception {
 		JSONServiceAction jsonServiceAction = new JSONServiceAction();
 

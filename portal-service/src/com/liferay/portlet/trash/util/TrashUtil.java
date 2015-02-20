@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,59 +14,113 @@
 
 package com.liferay.portlet.trash.util;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.search.Hits;
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.model.Group;
+import com.liferay.portal.model.TrashedModel;
+import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portlet.trash.model.TrashEntry;
 
+import java.util.Date;
 import java.util.List;
+
+import javax.portlet.ActionRequest;
+import javax.portlet.PortletURL;
+
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * @author Julio Camarero
  */
+@ProviderType
 public class TrashUtil {
 
-	public static final String TRASH_ATTACHMENTS_DIR = ".trashed_";
+	public static void addBaseModelBreadcrumbEntries(
+			HttpServletRequest request, String className, long classPK,
+			PortletURL containerModelURL)
+		throws PortalException {
 
-	public static final int TRASH_DEFAULT_VALUE = -1;
-
-	public static final int TRASH_DISABLED = 0;
-
-	public static final int TRASH_DISABLED_BY_DEFAULT = 1;
-
-	public static final int TRASH_ENABLED = 3;
-
-	public static final int TRASH_ENABLED_BY_DEFAULT = 2;
-
-	public static final String TRASH_TIME_SEPARATOR = "_TRASH_TIME_";
-
-	public static String appendTrashNamespace(String title) {
-		return getTrash().appendTrashNamespace(title);
+		getTrash().addBaseModelBreadcrumbEntries(
+			request, className, classPK, containerModelURL);
 	}
 
-	public static String appendTrashNamespace(String title, String separator) {
-		return getTrash().appendTrashNamespace(title, separator);
+	public static void addContainerModelBreadcrumbEntries(
+			HttpServletRequest request, String className, long classPK,
+			PortletURL containerModelURL)
+		throws PortalException {
+
+		getTrash().addContainerModelBreadcrumbEntries(
+			request, className, classPK, containerModelURL);
+	}
+
+	public static void addTrashSessionMessages(
+		ActionRequest actionRequest, List<TrashedModel> trashedModels) {
+
+		getTrash().addTrashSessionMessages(actionRequest, trashedModels);
+	}
+
+	public static void addTrashSessionMessages(
+		ActionRequest actionRequest, List<TrashedModel> trashedModels,
+		String cmd) {
+
+		getTrash().addTrashSessionMessages(actionRequest, trashedModels, cmd);
+	}
+
+	public static void addTrashSessionMessages(
+		ActionRequest actionRequest, TrashedModel trashedModel) {
+
+		getTrash().addTrashSessionMessages(actionRequest, trashedModel);
+	}
+
+	public static void addTrashSessionMessages(
+		ActionRequest actionRequest, TrashedModel trashedModel, String cmd) {
+
+		getTrash().addTrashSessionMessages(actionRequest, trashedModel, cmd);
+	}
+
+	public static void deleteEntriesAttachments(
+			long companyId, long repositoryId, Date date,
+			String[] attachmentFileNames)
+		throws PortalException {
+
+		getTrash().deleteEntriesAttachments(
+			companyId, repositoryId, date, attachmentFileNames);
 	}
 
 	public static List<TrashEntry> getEntries(Hits hits)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return getTrash().getEntries(hits);
 	}
 
-	public static OrderByComparator getEntryOrderByComparator(
+	public static OrderByComparator<TrashEntry> getEntryOrderByComparator(
 		String orderByCol, String orderByType) {
 
 		return getTrash().getEntryOrderByComparator(orderByCol, orderByType);
 	}
 
-	public static int getMaxAge(Group group)
-		throws PortalException, SystemException {
-
+	public static int getMaxAge(Group group) throws PortalException {
 		return getTrash().getMaxAge(group);
+	}
+
+	public static String getNewName(String oldName, String token) {
+		return getTrash().getNewName(oldName, token);
+	}
+
+	public static String getNewName(
+			ThemeDisplay themeDisplay, String className, long classPK,
+			String oldName)
+		throws PortalException {
+
+		return getTrash().getNewName(themeDisplay, className, classPK, oldName);
+	}
+
+	public static String getOriginalTitle(String title) {
+		return getTrash().getOriginalTitle(title);
 	}
 
 	public static Trash getTrash() {
@@ -79,56 +133,29 @@ public class TrashUtil {
 		return getTrash().getTrashTime(title, separator);
 	}
 
-	public static boolean isTrashEnabled(long groupId)
-		throws PortalException, SystemException {
+	public static String getTrashTitle(long trashEntryId) {
+		return getTrash().getTrashTitle(trashEntryId);
+	}
 
+	public static PortletURL getViewContentURL(
+			HttpServletRequest request, String className, long classPK)
+		throws PortalException {
+
+		return getTrash().getViewContentURL(request, className, classPK);
+	}
+
+	public static boolean isInTrash(String className, long classPK)
+		throws PortalException {
+
+		return getTrash().isInTrash(className, classPK);
+	}
+
+	public static boolean isTrashEnabled(Group group) {
+		return getTrash().isTrashEnabled(group);
+	}
+
+	public static boolean isTrashEnabled(long groupId) throws PortalException {
 		return getTrash().isTrashEnabled(groupId);
-	}
-
-	public static void moveAttachmentFromTrash(
-			long companyId, long repositoryId, String deletedFileName,
-			String attachmentsDir)
-		throws PortalException, SystemException {
-
-		getTrash().moveAttachmentFromTrash(
-			companyId, repositoryId, deletedFileName, attachmentsDir);
-	}
-
-	public static void moveAttachmentFromTrash(
-			long companyId, long repositoryId, String deletedFileName,
-			String attachmentsDir, String separator)
-		throws PortalException, SystemException {
-
-		getTrash().moveAttachmentFromTrash(
-			companyId, repositoryId, deletedFileName, attachmentsDir,
-			separator);
-	}
-
-	public static String moveAttachmentToTrash(
-			long companyId, long repositoryId, String fileName,
-			String deletedAttachmentsDir)
-		throws PortalException, SystemException {
-
-		return getTrash().moveAttachmentToTrash(
-			companyId, repositoryId, fileName, deletedAttachmentsDir);
-	}
-
-	public static String moveAttachmentToTrash(
-			long companyId, long repositoryId, String fileName,
-			String deletedAttachmentsDir, String separator)
-		throws PortalException, SystemException {
-
-		return getTrash().moveAttachmentToTrash(
-			companyId, repositoryId, fileName, deletedAttachmentsDir,
-			separator);
-	}
-
-	public static String stripTrashNamespace(String title) {
-		return getTrash().stripTrashNamespace(title);
-	}
-
-	public static String stripTrashNamespace(String title, String separator) {
-		return getTrash().stripTrashNamespace(title, separator);
 	}
 
 	public void setTrash(Trash trash) {

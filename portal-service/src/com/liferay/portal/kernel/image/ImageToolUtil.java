@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,7 +14,10 @@
 
 package com.liferay.portal.kernel.image;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
+import com.liferay.portal.model.Image;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -32,6 +35,7 @@ import java.util.concurrent.Future;
  * @author Brian Wing Shun Chan
  * @author Alexander Chow
  */
+@ProviderType
 public class ImageToolUtil {
 
 	/**
@@ -65,6 +69,12 @@ public class ImageToolUtil {
 		BufferedImage sourceImage, int type) {
 
 		return getImageTool().convertImageType(sourceImage, type);
+	}
+
+	public static RenderedImage crop(
+		RenderedImage renderedImage, int height, int width, int x, int y) {
+
+		return getImageTool().crop(renderedImage, height, width, x, y);
 	}
 
 	/**
@@ -119,10 +129,52 @@ public class ImageToolUtil {
 		return getImageTool().getBytes(renderedImage, contentType);
 	}
 
+	public static Image getDefaultCompanyLogo() {
+		return getImageTool().getDefaultCompanyLogo();
+	}
+
+	public static Image getDefaultOrganizationLogo() {
+		return getImageTool().getDefaultOrganizationLogo();
+	}
+
+	public static Image getDefaultSpacer() {
+		return getImageTool().getDefaultSpacer();
+	}
+
+	public static Image getDefaultUserFemalePortrait() {
+		return getImageTool().getDefaultUserFemalePortrait();
+	}
+
+	public static Image getDefaultUserMalePortrait() {
+		return getImageTool().getDefaultUserMalePortrait();
+	}
+
+	public static Image getImage(byte[] bytes) throws IOException {
+		return getImageTool().getImage(bytes);
+	}
+
+	public static Image getImage(File file) throws IOException {
+		return getImageTool().getImage(file);
+	}
+
+	public static Image getImage(InputStream is) throws IOException {
+		return getImageTool().getImage(is);
+	}
+
+	public static Image getImage(InputStream is, boolean cleanUpStream)
+		throws IOException {
+
+		return getImageTool().getImage(is, cleanUpStream);
+	}
+
 	public static ImageTool getImageTool() {
 		PortalRuntimePermission.checkGetBeanProperty(ImageToolUtil.class);
 
 		return _imageTool;
+	}
+
+	public static boolean isNullOrDefaultSpacer(byte[] bytes) {
+		return getImageTool().isNullOrDefaultSpacer(bytes);
 	}
 
 	/**

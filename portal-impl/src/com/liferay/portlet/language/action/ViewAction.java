@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,11 +15,16 @@
 package com.liferay.portlet.language.action;
 
 import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.util.CharPool;
+import com.liferay.portal.kernel.util.GetterUtil;
+import com.liferay.portal.kernel.util.HttpUtil;
 import com.liferay.portal.kernel.util.ListUtil;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.Contact;
+import com.liferay.portal.model.Group;
 import com.liferay.portal.model.Layout;
 import com.liferay.portal.model.User;
 import com.liferay.portal.struts.PortletAction;
@@ -55,8 +60,9 @@ public class ViewAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		HttpServletRequest request = PortalUtil.getHttpServletRequest(
@@ -68,17 +74,18 @@ public class ViewAction extends PortletAction {
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
 			WebKeys.THEME_DISPLAY);
 
-		Layout layout = themeDisplay.getLayout();
-
 		String languageId = ParamUtil.getString(actionRequest, "languageId");
 
 		Locale locale = LocaleUtil.fromLanguageId(languageId);
 
 		List<Locale> availableLocales = ListUtil.fromArray(
-			LanguageUtil.getAvailableLocales());
+			LanguageUtil.getAvailableLocales(themeDisplay.getSiteGroupId()));
 
 		if (availableLocales.contains(locale)) {
-			if (themeDisplay.isSignedIn()) {
+			boolean persistState = ParamUtil.getBoolean(
+				request, "persistState", true);
+
+			if (themeDisplay.isSignedIn() && (persistState)) {
 				User user = themeDisplay.getUser();
 
 				Contact contact = user.getContact();
@@ -104,6 +111,7 @@ public class ViewAction extends PortletAction {
 
 		String redirect = ParamUtil.getString(actionRequest, "redirect");
 
+		String layoutURL = StringPool.BLANK;
 		String queryString = StringPool.BLANK;
 
 		int pos = redirect.indexOf(Portal.FRIENDLY_URL_SEPARATOR);
@@ -113,38 +121,93 @@ public class ViewAction extends PortletAction {
 		}
 
 		if (pos != -1) {
+			layoutURL = redirect.substring(0, pos);
 			queryString = redirect.substring(pos);
 		}
+		else {
+			layoutURL = redirect;
+		}
 
-		if (PropsValues.LOCALE_PREPEND_FRIENDLY_URL_STYLE == 0) {
-			redirect = PortalUtil.getLayoutURL(layout, themeDisplay);
+		Layout layout = themeDisplay.getLayout();
 
-			if (themeDisplay.isI18n()) {
-				redirect = layout.getFriendlyURL();
+		Group group = layout.getGroup();
+
+		if (isGroupFriendlyURL(group, layout, layoutURL, locale)) {
+			if (PropsValues.LOCALE_PREPEND_FRIENDLY_URL_STYLE == 0) {
+				redirect = layoutURL;
+			}
+			else {
+				redirect = PortalUtil.getGroupFriendlyURL(
+					group, layout.isPrivateLayout(), themeDisplay, locale);
 			}
 		}
 		else {
-			redirect = PortalUtil.getLayoutFriendlyURL(
-				layout, themeDisplay, locale);
+			if (PropsValues.LOCALE_PREPEND_FRIENDLY_URL_STYLE == 0) {
+				if (themeDisplay.isI18n()) {
+					redirect = layout.getFriendlyURL(locale);
+				}
+				else {
+					redirect = PortalUtil.getLayoutURL(
+						layout, themeDisplay, locale);
+				}
+			}
+			else {
+				redirect = PortalUtil.getLayoutFriendlyURL(
+					layout, themeDisplay, locale);
+			}
 		}
 
-		redirect = redirect + queryString;
+		int lifecycle = GetterUtil.getInteger(
+			HttpUtil.getParameter(queryString, "p_p_lifecycle", false));
+
+		if (lifecycle == 0) {
+			redirect = redirect + queryString;
+		}
 
 		actionResponse.sendRedirect(redirect);
 	}
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
-		return mapping.findForward("portlet.language.view");
+		return actionMapping.findForward("portlet.language.view");
 	}
 
 	@Override
 	protected boolean isCheckMethodOnProcessAction() {
 		return _CHECK_METHOD_ON_PROCESS_ACTION;
+	}
+
+	protected boolean isGroupFriendlyURL(
+		Group group, Layout layout, String layoutURL, Locale locale) {
+
+		if (Validator.isNull(layoutURL)) {
+			return true;
+		}
+
+		int pos = layoutURL.lastIndexOf(CharPool.SLASH);
+
+		String layoutURLLanguageId = layoutURL.substring(pos + 1);
+
+		Locale layoutURLLocale = LocaleUtil.fromLanguageId(
+			layoutURLLanguageId, true, false);
+
+		if (layoutURLLocale != null) {
+			return true;
+		}
+
+		if (PortalUtil.isGroupFriendlyURL(
+				layoutURL, group.getFriendlyURL(),
+				layout.getFriendlyURL(locale))) {
+
+			return true;
+		}
+
+		return false;
 	}
 
 	private static final boolean _CHECK_METHOD_ON_PROCESS_ACTION = false;

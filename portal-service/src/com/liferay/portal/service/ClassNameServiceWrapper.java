@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,19 +14,36 @@
 
 package com.liferay.portal.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 /**
- * <p>
- * This class is a wrapper for {@link ClassNameService}.
- * </p>
+ * Provides a wrapper for {@link ClassNameService}.
  *
- * @author    Brian Wing Shun Chan
- * @see       ClassNameService
+ * @author Brian Wing Shun Chan
+ * @see ClassNameService
  * @generated
  */
+@ProviderType
 public class ClassNameServiceWrapper implements ClassNameService,
 	ServiceWrapper<ClassNameService> {
 	public ClassNameServiceWrapper(ClassNameService classNameService) {
 		_classNameService = classNameService;
+	}
+
+	@Override
+	public com.liferay.portal.model.ClassName fetchClassName(
+		java.lang.String value) {
+		return _classNameService.fetchClassName(value);
+	}
+
+	@Override
+	public long fetchClassNameId(java.lang.Class<?> clazz) {
+		return _classNameService.fetchClassNameId(clazz);
+	}
+
+	@Override
+	public long fetchClassNameId(java.lang.String value) {
+		return _classNameService.fetchClassNameId(value);
 	}
 
 	/**
@@ -34,6 +51,7 @@ public class ClassNameServiceWrapper implements ClassNameService,
 	*
 	* @return the Spring bean ID for this bean
 	*/
+	@Override
 	public java.lang.String getBeanIdentifier() {
 		return _classNameService.getBeanIdentifier();
 	}
@@ -43,42 +61,33 @@ public class ClassNameServiceWrapper implements ClassNameService,
 	*
 	* @param beanIdentifier the Spring bean ID for this bean
 	*/
+	@Override
 	public void setBeanIdentifier(java.lang.String beanIdentifier) {
 		_classNameService.setBeanIdentifier(beanIdentifier);
 	}
 
-	public com.liferay.portal.model.ClassName fetchClassName(
-		java.lang.String value)
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return _classNameService.fetchClassName(value);
-	}
-
-	public long fetchClassNameId(java.lang.Class<?> clazz) {
-		return _classNameService.fetchClassNameId(clazz);
-	}
-
-	public long fetchClassNameId(java.lang.String value) {
-		return _classNameService.fetchClassNameId(value);
-	}
-
 	/**
-	 * @deprecated Renamed to {@link #getWrappedService}
+	 * @deprecated As of 6.1.0, replaced by {@link #getWrappedService}
 	 */
+	@Deprecated
 	public ClassNameService getWrappedClassNameService() {
 		return _classNameService;
 	}
 
 	/**
-	 * @deprecated Renamed to {@link #setWrappedService}
+	 * @deprecated As of 6.1.0, replaced by {@link #setWrappedService}
 	 */
+	@Deprecated
 	public void setWrappedClassNameService(ClassNameService classNameService) {
 		_classNameService = classNameService;
 	}
 
+	@Override
 	public ClassNameService getWrappedService() {
 		return _classNameService;
 	}
 
+	@Override
 	public void setWrappedService(ClassNameService classNameService) {
 		_classNameService = classNameService;
 	}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,19 +16,15 @@ package com.liferay.portlet.wiki.asset;
 
 import com.liferay.portal.kernel.trash.BaseTrashRenderer;
 import com.liferay.portal.kernel.util.HtmlUtil;
-import com.liferay.portal.security.permission.ActionKeys;
-import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PortletKeys;
-import com.liferay.portal.util.WebKeys;
 import com.liferay.portlet.trash.util.TrashUtil;
 import com.liferay.portlet.wiki.model.WikiNode;
-import com.liferay.portlet.wiki.service.permission.WikiNodePermission;
 
 import java.util.Locale;
 
-import javax.portlet.RenderRequest;
-import javax.portlet.RenderResponse;
+import javax.portlet.PortletRequest;
+import javax.portlet.PortletResponse;
 
 /**
  * @author Eudaldo Alonso
@@ -42,48 +38,49 @@ public class WikiNodeTrashRenderer extends BaseTrashRenderer {
 	}
 
 	@Override
+	public String getClassName() {
+		return WikiNode.class.getName();
+	}
+
+	@Override
+	public long getClassPK() {
+		return _node.getPrimaryKey();
+	}
+
+	@Override
+	public String getIconCssClass() {
+		return "icon-copy";
+	}
+
+	@Override
 	public String getIconPath(ThemeDisplay themeDisplay) {
 		return themeDisplay.getPathThemeImages() + "/common/all_pages.png";
 	}
 
+	@Override
 	public String getPortletId() {
 		return PortletKeys.WIKI;
 	}
 
-	public String getSummary(Locale locale) {
+	@Override
+	public String getSummary(
+		PortletRequest portletRequest, PortletResponse portletResponse) {
+
 		return HtmlUtil.stripHtml(_node.getDescription());
 	}
 
+	@Override
 	public String getTitle(Locale locale) {
 		if (!_node.isInTrash()) {
 			return _node.getName();
 		}
 
-		return TrashUtil.stripTrashNamespace(_node.getName());
+		return TrashUtil.getOriginalTitle(_node.getName());
 	}
 
+	@Override
 	public String getType() {
 		return TYPE;
-	}
-
-	public boolean hasDeletePermission(PermissionChecker permissionChecker) {
-		return WikiNodePermission.contains(
-			permissionChecker, _node, ActionKeys.DELETE);
-	}
-
-	public boolean hasViewPermission(PermissionChecker permissionChecker) {
-		return WikiNodePermission.contains(
-			permissionChecker, _node, ActionKeys.VIEW);
-	}
-
-	public String render(
-			RenderRequest renderRequest, RenderResponse renderResponse,
-			String template)
-		throws Exception {
-
-		renderRequest.setAttribute(WebKeys.WIKI_NODE, _node);
-
-		return "/html/portlet/wiki/trash/node.jsp";
 	}
 
 	private WikiNode _node;

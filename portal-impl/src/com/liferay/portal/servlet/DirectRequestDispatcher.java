@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -35,6 +35,7 @@ public class DirectRequestDispatcher implements RequestDispatcher {
 		_queryString = queryString;
 	}
 
+	@Override
 	public void forward(
 			ServletRequest servletRequest, ServletResponse servletResponse)
 		throws IOException, ServletException {
@@ -45,6 +46,7 @@ public class DirectRequestDispatcher implements RequestDispatcher {
 		_servlet.service(servletRequest, servletResponse);
 	}
 
+	@Override
 	public void include(
 			ServletRequest servletRequest, ServletResponse servletResponse)
 		throws IOException, ServletException {

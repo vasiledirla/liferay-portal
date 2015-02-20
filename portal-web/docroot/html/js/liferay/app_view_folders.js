@@ -1,15 +1,18 @@
 AUI.add(
 	'liferay-app-view-folders',
 	function(A) {
+		var ANode = A.Node;
 		var AObject = A.Object;
 		var History = Liferay.HistoryManager;
 		var Lang = A.Lang;
 
-		var formatSelectorNS = A.Node.formatSelectorNS;
+		var formatSelectorNS = ANode.formatSelectorNS;
 
 		var owns = AObject.owns;
 
-		var CSS_SELECTED = 'selected';
+		var BROWSE_BY = 'browseBy';
+
+		var CSS_SELECTED = 'active';
 
 		var DATA_DIRECTION_RIGHT = 'data-direction-right';
 
@@ -18,8 +21,6 @@ AUI.add(
 		var DATA_VIEW_ENTRIES = 'data-view-entries';
 
 		var DATA_VIEW_FOLDERS = 'data-view-folders';
-
-		var EXPAND_FOLDER = 'expandFolder';
 
 		var MESSAGE_TYPE_ERROR = 'error';
 
@@ -139,7 +140,7 @@ AUI.add(
 
 						instance._displayStyleToolbar = instance.get('displayStyleToolbar');
 
-						instance._portletMessageContainer = A.Node.create(TPL_MESSAGE_RESPONSE);
+						instance._portletMessageContainer = ANode.create(TPL_MESSAGE_RESPONSE);
 
 						instance._entriesContainer = instance.byId('entriesContainer');
 
@@ -148,16 +149,16 @@ AUI.add(
 						instance._repositoriesData = {};
 
 						var eventHandles = [
-							Liferay.after(instance._eventDataRequest, instance._afterDataRequest, instance),
-							Liferay.on(instance._dataRetrieveFailure, instance._onDataRetrieveFailure, instance),
-							Liferay.on(instance._eventDataRequest, instance._onDataRequest, instance)
+							Liferay.after(instance._eventDataRequest, A.bind('_afterDataRequest', instance)),
+							Liferay.on(instance._dataRetrieveFailure, A.bind('_onDataRetrieveFailure', instance)),
+							Liferay.on(instance._eventDataRequest, A.bind('_onDataRequest', instance))
 						];
 
 						instance._eventHandles = eventHandles;
 
 						portletContainer.delegate(
 							STR_CLICK,
-							A.bind(instance._onPortletContainerClick, instance),
+							A.bind('_onPortletContainerClick', instance),
 							formatSelectorNS(instance.NS, '#entriesContainer a[data-folder=true], #breadcrumbContainer a')
 						);
 
@@ -179,9 +180,9 @@ AUI.add(
 
 						var output = instance._portletMessageContainer;
 
-						output.removeClass('portlet-msg-error').removeClass('portlet-msg-success');
+						output.removeClass('alert-danger').removeClass('alert-success');
 
-						output.addClass('portlet-msg-' + type);
+						output.addClass('alert alert-' + type);
 
 						output.html(message);
 
@@ -198,6 +199,9 @@ AUI.add(
 						instance._setEntries(data);
 						instance._setFolders(data);
 						instance._setParentTitle(data);
+						instance._setSelectAllCheckbox(data);
+
+						instance._parseContent(data);
 
 						WIN[instance.ns(STR_TOGGLE_ACTIONS_BUTTON)]();
 					},
@@ -213,7 +217,7 @@ AUI.add(
 
 						AObject.each(
 							currentHistoryState,
-							function(index, item, collection) {
+							function(index, item) {
 								if (!owns(historyState, item) && !owns(defaultParams, item)) {
 									historyState[item] = null;
 								}
@@ -258,11 +262,12 @@ AUI.add(
 							instance.get('mainUrl'),
 							{
 								autoLoad: false,
-								method: 'get'
+								cache: false,
+								method: 'GET'
 							}
 						);
 
-						var sendIOResponse = A.bind(instance._sendIOResponse, instance, ioRequest);
+						var sendIOResponse = A.bind('_sendIOResponse', instance, ioRequest);
 
 						ioRequest.after(['failure', STR_SUCCESS], sendIOResponse);
 
@@ -304,7 +309,7 @@ AUI.add(
 					_afterListViewItemChange: function(event) {
 						var instance = this;
 
-						var selFolder = A.one('.folder.selected');
+						var selFolder = A.one('.folder.active');
 
 						if (selFolder) {
 							selFolder.removeClass(CSS_SELECTED);
@@ -316,7 +321,7 @@ AUI.add(
 
 						var entryConfig = instance.get('entry');
 
-						var dataExpandFolder = item.attr('data-expand-folder');
+						var dataBrowseBy = item.attr('data-browse-by');
 						var dataStructureId = item.attr(entryConfig.typeId);
 						var dataFolderId = item.attr(DATA_FOLDER_ID);
 						var dataNavigation = item.attr('data-navigation');
@@ -335,8 +340,8 @@ AUI.add(
 
 						requestParams[instance.ns(PARAM_STRUTS_ACTION)] = instance.get(STR_STRUTS_ACTION);
 
-						if (dataExpandFolder) {
-							requestParams[instance.ns(EXPAND_FOLDER)] = dataExpandFolder;
+						if (dataBrowseBy) {
+							requestParams[instance.ns(BROWSE_BY)] = dataBrowseBy;
 						}
 
 						if (dataFolderId) {
@@ -363,7 +368,7 @@ AUI.add(
 							instance._eventDataRequest,
 							{
 								requestParams: requestParams,
-								resetPaginator: true
+								resetPagination: true
 							}
 						);
 					},
@@ -377,7 +382,7 @@ AUI.add(
 							'liferay-app-view-folders:dataRequest',
 							{
 								requestParams: event.requestParams,
-								resetPaginator: event.resetPaginator,
+								resetPagination: event.resetPagination,
 								src: event.src
 							}
 						);
@@ -401,7 +406,6 @@ AUI.add(
 						requestParams[instance.ns(PARAM_STRUTS_ACTION)] = instance.get(STR_STRUTS_ACTION);
 						requestParams[instance.ns('action')] = 'browseFolder';
 						requestParams[instance._folderId] = event.currentTarget.attr(DATA_FOLDER_ID);
-						requestParams[instance.ns(EXPAND_FOLDER)] = false;
 
 						var viewEntries = event.currentTarget.attr(DATA_VIEW_ENTRIES);
 
@@ -427,9 +431,19 @@ AUI.add(
 							instance._eventDataRequest,
 							{
 								requestParams: requestParams,
-								resetPaginator: true
+								resetPagination: true
 							}
 						);
+					},
+
+					_parseContent: function(data) {
+						var instance = this;
+
+						var tmpNode = ANode.create('<div></div>');
+
+						tmpNode.plug(A.Plugin.ParseContent);
+
+						tmpNode.ParseContent.parseContent(data);
 					},
 
 					_processDefaultParams: function(event) {
@@ -439,7 +453,7 @@ AUI.add(
 
 						AObject.each(
 							instance.get('defaultParams'),
-							function(item, index, collection) {
+							function(item, index) {
 								if (!Lang.isValue(History.get(index))) {
 									requestParams[index] = item;
 								}
@@ -460,7 +474,7 @@ AUI.add(
 
 								AObject.each(
 									initialState,
-									function(item, index, collection) {
+									function(item, index) {
 										if (index.indexOf(namespace) === 0) {
 											requestParams[index] = item;
 										}
@@ -508,22 +522,12 @@ AUI.add(
 						if (breadcrumb) {
 							var breadcrumbContainer;
 
-							var journalBreadcrumb = breadcrumb.one('.portlet-breadcrumb ul');
+							var portletBreadcrumb = breadcrumb.one('.portlet-breadcrumb');
 
-							if (journalBreadcrumb) {
+							if (portletBreadcrumb) {
 								breadcrumbContainer = instance.byId('breadcrumbContainer');
 
-								breadcrumbContainer.setContent(journalBreadcrumb);
-							}
-
-							var portalBreadcrumb = breadcrumb.one('.portal-breadcrumb ul');
-
-							if (portalBreadcrumb) {
-								breadcrumbContainer = A.one('#breadcrumbs ul');
-
-								if (breadcrumbContainer) {
-									breadcrumbContainer.setContent(portalBreadcrumb.html());
-								}
+								breadcrumbContainer.setContent(portletBreadcrumb.html());
 							}
 						}
 					},
@@ -534,11 +538,27 @@ AUI.add(
 						var addButton = instance.one('#addButton', content);
 
 						if (addButton) {
+							var toolbarContainer = instance.byId('toolbarContainer');
+
 							var addButtonContainer = instance.byId('addButtonContainer');
 
-							addButtonContainer.plug(A.Plugin.ParseContent);
+							if (addButtonContainer) {
+								var refNode = addButtonContainer.next();
 
-							addButtonContainer.setContent(addButton);
+								addButtonContainer.remove();
+
+								toolbarContainer.insertBefore(addButton.html(), refNode);
+							}
+							else {
+								var actionsButtonContainer = instance.one('#actionsButtonContainer', toolbarContainer);
+
+								if (actionsButtonContainer) {
+									toolbarContainer.insertBefore(addButton.html(), actionsButtonContainer.next());
+								}
+								else {
+									toolbarContainer.prepend(addButton.html());
+								}
+							}
 						}
 
 						var displayStyleButtons = instance.one('#displayStyleButtons', content);
@@ -548,8 +568,6 @@ AUI.add(
 
 							var displayStyleButtonsContainer = instance.byId('displayStyleButtonsContainer');
 
-							displayStyleButtonsContainer.plug(A.Plugin.ParseContent);
-
 							displayStyleButtonsContainer.setContent(displayStyleButtons);
 						}
 
@@ -558,9 +576,7 @@ AUI.add(
 						if (sortButton) {
 							var sortButtonContainer = instance.byId('sortButtonContainer');
 
-							sortButtonContainer.plug(A.Plugin.ParseContent);
-
-							sortButtonContainer.setContent(sortButton);
+							sortButtonContainer.replace(sortButton.html());
 						}
 					},
 
@@ -574,11 +590,21 @@ AUI.add(
 
 							entriesContainer.empty();
 
-							entriesContainer.plug(A.Plugin.ParseContent);
-
 							entriesContainer.setContent(entries);
 
 							Liferay.fire('liferay-app-view-folders:setEntries');
+						}
+
+						var addButtonContainer = instance.byId('addButtonContainer');
+
+						if (addButtonContainer) {
+							addButtonContainer.show();
+						}
+
+						var sortButtonContainer = instance.byId('sortButtonContainer');
+
+						if (sortButtonContainer) {
+							sortButtonContainer.show();
 						}
 					},
 
@@ -588,10 +614,6 @@ AUI.add(
 						var folders = instance.one('#folderContainer', content);
 
 						if (folders) {
-							var listViewDataContainer = A.one('.lfr-list-view-data-container');
-
-							listViewDataContainer.plug(A.Plugin.ParseContent);
-
 							instance._listView.set(STR_DATA, folders.html());
 						}
 					},
@@ -608,12 +630,38 @@ AUI.add(
 						}
 					},
 
+					_setSelectAllCheckbox: function(content) {
+						var instance = this;
+
+						var portletContainer = instance._portletContainer;
+
+						var entriesContainer = instance.one('#entriesContainer');
+
+						if (entriesContainer && portletContainer) {
+							var entriesSize = entriesContainer.all('.app-view-entry').size();
+
+							var selectAllEntriesCheckbox = portletContainer.one('.select-all-entries');
+
+							if (selectAllEntriesCheckbox) {
+								var entries = (entriesSize > 0);
+								var hidden = selectAllEntriesCheckbox.hasClass('hide');
+
+								if (entries && hidden) {
+									selectAllEntriesCheckbox.removeClass('hide');
+								}
+								else if (!entries && !hidden) {
+									selectAllEntriesCheckbox.addClass('hide');
+								}
+							}
+						}
+					},
+
 					_validateEntry: function(value) {
 						return Lang.isObject(value) && Lang.isString(value.paramName) && Lang.isString(value.typeId);
 					},
 
 					_validateFolderContainer: function(value) {
-						return (Lang.isString(value) || value instanceof A.Node);
+						return (Lang.isString(value) || value instanceof ANode);
 					},
 
 					_valueFolderContainer: function() {
@@ -631,7 +679,7 @@ AUI.add(
 							boundingBox: formatSelectorNS(instance.NS, '#listViewContainer'),
 							contentBox: folderContainer,
 							cssClass: 'folder-display-style lfr-list-view-content',
-							itemSelector: '.folder a.browse-folder, .folder a.expand-folder',
+							itemSelector: '.folder a.browse-folder',
 							srcNode: folderContainer
 						};
 					}
@@ -643,6 +691,6 @@ AUI.add(
 	},
 	'',
 	{
-		requires: ['aui-base', 'aui-parse-content', 'liferay-app-view-move', 'liferay-history-manager', 'liferay-list-view', 'liferay-portlet-base']
+		requires: ['aui-base', 'aui-parse-content', 'liferay-app-view-move', 'liferay-history-manager', 'liferay-list-view', 'liferay-node', 'liferay-portlet-base']
 	}
 );

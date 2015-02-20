@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,329 +17,268 @@
 <%@ include file="/html/portlet/journal/init.jsp" %>
 
 <%
+String browseBy = ParamUtil.getString(request, "browseBy");
+
 JournalFolder folder = (JournalFolder)request.getAttribute("view.jsp-folder");
 
 long folderId = GetterUtil.getLong((String)request.getAttribute("view.jsp-folderId"));
 
 long parentFolderId = JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID;
 
-boolean expandFolder = ParamUtil.getBoolean(request, "expandFolder");
-
 if (folder != null) {
 	parentFolderId = folder.getParentFolderId();
 
-	if (expandFolder) {
-		parentFolderId = folderId;
-	}
-
 	if (parentFolderId != JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
-		try {
-			JournalFolderServiceUtil.getFolder(folderId);
-		}
-		catch (NoSuchFolderException nsfe) {
+		JournalFolder parentFolder = JournalFolderServiceUtil.fetchFolder(folderId);
+
+		if (parentFolder == null) {
 			parentFolderId = JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID;
 		}
 	}
 }
 
-int entryStart = ParamUtil.getInteger(request, "entryStart");
-int entryEnd = ParamUtil.getInteger(request, "entryEnd", SearchContainer.DEFAULT_DELTA);
+String structureId = ParamUtil.getString(request, "structureId");
 
-int folderStart = ParamUtil.getInteger(request, "folderStart");
-int folderEnd = ParamUtil.getInteger(request, "folderEnd", SearchContainer.DEFAULT_DELTA);
-
-List<JournalFolder> folders = JournalFolderServiceUtil.getFolders(scopeGroupId, parentFolderId, folderStart, folderEnd);
+String displayStyle = JournalUtil.getDisplayStyle(liferayPortletRequest, displayViews);
 
 int total = 0;
 
-if (folderId != JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
+long[] groupIds = PortalUtil.getCurrentAndAncestorSiteGroupIds(scopeGroupId);
+
+if (browseBy.equals("structure")) {
+	total = DDMStructureLocalServiceUtil.getStructuresCount(groupIds, PortalUtil.getClassNameId(JournalArticle.class));
+}
+else if (folderId != JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
 	total = JournalFolderServiceUtil.getFoldersCount(scopeGroupId, parentFolderId);
 }
 
-request.setAttribute("view_folders.jsp-total", String.valueOf(total));
+PortletURL portletURL = liferayPortletResponse.createRenderURL();
+
+portletURL.setParameter("struts_action", "/journal/view");
+portletURL.setParameter("folderId", String.valueOf(folderId));
+portletURL.setParameter("displayStyle", displayStyle);
+
+SearchContainer searchContainer = new SearchContainer(liferayPortletRequest, null, null, "cur2", SearchContainer.DEFAULT_DELTA, portletURL, null, null);
+
+searchContainer.setTotal(total);
 
 String parentTitle = StringPool.BLANK;
 
-if ((folderId != JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) && (parentFolderId > 0)) {
-	JournalFolder grandParentFolder = JournalFolderServiceUtil.getFolder(parentFolderId);
-
-	parentTitle = grandParentFolder.getName();
+if (browseBy.equals("structure")) {
+	parentTitle = LanguageUtil.get(request, "browse-by-structure");
 }
 else {
-	parentTitle = LanguageUtil.get(pageContext, "home");
+	if ((folderId != JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) && (parentFolderId > 0)) {
+		JournalFolder grandparentFolder = JournalFolderServiceUtil.getFolder(parentFolderId);
+
+		parentTitle = grandparentFolder.getName();
+	}
+	else if (parentFolderId == 0) {
+		parentTitle = LanguageUtil.get(request, "home");
+	}
 }
 %>
 
-<liferay-ui:app-view-navigation title="<%= parentTitle %>">
-	<ul class="lfr-component">
-		<c:choose>
-			<c:when test="<%= ((folderId == JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) && !expandFolder) %>">
+<div id="<portlet:namespace />listViewContainer">
+	<div id="<portlet:namespace />folderContainer">
+		<aui:nav cssClass="list-group">
+			<c:if test="<%= Validator.isNotNull(parentTitle) %>">
+				<li class="list-group-item nav-header">
+					<%= HtmlUtil.escape(parentTitle) %>
+				</li>
+			</c:if>
 
-				<%
-				int foldersCount = JournalFolderServiceUtil.getFoldersCount(scopeGroupId, folderId);
-				%>
-
-				<liferay-portlet:renderURL varImpl="viewArticlesHomeURL">
-					<portlet:param name="struts_action" value="/journal/view" />
-					<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
-					<portlet:param name="entryStart" value="0" />
-					<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-					<portlet:param name="folderStart" value="0" />
-					<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-				</liferay-portlet:renderURL>
-
-				<%
-				PortletURL expandArticlesHomeURL = PortletURLUtil.clone(viewArticlesHomeURL, liferayPortletResponse);
-
-				expandArticlesHomeURL.setParameter("expandFolder", Boolean.TRUE.toString());
-
-				String navigation = ParamUtil.getString(request, "navigation", "home");
-
-				String structureId = ParamUtil.getString(request, "structureId");
-
-				request.setAttribute("view_entries.jsp-folder", folder);
-				request.setAttribute("view_entries.jsp-folderId", String.valueOf(folderId));
-
-				Map<String, Object> dataExpand = new HashMap<String, Object>();
-
-				dataExpand.put("folder-id", JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
-
-				Map<String, Object> dataView = new HashMap<String, Object>();
-
-				dataView.put("folder-id", JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID);
-				dataView.put("navigation", "home");
-				dataView.put("title", LanguageUtil.get(pageContext, "home"));
-				%>
-
-				<liferay-ui:app-view-navigation-entry
-					actionJsp="/html/portlet/journal/folder_action.jsp"
-					dataExpand="<%= dataExpand %>"
-					dataView="<%= dataView %>"
-					entryTitle='<%= LanguageUtil.get(pageContext, "home") %>'
-					expandURL="<%= expandArticlesHomeURL.toString() %>"
-					iconImage="../aui/home"
-					selected='<%= (navigation.equals("home") && (folderId == JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID)) && Validator.isNull(structureId) %>'
-					showExpand="<%= foldersCount > 0 %>"
-					viewURL="<%= viewArticlesHomeURL.toString() %>"
-				/>
-
-				<liferay-portlet:renderURL varImpl="viewRecentArticlesURL">
-					<portlet:param name="struts_action" value="/journal/view" />
-					<portlet:param name="navigation" value="recent" />
-					<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
-					<portlet:param name="entryStart" value="0" />
-					<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-					<portlet:param name="folderStart" value="0" />
-					<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-				</liferay-portlet:renderURL>
-
-				<%
-				dataView = new HashMap<String, Object>();
-
-				dataView.put("navigation", "recent");
-				%>
-
-				<liferay-ui:app-view-navigation-entry
-					dataView="<%= dataView %>"
-					entryTitle='<%= LanguageUtil.get(pageContext, "recent") %>'
-					iconImage="../aui/clock"
-					selected='<%= navigation.equals("recent") %>'
-					viewURL="<%= viewRecentArticlesURL.toString() %>"
-				/>
-
-				<c:if test="<%= themeDisplay.isSignedIn() %>">
-					<liferay-portlet:renderURL varImpl="viewMyArticlesURL">
-						<portlet:param name="struts_action" value="/journal/view" />
-						<portlet:param name="navigation" value="mine" />
-						<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
-						<portlet:param name="entryStart" value="0" />
-						<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-						<portlet:param name="folderStart" value="0" />
-						<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-					</liferay-portlet:renderURL>
+			<c:choose>
+				<c:when test='<%= (folderId == JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) && !browseBy.equals("structure") %>'>
 
 					<%
-					dataView = new HashMap<String, Object>();
+					String navigation = ParamUtil.getString(request, "navigation", "home");
 
-					dataView.put("navigation", "mine");
+					request.setAttribute("view_entries.jsp-folder", folder);
+					request.setAttribute("view_entries.jsp-folderId", String.valueOf(folderId));
 					%>
 
-					<liferay-ui:app-view-navigation-entry
-						dataView="<%= dataView %>"
-						entryTitle='<%= LanguageUtil.get(pageContext, "mine") %>'
-						iconImage="../aui/person"
-						selected='<%= navigation.equals("mine") %>'
-						viewURL="<%= viewMyArticlesURL.toString() %>"
-					/>
-				</c:if>
-
-				<%
-				List<JournalStructure> structures = JournalStructureLocalServiceUtil.getStructures(scopeGroupId);
-				%>
-
-				<c:if test="<%= !structures.isEmpty() %>">
-					<liferay-portlet:renderURL varImpl="viewBasicJournalStructureArticlesURL">
+					<portlet:renderURL var="viewArticlesHomeURL">
 						<portlet:param name="struts_action" value="/journal/view" />
 						<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
-						<portlet:param name="structureId" value="0" />
-						<portlet:param name="entryStart" value="0" />
-						<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-						<portlet:param name="folderStart" value="0" />
-						<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-					</liferay-portlet:renderURL>
+						<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+					</portlet:renderURL>
 
-					<%
-					dataView = new HashMap<String, Object>();
+					<aui:nav-item
+						cssClass="app-view-navigation-entry folder list-group-item"
+						href="<%= viewArticlesHomeURL %>"
+						iconCssClass="icon-home"
+						label='<%= HtmlUtil.escape(LanguageUtil.get(request, "home")) %>'
+						localizeLabel="<%= false %>"
+						selected='<%= (navigation.equals("home") && (folderId == JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID)) && Validator.isNull(structureId) %>'
+					>
 
-					dataView.put("structure-id", 0);
-					%>
+						<%
+						request.removeAttribute(WebKeys.SEARCH_CONTAINER_RESULT_ROW);
+						%>
 
-					<liferay-ui:app-view-navigation-entry
-						cssClassName="folder structure"
-						dataView="<%= dataView %>"
-						entryTitle='<%= LanguageUtil.get(pageContext, "basic-web-content") %>'
-						iconImage="copy"
-						selected='<%= (structureId == "0") %>'
-						viewURL="<%= viewBasicJournalStructureArticlesURL.toString() %>"
+						<liferay-util:include page="/html/portlet/journal/folder_action.jsp" />
+					</aui:nav-item>
+
+					<portlet:renderURL var="viewRecentArticlesURL">
+						<portlet:param name="struts_action" value="/journal/view" />
+						<portlet:param name="navigation" value="recent" />
+						<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
+						<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+					</portlet:renderURL>
+
+					<aui:nav-item
+						cssClass="app-view-navigation-entry folder list-group-item"
+						href="<%= viewRecentArticlesURL %>"
+						iconCssClass="icon-time"
+						label='<%= HtmlUtil.escape(LanguageUtil.get(request, "recent")) %>'
+						localizeLabel="<%= false %>"
+						selected='<%= navigation.equals("recent") %>'
 					/>
-				</c:if>
 
-				<%
-				for (JournalStructure structure : structures) {
-				%>
+					<c:if test="<%= themeDisplay.isSignedIn() %>">
+						<portlet:renderURL var="viewMyArticlesURL">
+							<portlet:param name="struts_action" value="/journal/view" />
+							<portlet:param name="navigation" value="mine" />
+							<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
+							<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+						</portlet:renderURL>
 
-					<liferay-portlet:renderURL varImpl="viewJournalStructureArticlesURL">
+						<aui:nav-item
+							cssClass="app-view-navigation-entry folder list-group-item"
+							href="<%= viewMyArticlesURL %>"
+							iconCssClass="icon-user"
+							label='<%= HtmlUtil.escape(LanguageUtil.get(request, "mine")) %>'
+							localizeLabel="<%= false %>"
+							selected='<%= navigation.equals("mine") %>'
+						/>
+					</c:if>
+
+					<c:if test="<%= DDMStructureLocalServiceUtil.getStructuresCount(groupIds, PortalUtil.getClassNameId(JournalArticle.class)) > 0 %>">
+						<portlet:renderURL var="filterDDMStructureArticlesURL">
+							<portlet:param name="struts_action" value="/journal/view" />
+							<portlet:param name="browseBy" value="structure" />
+							<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
+							<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+						</portlet:renderURL>
+
+						<aui:nav-item
+							cssClass="app-view-navigation-entry folder list-group-item structure"
+							href="<%= filterDDMStructureArticlesURL %>"
+							iconCssClass="icon-th-large"
+							label='<%= HtmlUtil.escape(LanguageUtil.get(request, "browse-by-structure")) %>'
+							localizeLabel="<%= false %>"
+							selected='<%= browseBy.equals("structure") %>'
+						/>
+					</c:if>
+				</c:when>
+				<c:when test='<%= browseBy.equals("structure") %>'>
+					<portlet:renderURL var="viewURL">
 						<portlet:param name="struts_action" value="/journal/view" />
 						<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
-						<portlet:param name="structureId" value="<%= structure.getStructureId() %>" />
-						<portlet:param name="entryStart" value="0" />
-						<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-						<portlet:param name="folderStart" value="0" />
-						<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-					</liferay-portlet:renderURL>
+						<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+					</portlet:renderURL>
 
-					<%
-					dataView = new HashMap<String, Object>();
-
-					dataView.put("structure-id", structure.getStructureId());
-					%>
-
-					<liferay-ui:app-view-navigation-entry
-						cssClassName="folder structure"
-						dataView="<%= dataView %>"
-						entryTitle="<%= HtmlUtil.escape(structure.getName(locale)) %>"
-						iconImage="copy"
-						selected="<%= structureId.equals(structure.getStructureId()) %>"
-						viewURL="<%= viewJournalStructureArticlesURL.toString() %>"
+					<aui:nav-item
+						cssClass="app-view-navigation-entry folder list-group-item"
+						href="<%= viewURL %>"
+						iconCssClass="icon-level-up"
+						label='<%= HtmlUtil.escape(LanguageUtil.get(request, "up")) %>'
+						localizeLabel="<%= false %>"
 					/>
 
-				<%
-				}
-				%>
+					<c:if test="<%= total > 0 %>">
 
-			</c:when>
-			<c:otherwise>
-				<liferay-portlet:renderURL varImpl="viewURL">
-					<portlet:param name="struts_action" value="/journal/view" />
-					<portlet:param name="folderId" value="<%= String.valueOf(parentFolderId) %>" />
-					<portlet:param name="entryStart" value="0" />
-					<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-					<portlet:param name="folderStart" value="0" />
-					<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-				</liferay-portlet:renderURL>
+						<%
+						List<DDMStructure> ddmStructures = DDMStructureServiceUtil.getStructures(groupIds, PortalUtil.getClassNameId(JournalArticle.class), searchContainer.getStart(), searchContainer.getEnd());
 
-				<%
-				PortletURL expandViewURL = PortletURLUtil.clone(viewURL, liferayPortletResponse);
+						for (DDMStructure ddmStructure : ddmStructures) {
+							AssetRendererFactory assetRendererFactory = AssetRendererFactoryRegistryUtil.getAssetRendererFactoryByClassName(JournalArticle.class.getName());
+						%>
 
-				expandViewURL.setParameter("expandFolder", Boolean.TRUE.toString());
+							<portlet:renderURL var="viewDDMStructureArticlesURL">
+								<portlet:param name="struts_action" value="/journal/view" />
+								<portlet:param name="browseBy" value="structure" />
+								<portlet:param name="folderId" value="<%= String.valueOf(JournalFolderConstants.DEFAULT_PARENT_FOLDER_ID) %>" />
+								<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+								<portlet:param name="structureId" value="<%= ddmStructure.getStructureKey() %>" />
+							</portlet:renderURL>
 
-				Map<String, Object> dataExpand = new HashMap<String, Object>();
+							<aui:nav-item
+								cssClass="app-view-navigation-entry folder list-group-item structure"
+								href="<%= viewDDMStructureArticlesURL %>"
+								iconCssClass="<%= assetRendererFactory.getIconCssClass() %>"
+								label="<%= HtmlUtil.escape(ddmStructure.getName(locale)) %>"
+								localizeLabel="<%= false %>"
+								selected="<%= structureId.equals(ddmStructure.getStructureKey()) %>"
+							/>
 
-				dataExpand.put("folder-id", parentFolderId);
+						<%
+						}
+						%>
 
-				Map<String, Object> dataView = new HashMap<String, Object>();
-
-				dataView.put("folder-id", parentFolderId);
-				%>
-
-				<liferay-ui:app-view-navigation-entry
-					browseUp="<%= true %>"
-					dataExpand="<%= dataExpand %>"
-					dataView="<%= dataView %>"
-					entryTitle='<%= LanguageUtil.get(pageContext, "up") %>'
-					expandURL="<%= expandViewURL.toString() %>"
-					iconSrc='<%= themeDisplay.getPathThemeImages() + "/arrows/01_up.png" %>'
-					showExpand="<%= true %>"
-					viewURL="<%= viewURL.toString() %>"
-				/>
-
-				<%
-				for (JournalFolder curFolder : folders) {
-					int foldersCount = JournalFolderServiceUtil.getFoldersCount(scopeGroupId, curFolder.getFolderId());
-					int articlesCount = JournalArticleServiceUtil.getArticlesCount(scopeGroupId, curFolder.getFolderId());
-
-					request.setAttribute("view_entries.jsp-folder", curFolder);
-					request.setAttribute("view_entries.jsp-folderId", String.valueOf(curFolder.getFolderId()));
-					request.setAttribute("view_entries.jsp-folderSelected", String.valueOf(folderId == curFolder.getFolderId()));
-				%>
-
-					<liferay-portlet:renderURL varImpl="viewURL">
+					</c:if>
+				</c:when>
+				<c:otherwise>
+					<portlet:renderURL var="viewURL">
 						<portlet:param name="struts_action" value="/journal/view" />
-						<portlet:param name="folderId" value="<%= String.valueOf(curFolder.getFolderId()) %>" />
-						<portlet:param name="entryStart" value="0" />
-						<portlet:param name="entryEnd" value="<%= String.valueOf(entryEnd - entryStart) %>" />
-						<portlet:param name="folderStart" value="0" />
-						<portlet:param name="folderEnd" value="<%= String.valueOf(folderEnd - folderStart) %>" />
-					</liferay-portlet:renderURL>
+						<portlet:param name="folderId" value="<%= String.valueOf(parentFolderId) %>" />
+						<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+					</portlet:renderURL>
 
-					<%
-					expandViewURL = PortletURLUtil.clone(viewURL, liferayPortletResponse);
-
-					expandViewURL.setParameter("expandFolder", Boolean.TRUE.toString());
-
-					dataExpand = new HashMap<String, Object>();
-
-					dataExpand.put("folder-id", curFolder.getFolderId());
-
-					dataView = new HashMap<String, Object>();
-
-					dataView.put("folder-id", curFolder.getFolderId());
-					dataView.put("title", curFolder.getName());
-					%>
-
-					<liferay-ui:app-view-navigation-entry
-						actionJsp="/html/portlet/journal/folder_action.jsp"
-						dataExpand="<%= dataExpand %>"
-						dataView="<%= dataView %>"
-						entryTitle="<%= curFolder.getName() %>"
-						expandURL="<%= expandViewURL.toString() %>"
-						iconImage='<%= (foldersCount + articlesCount) > 0 ? "folder_full_document" : "folder_empty" %>'
-						selected="<%= (curFolder.getFolderId() == folderId) %>"
-						showExpand="<%= foldersCount > 0 %>"
-						viewURL="<%= viewURL.toString() %>"
+					<aui:nav-item
+						cssClass="app-view-navigation-entry folder list-group-item"
+						href="<%= viewURL %>"
+						iconCssClass="icon-level-up"
+						label='<%= LanguageUtil.get(request, "up") %>'
+						localizeLabel="<%= false %>"
 					/>
 
-				<%
-				}
-				%>
+					<%
+					List<JournalFolder> folders = JournalFolderServiceUtil.getFolders(scopeGroupId, parentFolderId, searchContainer.getStart(), searchContainer.getEnd());
 
-			</c:otherwise>
-		</c:choose>
-	</ul>
+					for (JournalFolder curFolder : folders) {
+						request.setAttribute("view_entries.jsp-folder", curFolder);
+						request.setAttribute("view_entries.jsp-folderId", String.valueOf(curFolder.getFolderId()));
+						request.setAttribute("view_entries.jsp-folderSelected", String.valueOf(folderId == curFolder.getFolderId()));
 
-	<aui:script>
-		Liferay.fire(
-			'<portlet:namespace />pageLoaded',
-			{
-				paginator: {
-					name: 'folderPaginator',
-					state: {
-						page: <%= folderEnd / (folderEnd - folderStart) %>,
-						rowsPerPage: <%= (folderEnd - folderStart) %>,
-						total: <%= total %>
+						AssetRendererFactory assetRendererFactory = AssetRendererFactoryRegistryUtil.getAssetRendererFactoryByClassName(JournalFolder.class.getName());
+
+						AssetRenderer assetRenderer = assetRendererFactory.getAssetRenderer(curFolder.getFolderId());
+					%>
+
+						<portlet:renderURL var="viewURL">
+							<portlet:param name="struts_action" value="/journal/view" />
+							<portlet:param name="folderId" value="<%= String.valueOf(curFolder.getFolderId()) %>" />
+							<portlet:param name="displayStyle" value="<%= displayStyle %>" />
+						</portlet:renderURL>
+
+						<aui:nav-item
+							cssClass="app-view-navigation-entry folder list-group-item"
+							href="<%= viewURL %>"
+							iconCssClass="<%= assetRenderer.getIconCssClass() %>"
+							label="<%= HtmlUtil.escape(curFolder.getName()) %>"
+							localizeLabel="<%= false %>"
+							selected="<%= (curFolder.getFolderId() == folderId) %>"
+						>
+
+							<%
+							request.removeAttribute(WebKeys.SEARCH_CONTAINER_RESULT_ROW);
+							%>
+
+							<liferay-util:include page="/html/portlet/journal/folder_action.jsp" />
+						</aui:nav-item>
+
+					<%
 					}
-				}
-			}
-		);
-	</aui:script>
-</liferay-ui:app-view-navigation>
+					%>
+
+				</c:otherwise>
+			</c:choose>
+		</aui:nav>
+	</div>
+</div>
+
+<div class="article-folders-pagination">
+	<liferay-ui:search-paginator searchContainer="<%= searchContainer %>" />
+</div>

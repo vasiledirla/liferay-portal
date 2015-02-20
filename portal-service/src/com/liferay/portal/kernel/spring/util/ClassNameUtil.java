@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -35,6 +35,25 @@ public class ClassNameUtil {
 		Class<?> clazz = Class.forName(className, false, classLoader);
 
 		return clazz.getName();
+	}
+
+	public static String getSimpleClassName(String className)
+		throws ClassNotFoundException {
+
+		Thread currentThread = Thread.currentThread();
+
+		ClassLoader classLoader = currentThread.getContextClassLoader();
+
+		return getSimpleClassName(className, classLoader);
+	}
+
+	public static String getSimpleClassName(
+			String className, ClassLoader classLoader)
+		throws ClassNotFoundException {
+
+		Class<?> clazz = Class.forName(className, false, classLoader);
+
+		return clazz.getSimpleName();
 	}
 
 }

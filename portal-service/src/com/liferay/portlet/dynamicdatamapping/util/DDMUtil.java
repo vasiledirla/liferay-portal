@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,19 +15,20 @@
 package com.liferay.portlet.dynamicdatamapping.util;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
 import com.liferay.portal.kernel.util.OrderByComparator;
-import com.liferay.portal.model.BaseModel;
 import com.liferay.portal.service.ServiceContext;
+import com.liferay.portal.theme.ThemeDisplay;
+import com.liferay.portlet.dynamicdatamapping.model.DDMStructure;
+import com.liferay.portlet.dynamicdatamapping.model.DDMTemplate;
 import com.liferay.portlet.dynamicdatamapping.storage.Field;
 import com.liferay.portlet.dynamicdatamapping.storage.Fields;
 
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import java.io.Serializable;
 
 /**
  * @author Eduardo Lundgren
+ * @author Marcellus Tavares
  */
 public class DDMUtil {
 
@@ -37,10 +38,21 @@ public class DDMUtil {
 		return _ddm;
 	}
 
+	public static DDMDisplay getDDMDisplay(ServiceContext serviceContext) {
+		return getDDM().getDDMDisplay(serviceContext);
+	}
+
+	public static Serializable getDisplayFieldValue(
+			ThemeDisplay themeDisplay, Serializable fieldValue, String type)
+		throws Exception {
+
+		return getDDM().getDisplayFieldValue(themeDisplay, fieldValue, type);
+	}
+
 	public static Fields getFields(
 			long ddmStructureId, long ddmTemplateId,
 			ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return getDDM().getFields(
 			ddmStructureId, ddmTemplateId, serviceContext);
@@ -49,7 +61,7 @@ public class DDMUtil {
 	public static Fields getFields(
 			long ddmStructureId, long ddmTemplateId, String fieldNamespace,
 			ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return getDDM().getFields(
 			ddmStructureId, ddmTemplateId, fieldNamespace, serviceContext);
@@ -57,7 +69,7 @@ public class DDMUtil {
 
 	public static Fields getFields(
 			long ddmStructureId, ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return getDDM().getFields(ddmStructureId, serviceContext);
 	}
@@ -65,54 +77,39 @@ public class DDMUtil {
 	public static Fields getFields(
 			long ddmStructureId, String fieldNamespace,
 			ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		return getDDM().getFields(
 			ddmStructureId, fieldNamespace, serviceContext);
 	}
 
-	public static String getFileUploadPath(BaseModel<?> baseModel) {
-		return getDDM().getFileUploadPath(baseModel);
+	public static String[] getFieldsDisplayValues(Field fieldsDisplayField)
+		throws Exception {
+
+		return getDDM().getFieldsDisplayValues(fieldsDisplayField);
 	}
 
-	public static OrderByComparator getStructureOrderByComparator(
+	public static Serializable getIndexedFieldValue(
+			Serializable fieldValue, String type)
+		throws Exception {
+
+		return getDDM().getIndexedFieldValue(fieldValue, type);
+	}
+
+	public static OrderByComparator<DDMStructure> getStructureOrderByComparator(
 		String orderByCol, String orderByType) {
 
 		return getDDM().getStructureOrderByComparator(orderByCol, orderByType);
 	}
 
-	public static OrderByComparator getTemplateOrderByComparator(
+	public static OrderByComparator<DDMTemplate> getTemplateOrderByComparator(
 		String orderByCol, String orderByType) {
 
 		return getDDM().getTemplateOrderByComparator(orderByCol, orderByType);
 	}
 
-	public static void sendFieldFile(
-			HttpServletRequest request, HttpServletResponse response,
-			Field field)
-		throws Exception {
-
-		getDDM().sendFieldFile(request, response, field);
-	}
-
-	public static String uploadFieldFile(
-			long structureId, long storageId, BaseModel<?> baseModel,
-			String fieldName, ServiceContext serviceContext)
-		throws Exception {
-
-		return getDDM().uploadFieldFile(
-			structureId, storageId, baseModel, fieldName, serviceContext);
-	}
-
-	public static String uploadFieldFile(
-			long structureId, long storageId, BaseModel<?> baseModel,
-			String fieldName, String fieldNamespace,
-			ServiceContext serviceContext)
-		throws Exception {
-
-		return getDDM().uploadFieldFile(
-			structureId, storageId, baseModel, fieldName, fieldNamespace,
-			serviceContext);
+	public static Fields mergeFields(Fields newFields, Fields existingFields) {
+		return getDDM().mergeFields(newFields, existingFields);
 	}
 
 	public void setDDM(DDM ddm) {

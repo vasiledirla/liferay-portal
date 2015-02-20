@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -24,7 +24,7 @@ String returnToFullPageURL = ParamUtil.getString(request, "returnToFullPageURL")
 
 String modelResource = ParamUtil.getString(request, "modelResource");
 String modelResourceDescription = ParamUtil.getString(request, "modelResourceDescription");
-String modelResourceName = ResourceActionsUtil.getModelResource(pageContext, modelResource);
+String modelResourceName = ResourceActionsUtil.getModelResource(request, modelResource);
 
 long resourceGroupId = ParamUtil.getLong(request, "resourceGroupId");
 
@@ -41,8 +41,8 @@ String selResourceName = modelResourceName;
 if (Validator.isNull(modelResource)) {
 	PortletURL portletURL = new PortletURLImpl(request, portletResource, plid, PortletRequest.ACTION_PHASE);
 
-	portletURL.setWindowState(WindowState.NORMAL);
 	portletURL.setPortletMode(PortletMode.VIEW);
+	portletURL.setWindowState(WindowState.NORMAL);
 
 	redirect = portletURL.toString();
 
@@ -50,15 +50,20 @@ if (Validator.isNull(modelResource)) {
 
 	selResource = portlet.getRootPortletId();
 	selResourceDescription = PortalUtil.getPortletTitle(portlet, application, locale);
-	selResourceName = LanguageUtil.get(pageContext, "portlet");
+	selResourceName = LanguageUtil.get(request, "portlet");
 }
 else {
 	PortalUtil.addPortletBreadcrumbEntry(request, HtmlUtil.unescape(selResourceDescription), null);
-	PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(pageContext, "permissions"), currentURL);
+	PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(request, "permissions"), currentURL);
 }
 
-Group group = themeDisplay.getScopeGroup();
-long groupId = group.getGroupId();
+long groupId = themeDisplay.getScopeGroupId();
+
+if (resourceGroupId > 0) {
+	groupId = resourceGroupId;
+}
+
+Group group = GroupLocalServiceUtil.getGroup(groupId);
 
 Layout selLayout = null;
 
@@ -98,10 +103,6 @@ if (Validator.isNotNull(roleTypesParam)) {
 	roleTypes = StringUtil.split(roleTypesParam, 0);
 }
 
-if (group.isCompany()) {
-	roleTypes = new int[] {RoleConstants.TYPE_REGULAR};
-}
-
 PortletURL actionPortletURL = renderResponse.createActionURL();
 
 actionPortletURL.setParameter("struts_action", "/portlet_configuration/edit_permissions");
@@ -132,12 +133,10 @@ long controlPanelPlid = PortalUtil.getControlPanelPlid(company.getCompanyId());
 
 PortletURLImpl definePermissionsURL = new PortletURLImpl(request, PortletKeys.ROLES_ADMIN, controlPanelPlid, PortletRequest.RENDER_PHASE);
 
-definePermissionsURL.setPortletMode(PortletMode.VIEW);
-
-definePermissionsURL.setRefererPlid(plid);
-
 definePermissionsURL.setParameter("struts_action", "/roles_admin/edit_role_permissions");
 definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
+definePermissionsURL.setPortletMode(PortletMode.VIEW);
+definePermissionsURL.setRefererPlid(plid);
 %>
 
 <div class="edit-permissions">
@@ -161,6 +160,8 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 		</c:choose>
 
 		<%
+		boolean filterGroupRoles = !ResourceActionsUtil.isPortalModelResource(modelResource);
+
 		List<String> actions = ResourceActionsUtil.getResourceActions(portletResource, modelResource);
 
 		if (modelResource.equals(Group.class.getName())) {
@@ -169,7 +170,7 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 			Group modelResourceGroup = GroupLocalServiceUtil.getGroup(modelResourceGroupId);
 
 			if (modelResourceGroup.isLayoutPrototype() || modelResourceGroup.isLayoutSetPrototype() || modelResourceGroup.isUserGroup()) {
-				actions = new ArrayList(actions);
+				actions = new ArrayList<String>(actions);
 
 				actions.remove(ActionKeys.ADD_LAYOUT_BRANCH);
 				actions.remove(ActionKeys.ADD_LAYOUT_SET_BRANCH);
@@ -184,14 +185,36 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 				actions.remove(ActionKeys.VIEW_STAGING);
 			}
 		}
+		else if (modelResource.equals(Role.class.getName())) {
+			long modelResourceRoleId = GetterUtil.getLong(resourcePrimKey);
 
-		List<Role> roles = ResourceActionsUtil.getRoles(company.getCompanyId(), group, modelResource, roleTypes);
+			Role modelResourceRole = RoleLocalServiceUtil.getRole(modelResourceRoleId);
+
+			String name = modelResourceRole.getName();
+
+			if (name.equals(RoleConstants.GUEST) || name.equals(RoleConstants.USER)) {
+				actions = new ArrayList<String>(actions);
+
+				actions.remove(ActionKeys.ASSIGN_MEMBERS);
+				actions.remove(ActionKeys.DEFINE_PERMISSIONS);
+				actions.remove(ActionKeys.DELETE);
+				actions.remove(ActionKeys.PERMISSIONS);
+				actions.remove(ActionKeys.UPDATE);
+				actions.remove(ActionKeys.VIEW);
+			}
+
+			if ((modelResourceRole.getType() == RoleConstants.TYPE_ORGANIZATION) || (modelResourceRole.getType() == RoleConstants.TYPE_SITE)) {
+				filterGroupRoles = true;
+			}
+		}
+
+		List<Role> roles = ListUtil.copy(ResourceActionsUtil.getRoles(company.getCompanyId(), group, modelResource, roleTypes));
 
 		Role administratorRole = RoleLocalServiceUtil.getRole(company.getCompanyId(), RoleConstants.ADMINISTRATOR);
 
 		roles.remove(administratorRole);
 
-		if (!ResourceActionsUtil.isPortalModelResource(modelResource)) {
+		if (filterGroupRoles) {
 			Role organizationAdministratorRole = RoleLocalServiceUtil.getRole(company.getCompanyId(), RoleConstants.ORGANIZATION_ADMINISTRATOR);
 
 			roles.remove(organizationAdministratorRole);
@@ -213,32 +236,9 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 
 		if (modelResource.equals(Role.class.getName())) {
 			modelResourceRoleId = GetterUtil.getLong(resourcePrimKey);
-
-			Role role = RoleLocalServiceUtil.getRole(modelResourceRoleId);
-
-			roles.remove(role);
 		}
 
-		List<Team> teams = null;
-
-		if (group.isOrganization() || group.isRegularSite()) {
-			teams = TeamLocalServiceUtil.getGroupTeams(groupId);
-		}
-		else if (group.isLayout()) {
-			teams = TeamLocalServiceUtil.getGroupTeams(group.getParentGroupId());
-		}
-
-		if (teams != null) {
-			for (Team team : teams) {
-				Role role = RoleLocalServiceUtil.getTeamRole(team.getCompanyId(), team.getTeamId());
-
-				if (role.getRoleId() == modelResourceRoleId) {
-					continue;
-				}
-
-				roles.add(role);
-			}
-		}
+		roles.addAll(RoleLocalServiceUtil.getTeamRoles(groupId, new long[] {modelResourceRoleId}));
 
 		Iterator<Role> itr = roles.iterator();
 
@@ -274,7 +274,7 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 					if (resourceLayout.isPrivateLayout()) {
 						Group resourceLayoutGroup = resourceLayout.getGroup();
 
-						if (!resourceLayoutGroup.isLayoutSetPrototype()) {
+						if (!resourceLayoutGroup.isLayoutPrototype() && !resourceLayoutGroup.isLayoutSetPrototype()) {
 							itr.remove();
 						}
 					}
@@ -295,8 +295,6 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 				keyProperty="roleId"
 				modelVar="role"
 			>
-				<liferay-util:param name="className" value="<%= RolesAdminUtil.getCssClassName(role) %>" />
-				<liferay-util:param name="classHoverName" value="<%= RolesAdminUtil.getCssClassName(role) %>" />
 
 				<%
 				String definePermissionsHREF = null;
@@ -313,8 +311,13 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 				<liferay-ui:search-container-column-text
 					href="<%= definePermissionsHREF %>"
 					name="role"
-					value="<%= role.getTitle(locale) %>"
-				/>
+				>
+					<liferay-ui:icon
+						iconCssClass="<%= RolesAdminUtil.getIconCssClass(role) %>"
+						label="<%= true %>"
+						message="<%= HtmlUtil.escape(role.getTitle(locale)) %>"
+					/>
+				</liferay-ui:search-container-column-text>
 
 				<%
 
@@ -327,14 +330,15 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 
 				ResourcePermissionUtil.populateResourcePermissionActionIds(groupId, role, resource, actions, currentIndividualActions, currentGroupActions, currentGroupTemplateActions, currentCompanyActions);
 
-				List<String> currentActions = new ArrayList<String>();
-
-				currentActions.addAll(currentIndividualActions);
-				currentActions.addAll(currentGroupActions);
-				currentActions.addAll(currentGroupTemplateActions);
-				currentActions.addAll(currentCompanyActions);
-
 				List<String> guestUnsupportedActions = ResourceActionsUtil.getResourceGuestUnsupportedActions(portletResource, modelResource);
+
+				// LPS-32515
+
+				if ((selLayout != null) && group.isGuest() && SitesUtil.isFirstLayout(selLayout.getGroupId(), selLayout.isPrivateLayout(), selLayout.getLayoutId())) {
+					guestUnsupportedActions = new ArrayList<String>(guestUnsupportedActions);
+
+					guestUnsupportedActions.add(ActionKeys.VIEW);
+				}
 
 				for (String action : actions) {
 					boolean checked = false;
@@ -365,60 +369,20 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 				%>
 
 					<liferay-ui:search-container-column-text
-						buffer="buffer"
-						name="<%= ResourceActionsUtil.getAction(pageContext, action) %>"
+						name="<%= ResourceActionsUtil.getAction(request, action) %>"
 					>
 
 						<%
-						buffer.append("<input ");
-
-						if (checked) {
-							buffer.append("checked ");
-						}
+						String dataMessage = StringPool.BLANK;
 
 						if (Validator.isNotNull(preselectedMsg)) {
-							buffer.append("class=\"lfr-checkbox-preselected\" ");
+							dataMessage = HtmlUtil.escapeAttribute(LanguageUtil.format(request, preselectedMsg, new Object[] {role.getTitle(locale), ResourceActionsUtil.getAction(request, action), Validator.isNull(modelResource) ? selResourceDescription : ResourceActionsUtil.getModelResource(locale, resource.getName()), HtmlUtil.escape(group.getDescriptiveName(locale))}, false));
 						}
 
-						if (disabled) {
-							buffer.append("disabled ");
-						}
-
-						buffer.append("id=\"");
-						buffer.append(FriendlyURLNormalizerUtil.normalize(role.getName()));
-
-						if (Validator.isNotNull(preselectedMsg)) {
-							buffer.append("_PRESELECTED_");
-						}
-						else {
-							buffer.append("_ACTION_");
-						}
-
-						buffer.append(action);
-						buffer.append("\" ");
-
-						buffer.append("name=\"");
-						buffer.append(role.getRoleId());
-
-						if (Validator.isNotNull(preselectedMsg)) {
-							buffer.append("_PRESELECTED_");
-						}
-						else {
-							buffer.append("_ACTION_");
-						}
-
-						buffer.append(action);
-						buffer.append("\" ");
-
-						if (Validator.isNotNull(preselectedMsg)) {
-							buffer.append("onclick=\"return false;\" onmouseover=\"Liferay.Portal.ToolTip.show(this, '");
-							buffer.append(UnicodeLanguageUtil.format(pageContext, preselectedMsg, new Object[] {role.getTitle(locale), ResourceActionsUtil.getAction(pageContext, action), Validator.isNull(modelResource) ? selResourceDescription : ResourceActionsUtil.getModelResource(locale, resource.getName()), HtmlUtil.escape(group.getDescriptiveName(locale))}));
-							buffer.append("'); return false;\" ");
-						}
-
-						buffer.append("type=\"checkbox\" />");
+						String actionSeparator = Validator.isNotNull(preselectedMsg) ? ActionUtil.PRESELECTED : ActionUtil.ACTION;
 						%>
 
+						<input <%= checked ? "checked" : StringPool.BLANK %> class="<%= Validator.isNotNull(preselectedMsg) ? "lfr-checkbox-preselected" : StringPool.BLANK %>" data-message="<%= dataMessage %>" <%= disabled ? "disabled" : StringPool.BLANK %> id="<%= FriendlyURLNormalizerUtil.normalize(role.getName()) + actionSeparator + action %>" name="<%= renderResponse.getNamespace() + role.getRoleId() + actionSeparator + action %>" type="checkbox" />
 					</liferay-ui:search-container-column-text>
 
 				<%
@@ -430,10 +394,22 @@ definePermissionsURL.setParameter(Constants.CMD, Constants.VIEW);
 			<liferay-ui:search-iterator paginate="<%= false %>" searchContainer="<%= searchContainer %>" />
 		</liferay-ui:search-container>
 
-		<br />
-
 		<aui:button-row>
 			<aui:button type="submit" />
 		</aui:button-row>
 	</aui:form>
 </div>
+
+<aui:script use="aui-base">
+	A.one('#<portlet:namespace />fm').delegate(
+		'mouseover',
+		function(event) {
+			var currentTarget = event.currentTarget;
+
+			Liferay.Portal.ToolTip.show(this, currentTarget.attr('data-message'));
+
+			return false;
+		},
+		'.lfr-checkbox-preselected'
+	);
+</aui:script>

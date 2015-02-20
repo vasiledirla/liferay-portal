@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,18 +14,27 @@
 
 package com.liferay.portlet.blogs.model.impl;
 
+import com.liferay.portal.NoSuchModelException;
 import com.liferay.portal.kernel.bean.AutoEscapeBeanHandler;
-import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSON;
+import com.liferay.portal.kernel.lar.StagedModelType;
+import com.liferay.portal.kernel.trash.TrashHandler;
+import com.liferay.portal.kernel.trash.TrashHandlerRegistryUtil;
 import com.liferay.portal.kernel.util.DateUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.model.CacheModel;
+import com.liferay.portal.model.ContainerModel;
+import com.liferay.portal.model.TrashedModel;
+import com.liferay.portal.model.User;
 import com.liferay.portal.model.impl.BaseModelImpl;
 import com.liferay.portal.service.ServiceContext;
+import com.liferay.portal.service.UserLocalServiceUtil;
 import com.liferay.portal.util.PortalUtil;
 
 import com.liferay.portlet.blogs.model.BlogsEntry;
@@ -33,6 +42,8 @@ import com.liferay.portlet.blogs.model.BlogsEntryModel;
 import com.liferay.portlet.blogs.model.BlogsEntrySoap;
 import com.liferay.portlet.expando.model.ExpandoBridge;
 import com.liferay.portlet.expando.util.ExpandoBridgeFactoryUtil;
+import com.liferay.portlet.trash.model.TrashEntry;
+import com.liferay.portlet.trash.service.TrashEntryLocalServiceUtil;
 
 import java.io.Serializable;
 
@@ -76,6 +87,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 			{ "createDate", Types.TIMESTAMP },
 			{ "modifiedDate", Types.TIMESTAMP },
 			{ "title", Types.VARCHAR },
+			{ "subtitle", Types.VARCHAR },
 			{ "urlTitle", Types.VARCHAR },
 			{ "description", Types.VARCHAR },
 			{ "content", Types.CLOB },
@@ -91,7 +103,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 			{ "statusByUserName", Types.VARCHAR },
 			{ "statusDate", Types.TIMESTAMP }
 		};
-	public static final String TABLE_SQL_CREATE = "create table BlogsEntry (uuid_ VARCHAR(75) null,entryId LONG not null primary key,groupId LONG,companyId LONG,userId LONG,userName VARCHAR(75) null,createDate DATE null,modifiedDate DATE null,title VARCHAR(150) null,urlTitle VARCHAR(150) null,description STRING null,content TEXT null,displayDate DATE null,allowPingbacks BOOLEAN,allowTrackbacks BOOLEAN,trackbacks TEXT null,smallImage BOOLEAN,smallImageId LONG,smallImageURL STRING null,status INTEGER,statusByUserId LONG,statusByUserName VARCHAR(75) null,statusDate DATE null)";
+	public static final String TABLE_SQL_CREATE = "create table BlogsEntry (uuid_ VARCHAR(75) null,entryId LONG not null primary key,groupId LONG,companyId LONG,userId LONG,userName VARCHAR(75) null,createDate DATE null,modifiedDate DATE null,title VARCHAR(150) null,subtitle STRING null,urlTitle VARCHAR(150) null,description STRING null,content TEXT null,displayDate DATE null,allowPingbacks BOOLEAN,allowTrackbacks BOOLEAN,trackbacks TEXT null,smallImage BOOLEAN,smallImageId LONG,smallImageURL STRING null,status INTEGER,statusByUserId LONG,statusByUserName VARCHAR(75) null,statusDate DATE null)";
 	public static final String TABLE_SQL_DROP = "drop table BlogsEntry";
 	public static final String ORDER_BY_JPQL = " ORDER BY blogsEntry.displayDate DESC, blogsEntry.createDate DESC";
 	public static final String ORDER_BY_SQL = " ORDER BY BlogsEntry.displayDate DESC, BlogsEntry.createDate DESC";
@@ -114,6 +126,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	public static long URLTITLE_COLUMN_BITMASK = 16L;
 	public static long USERID_COLUMN_BITMASK = 32L;
 	public static long UUID_COLUMN_BITMASK = 64L;
+	public static long CREATEDATE_COLUMN_BITMASK = 128L;
 
 	/**
 	 * Converts the soap model instance into a normal model instance.
@@ -137,6 +150,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		model.setCreateDate(soapModel.getCreateDate());
 		model.setModifiedDate(soapModel.getModifiedDate());
 		model.setTitle(soapModel.getTitle());
+		model.setSubtitle(soapModel.getSubtitle());
 		model.setUrlTitle(soapModel.getUrlTitle());
 		model.setDescription(soapModel.getDescription());
 		model.setContent(soapModel.getContent());
@@ -181,26 +195,32 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	public BlogsEntryModelImpl() {
 	}
 
+	@Override
 	public long getPrimaryKey() {
 		return _entryId;
 	}
 
+	@Override
 	public void setPrimaryKey(long primaryKey) {
 		setEntryId(primaryKey);
 	}
 
+	@Override
 	public Serializable getPrimaryKeyObj() {
-		return new Long(_entryId);
+		return _entryId;
 	}
 
+	@Override
 	public void setPrimaryKeyObj(Serializable primaryKeyObj) {
 		setPrimaryKey(((Long)primaryKeyObj).longValue());
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return BlogsEntry.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return BlogsEntry.class.getName();
 	}
@@ -218,6 +238,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		attributes.put("createDate", getCreateDate());
 		attributes.put("modifiedDate", getModifiedDate());
 		attributes.put("title", getTitle());
+		attributes.put("subtitle", getSubtitle());
 		attributes.put("urlTitle", getUrlTitle());
 		attributes.put("description", getDescription());
 		attributes.put("content", getContent());
@@ -232,6 +253,9 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		attributes.put("statusByUserId", getStatusByUserId());
 		attributes.put("statusByUserName", getStatusByUserName());
 		attributes.put("statusDate", getStatusDate());
+
+		attributes.put("entityCacheEnabled", isEntityCacheEnabled());
+		attributes.put("finderCacheEnabled", isFinderCacheEnabled());
 
 		return attributes;
 	}
@@ -290,6 +314,12 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 
 		if (title != null) {
 			setTitle(title);
+		}
+
+		String subtitle = (String)attributes.get("subtitle");
+
+		if (subtitle != null) {
+			setSubtitle(subtitle);
 		}
 
 		String urlTitle = (String)attributes.get("urlTitle");
@@ -378,6 +408,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public String getUuid() {
 		if (_uuid == null) {
 			return StringPool.BLANK;
@@ -387,6 +418,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setUuid(String uuid) {
 		if (_originalUuid == null) {
 			_originalUuid = _uuid;
@@ -400,19 +432,23 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public long getEntryId() {
 		return _entryId;
 	}
 
+	@Override
 	public void setEntryId(long entryId) {
 		_entryId = entryId;
 	}
 
 	@JSON
+	@Override
 	public long getGroupId() {
 		return _groupId;
 	}
 
+	@Override
 	public void setGroupId(long groupId) {
 		_columnBitmask |= GROUPID_COLUMN_BITMASK;
 
@@ -430,10 +466,12 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public long getCompanyId() {
 		return _companyId;
 	}
 
+	@Override
 	public void setCompanyId(long companyId) {
 		_columnBitmask |= COMPANYID_COLUMN_BITMASK;
 
@@ -451,10 +489,12 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public long getUserId() {
 		return _userId;
 	}
 
+	@Override
 	public void setUserId(long userId) {
 		_columnBitmask |= USERID_COLUMN_BITMASK;
 
@@ -467,12 +507,20 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		_userId = userId;
 	}
 
-	public String getUserUuid() throws SystemException {
-		return PortalUtil.getUserValue(getUserId(), "uuid", _userUuid);
+	@Override
+	public String getUserUuid() {
+		try {
+			User user = UserLocalServiceUtil.getUserById(getUserId());
+
+			return user.getUuid();
+		}
+		catch (PortalException pe) {
+			return StringPool.BLANK;
+		}
 	}
 
+	@Override
 	public void setUserUuid(String userUuid) {
-		_userUuid = userUuid;
 	}
 
 	public long getOriginalUserId() {
@@ -480,6 +528,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public String getUserName() {
 		if (_userName == null) {
 			return StringPool.BLANK;
@@ -489,15 +538,18 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setUserName(String userName) {
 		_userName = userName;
 	}
 
 	@JSON
+	@Override
 	public Date getCreateDate() {
 		return _createDate;
 	}
 
+	@Override
 	public void setCreateDate(Date createDate) {
 		_columnBitmask = -1L;
 
@@ -505,15 +557,18 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public Date getModifiedDate() {
 		return _modifiedDate;
 	}
 
+	@Override
 	public void setModifiedDate(Date modifiedDate) {
 		_modifiedDate = modifiedDate;
 	}
 
 	@JSON
+	@Override
 	public String getTitle() {
 		if (_title == null) {
 			return StringPool.BLANK;
@@ -523,11 +578,29 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setTitle(String title) {
 		_title = title;
 	}
 
 	@JSON
+	@Override
+	public String getSubtitle() {
+		if (_subtitle == null) {
+			return StringPool.BLANK;
+		}
+		else {
+			return _subtitle;
+		}
+	}
+
+	@Override
+	public void setSubtitle(String subtitle) {
+		_subtitle = subtitle;
+	}
+
+	@JSON
+	@Override
 	public String getUrlTitle() {
 		if (_urlTitle == null) {
 			return StringPool.BLANK;
@@ -537,6 +610,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setUrlTitle(String urlTitle) {
 		_columnBitmask |= URLTITLE_COLUMN_BITMASK;
 
@@ -552,6 +626,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public String getDescription() {
 		if (_description == null) {
 			return StringPool.BLANK;
@@ -561,11 +636,13 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setDescription(String description) {
 		_description = description;
 	}
 
 	@JSON
+	@Override
 	public String getContent() {
 		if (_content == null) {
 			return StringPool.BLANK;
@@ -575,15 +652,18 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setContent(String content) {
 		_content = content;
 	}
 
 	@JSON
+	@Override
 	public Date getDisplayDate() {
 		return _displayDate;
 	}
 
+	@Override
 	public void setDisplayDate(Date displayDate) {
 		_columnBitmask = -1L;
 
@@ -599,32 +679,39 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public boolean getAllowPingbacks() {
 		return _allowPingbacks;
 	}
 
+	@Override
 	public boolean isAllowPingbacks() {
 		return _allowPingbacks;
 	}
 
+	@Override
 	public void setAllowPingbacks(boolean allowPingbacks) {
 		_allowPingbacks = allowPingbacks;
 	}
 
 	@JSON
+	@Override
 	public boolean getAllowTrackbacks() {
 		return _allowTrackbacks;
 	}
 
+	@Override
 	public boolean isAllowTrackbacks() {
 		return _allowTrackbacks;
 	}
 
+	@Override
 	public void setAllowTrackbacks(boolean allowTrackbacks) {
 		_allowTrackbacks = allowTrackbacks;
 	}
 
 	@JSON
+	@Override
 	public String getTrackbacks() {
 		if (_trackbacks == null) {
 			return StringPool.BLANK;
@@ -634,33 +721,40 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setTrackbacks(String trackbacks) {
 		_trackbacks = trackbacks;
 	}
 
 	@JSON
+	@Override
 	public boolean getSmallImage() {
 		return _smallImage;
 	}
 
+	@Override
 	public boolean isSmallImage() {
 		return _smallImage;
 	}
 
+	@Override
 	public void setSmallImage(boolean smallImage) {
 		_smallImage = smallImage;
 	}
 
 	@JSON
+	@Override
 	public long getSmallImageId() {
 		return _smallImageId;
 	}
 
+	@Override
 	public void setSmallImageId(long smallImageId) {
 		_smallImageId = smallImageId;
 	}
 
 	@JSON
+	@Override
 	public String getSmallImageURL() {
 		if (_smallImageURL == null) {
 			return StringPool.BLANK;
@@ -670,15 +764,18 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setSmallImageURL(String smallImageURL) {
 		_smallImageURL = smallImageURL;
 	}
 
 	@JSON
+	@Override
 	public int getStatus() {
 		return _status;
 	}
 
+	@Override
 	public void setStatus(int status) {
 		_columnBitmask |= STATUS_COLUMN_BITMASK;
 
@@ -696,24 +793,34 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	@JSON
+	@Override
 	public long getStatusByUserId() {
 		return _statusByUserId;
 	}
 
+	@Override
 	public void setStatusByUserId(long statusByUserId) {
 		_statusByUserId = statusByUserId;
 	}
 
-	public String getStatusByUserUuid() throws SystemException {
-		return PortalUtil.getUserValue(getStatusByUserId(), "uuid",
-			_statusByUserUuid);
+	@Override
+	public String getStatusByUserUuid() {
+		try {
+			User user = UserLocalServiceUtil.getUserById(getStatusByUserId());
+
+			return user.getUuid();
+		}
+		catch (PortalException pe) {
+			return StringPool.BLANK;
+		}
 	}
 
+	@Override
 	public void setStatusByUserUuid(String statusByUserUuid) {
-		_statusByUserUuid = statusByUserUuid;
 	}
 
 	@JSON
+	@Override
 	public String getStatusByUserName() {
 		if (_statusByUserName == null) {
 			return StringPool.BLANK;
@@ -723,80 +830,86 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public void setStatusByUserName(String statusByUserName) {
 		_statusByUserName = statusByUserName;
 	}
 
 	@JSON
+	@Override
 	public Date getStatusDate() {
 		return _statusDate;
 	}
 
+	@Override
 	public void setStatusDate(Date statusDate) {
 		_statusDate = statusDate;
 	}
 
-	/**
-	 * @deprecated {@link #isApproved}
-	 */
-	public boolean getApproved() {
-		return isApproved();
+	@Override
+	public StagedModelType getStagedModelType() {
+		return new StagedModelType(PortalUtil.getClassNameId(
+				BlogsEntry.class.getName()));
 	}
 
-	public boolean isApproved() {
-		if (getStatus() == WorkflowConstants.STATUS_APPROVED) {
-			return true;
+	@Override
+	public TrashEntry getTrashEntry() throws PortalException {
+		if (!isInTrash()) {
+			return null;
 		}
-		else {
-			return false;
+
+		TrashEntry trashEntry = TrashEntryLocalServiceUtil.fetchEntry(getModelClassName(),
+				getTrashEntryClassPK());
+
+		if (trashEntry != null) {
+			return trashEntry;
 		}
+
+		TrashHandler trashHandler = getTrashHandler();
+
+		if (!Validator.isNull(trashHandler.getContainerModelClassName(
+						getPrimaryKey()))) {
+			ContainerModel containerModel = null;
+
+			try {
+				containerModel = trashHandler.getParentContainerModel(this);
+			}
+			catch (NoSuchModelException nsme) {
+				return null;
+			}
+
+			while (containerModel != null) {
+				if (containerModel instanceof TrashedModel) {
+					TrashedModel trashedModel = (TrashedModel)containerModel;
+
+					return trashedModel.getTrashEntry();
+				}
+
+				trashHandler = TrashHandlerRegistryUtil.getTrashHandler(trashHandler.getContainerModelClassName(
+							containerModel.getContainerModelId()));
+
+				if (trashHandler == null) {
+					return null;
+				}
+
+				containerModel = trashHandler.getContainerModel(containerModel.getParentContainerModelId());
+			}
+		}
+
+		return null;
 	}
 
-	public boolean isDenied() {
-		if (getStatus() == WorkflowConstants.STATUS_DENIED) {
-			return true;
-		}
-		else {
-			return false;
-		}
+	@Override
+	public long getTrashEntryClassPK() {
+		return getPrimaryKey();
 	}
 
-	public boolean isDraft() {
-		if (getStatus() == WorkflowConstants.STATUS_DRAFT) {
-			return true;
-		}
-		else {
-			return false;
-		}
+	@Override
+	public TrashHandler getTrashHandler() {
+		return TrashHandlerRegistryUtil.getTrashHandler(getModelClassName());
 	}
 
-	public boolean isExpired() {
-		if (getStatus() == WorkflowConstants.STATUS_EXPIRED) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
-	public boolean isInactive() {
-		if (getStatus() == WorkflowConstants.STATUS_INACTIVE) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
-	public boolean isIncomplete() {
-		if (getStatus() == WorkflowConstants.STATUS_INCOMPLETE) {
-			return true;
-		}
-		else {
-			return false;
-		}
-	}
-
+	@Override
 	public boolean isInTrash() {
 		if (getStatus() == WorkflowConstants.STATUS_IN_TRASH) {
 			return true;
@@ -806,6 +919,135 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
+	public boolean isInTrashContainer() {
+		TrashHandler trashHandler = getTrashHandler();
+
+		if ((trashHandler == null) ||
+				Validator.isNull(trashHandler.getContainerModelClassName(
+						getPrimaryKey()))) {
+			return false;
+		}
+
+		try {
+			ContainerModel containerModel = trashHandler.getParentContainerModel(this);
+
+			if (containerModel == null) {
+				return false;
+			}
+
+			if (containerModel instanceof TrashedModel) {
+				return ((TrashedModel)containerModel).isInTrash();
+			}
+		}
+		catch (Exception e) {
+		}
+
+		return false;
+	}
+
+	@Override
+	public boolean isInTrashExplicitly() {
+		if (!isInTrash()) {
+			return false;
+		}
+
+		TrashEntry trashEntry = TrashEntryLocalServiceUtil.fetchEntry(getModelClassName(),
+				getTrashEntryClassPK());
+
+		if (trashEntry != null) {
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
+	public boolean isInTrashImplicitly() {
+		if (!isInTrash()) {
+			return false;
+		}
+
+		TrashEntry trashEntry = TrashEntryLocalServiceUtil.fetchEntry(getModelClassName(),
+				getTrashEntryClassPK());
+
+		if (trashEntry != null) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * @deprecated As of 6.1.0, replaced by {@link #isApproved}
+	 */
+	@Deprecated
+	@Override
+	public boolean getApproved() {
+		return isApproved();
+	}
+
+	@Override
+	public boolean isApproved() {
+		if (getStatus() == WorkflowConstants.STATUS_APPROVED) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean isDenied() {
+		if (getStatus() == WorkflowConstants.STATUS_DENIED) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean isDraft() {
+		if (getStatus() == WorkflowConstants.STATUS_DRAFT) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean isExpired() {
+		if (getStatus() == WorkflowConstants.STATUS_EXPIRED) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean isInactive() {
+		if (getStatus() == WorkflowConstants.STATUS_INACTIVE) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
+	public boolean isIncomplete() {
+		if (getStatus() == WorkflowConstants.STATUS_INCOMPLETE) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+
+	@Override
 	public boolean isPending() {
 		if (getStatus() == WorkflowConstants.STATUS_PENDING) {
 			return true;
@@ -815,6 +1057,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		}
 	}
 
+	@Override
 	public boolean isScheduled() {
 		if (getStatus() == WorkflowConstants.STATUS_SCHEDULED) {
 			return true;
@@ -843,13 +1086,12 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 
 	@Override
 	public BlogsEntry toEscapedModel() {
-		if (_escapedModelProxy == null) {
-			_escapedModelProxy = (BlogsEntry)ProxyUtil.newProxyInstance(_classLoader,
-					_escapedModelProxyInterfaces,
-					new AutoEscapeBeanHandler(this));
+		if (_escapedModel == null) {
+			_escapedModel = (BlogsEntry)ProxyUtil.newProxyInstance(_classLoader,
+					_escapedModelInterfaces, new AutoEscapeBeanHandler(this));
 		}
 
-		return _escapedModelProxy;
+		return _escapedModel;
 	}
 
 	@Override
@@ -865,6 +1107,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		blogsEntryImpl.setCreateDate(getCreateDate());
 		blogsEntryImpl.setModifiedDate(getModifiedDate());
 		blogsEntryImpl.setTitle(getTitle());
+		blogsEntryImpl.setSubtitle(getSubtitle());
 		blogsEntryImpl.setUrlTitle(getUrlTitle());
 		blogsEntryImpl.setDescription(getDescription());
 		blogsEntryImpl.setContent(getContent());
@@ -885,6 +1128,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		return blogsEntryImpl;
 	}
 
+	@Override
 	public int compareTo(BlogsEntry blogsEntry) {
 		int value = 0;
 
@@ -909,18 +1153,15 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 
 	@Override
 	public boolean equals(Object obj) {
-		if (obj == null) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof BlogsEntry)) {
 			return false;
 		}
 
-		BlogsEntry blogsEntry = null;
-
-		try {
-			blogsEntry = (BlogsEntry)obj;
-		}
-		catch (ClassCastException cce) {
-			return false;
-		}
+		BlogsEntry blogsEntry = (BlogsEntry)obj;
 
 		long primaryKey = blogsEntry.getPrimaryKey();
 
@@ -935,6 +1176,16 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	@Override
 	public int hashCode() {
 		return (int)getPrimaryKey();
+	}
+
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return ENTITY_CACHE_ENABLED;
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return FINDER_CACHE_ENABLED;
 	}
 
 	@Override
@@ -1020,6 +1271,14 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 			blogsEntryCacheModel.title = null;
 		}
 
+		blogsEntryCacheModel.subtitle = getSubtitle();
+
+		String subtitle = blogsEntryCacheModel.subtitle;
+
+		if ((subtitle != null) && (subtitle.length() == 0)) {
+			blogsEntryCacheModel.subtitle = null;
+		}
+
 		blogsEntryCacheModel.urlTitle = getUrlTitle();
 
 		String urlTitle = blogsEntryCacheModel.urlTitle;
@@ -1103,7 +1362,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 
 	@Override
 	public String toString() {
-		StringBundler sb = new StringBundler(47);
+		StringBundler sb = new StringBundler(49);
 
 		sb.append("{uuid=");
 		sb.append(getUuid());
@@ -1123,6 +1382,8 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		sb.append(getModifiedDate());
 		sb.append(", title=");
 		sb.append(getTitle());
+		sb.append(", subtitle=");
+		sb.append(getSubtitle());
 		sb.append(", urlTitle=");
 		sb.append(getUrlTitle());
 		sb.append(", description=");
@@ -1156,8 +1417,9 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		return sb.toString();
 	}
 
+	@Override
 	public String toXmlString() {
-		StringBundler sb = new StringBundler(73);
+		StringBundler sb = new StringBundler(76);
 
 		sb.append("<model><model-name>");
 		sb.append("com.liferay.portlet.blogs.model.BlogsEntry");
@@ -1198,6 +1460,10 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 		sb.append(
 			"<column><column-name>title</column-name><column-value><![CDATA[");
 		sb.append(getTitle());
+		sb.append("]]></column-value></column>");
+		sb.append(
+			"<column><column-name>subtitle</column-name><column-value><![CDATA[");
+		sb.append(getSubtitle());
 		sb.append("]]></column-value></column>");
 		sb.append(
 			"<column><column-name>urlTitle</column-name><column-value><![CDATA[");
@@ -1262,7 +1528,7 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	}
 
 	private static ClassLoader _classLoader = BlogsEntry.class.getClassLoader();
-	private static Class<?>[] _escapedModelProxyInterfaces = new Class[] {
+	private static Class<?>[] _escapedModelInterfaces = new Class[] {
 			BlogsEntry.class
 		};
 	private String _uuid;
@@ -1275,13 +1541,13 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	private long _originalCompanyId;
 	private boolean _setOriginalCompanyId;
 	private long _userId;
-	private String _userUuid;
 	private long _originalUserId;
 	private boolean _setOriginalUserId;
 	private String _userName;
 	private Date _createDate;
 	private Date _modifiedDate;
 	private String _title;
+	private String _subtitle;
 	private String _urlTitle;
 	private String _originalUrlTitle;
 	private String _description;
@@ -1298,9 +1564,8 @@ public class BlogsEntryModelImpl extends BaseModelImpl<BlogsEntry>
 	private int _originalStatus;
 	private boolean _setOriginalStatus;
 	private long _statusByUserId;
-	private String _statusByUserUuid;
 	private String _statusByUserName;
 	private Date _statusDate;
 	private long _columnBitmask;
-	private BlogsEntry _escapedModelProxy;
+	private BlogsEntry _escapedModel;
 }

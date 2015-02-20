@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -28,9 +28,9 @@ import com.liferay.portal.kernel.workflow.WorkflowInstanceManagerUtil;
 import com.liferay.portal.model.Group;
 import com.liferay.portal.model.Layout;
 import com.liferay.portal.security.auth.PrincipalException;
-import com.liferay.portal.security.permission.ActionKeys;
 import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.service.WorkflowInstanceLinkLocalServiceUtil;
+import com.liferay.portal.service.permission.PortletPermissionUtil;
 import com.liferay.portal.struts.PortletAction;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PortalUtil;
@@ -56,8 +56,9 @@ public class EditWorkflowInstanceAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
@@ -94,8 +95,9 @@ public class EditWorkflowInstanceAction extends PortletAction {
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		try {
@@ -103,10 +105,10 @@ public class EditWorkflowInstanceAction extends PortletAction {
 		}
 		catch (Exception e) {
 			if (e instanceof WorkflowException) {
-
 				SessionErrors.add(renderRequest, e.getClass());
 
-				return mapping.findForward("portlet.workflow_instances.error");
+				return actionMapping.findForward(
+					"portlet.workflow_instances.error");
 			}
 			else {
 				throw e;
@@ -116,7 +118,7 @@ public class EditWorkflowInstanceAction extends PortletAction {
 		String forward = getForward(
 			renderRequest, "portlet.workflow_instances.edit_workflow_instance");
 
-		return mapping.findForward(forward);
+		return actionMapping.findForward(forward);
 	}
 
 	protected String deleteInstance(ActionRequest actionRequest)
@@ -146,7 +148,7 @@ public class EditWorkflowInstanceAction extends PortletAction {
 		long classPK = GetterUtil.getLong(
 			workflowContext.get(WorkflowConstants.CONTEXT_ENTRY_CLASS_PK));
 
-		WorkflowHandler workflowHandler =
+		WorkflowHandler<?> workflowHandler =
 			WorkflowHandlerRegistryUtil.getWorkflowHandler(className);
 
 		workflowHandler.updateStatus(
@@ -168,9 +170,8 @@ public class EditWorkflowInstanceAction extends PortletAction {
 
 			String portletId = PortalUtil.getPortletId(actionRequest);
 
-			if (!permissionChecker.hasPermission(
-					groupId, portletId, 0,
-					ActionKeys.ACCESS_IN_CONTROL_PANEL)) {
+			if (!PortletPermissionUtil.hasControlPanelAccessPermission(
+					permissionChecker, groupId, portletId)) {
 
 				return themeDisplay.getURLControlPanel();
 			}

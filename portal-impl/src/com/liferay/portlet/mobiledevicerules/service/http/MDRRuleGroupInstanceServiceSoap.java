@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,8 @@
 
 package com.liferay.portlet.mobiledevicerules.service.http;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 
@@ -22,13 +24,11 @@ import com.liferay.portlet.mobiledevicerules.service.MDRRuleGroupInstanceService
 import java.rmi.RemoteException;
 
 /**
- * <p>
- * This class provides a SOAP utility for the
+ * Provides the SOAP utility for the
  * {@link com.liferay.portlet.mobiledevicerules.service.MDRRuleGroupInstanceServiceUtil} service utility. The
  * static methods of this class calls the same methods of the service utility.
  * However, the signatures are different because it is difficult for SOAP to
  * support certain types.
- * </p>
  *
  * <p>
  * ServiceBuilder follows certain rules in translating the methods. For example,
@@ -57,12 +57,13 @@ import java.rmi.RemoteException;
  * The SOAP utility is only generated for remote services.
  * </p>
  *
- * @author    Edward C. Han
- * @see       MDRRuleGroupInstanceServiceHttp
- * @see       com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstanceSoap
- * @see       com.liferay.portlet.mobiledevicerules.service.MDRRuleGroupInstanceServiceUtil
+ * @author Edward C. Han
+ * @see MDRRuleGroupInstanceServiceHttp
+ * @see com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstanceSoap
+ * @see com.liferay.portlet.mobiledevicerules.service.MDRRuleGroupInstanceServiceUtil
  * @generated
  */
+@ProviderType
 public class MDRRuleGroupInstanceServiceSoap {
 	public static com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstanceSoap addRuleGroupInstance(
 		long groupId, java.lang.String className, long classPK,
@@ -116,7 +117,7 @@ public class MDRRuleGroupInstanceServiceSoap {
 
 	public static com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstanceSoap[] getRuleGroupInstances(
 		java.lang.String className, long classPK, int start, int end,
-		com.liferay.portal.kernel.util.OrderByComparator orderByComparator)
+		com.liferay.portal.kernel.util.OrderByComparator<com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstance> orderByComparator)
 		throws RemoteException {
 		try {
 			java.util.List<com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstance> returnValue =

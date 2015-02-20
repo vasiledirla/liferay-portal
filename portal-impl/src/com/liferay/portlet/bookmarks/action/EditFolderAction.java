@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,6 +17,8 @@ package com.liferay.portlet.bookmarks.action;
 import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.ParamUtil;
+import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.model.TrashedModel;
 import com.liferay.portal.security.auth.PrincipalException;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.ServiceContextFactory;
@@ -29,6 +31,10 @@ import com.liferay.portlet.bookmarks.NoSuchFolderException;
 import com.liferay.portlet.bookmarks.model.BookmarksEntry;
 import com.liferay.portlet.bookmarks.model.BookmarksFolder;
 import com.liferay.portlet.bookmarks.service.BookmarksFolderServiceUtil;
+import com.liferay.portlet.trash.util.TrashUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
@@ -47,8 +53,9 @@ public class EditFolderAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
@@ -58,7 +65,10 @@ public class EditFolderAction extends PortletAction {
 				updateFolder(actionRequest);
 			}
 			else if (cmd.equals(Constants.DELETE)) {
-				deleteFolder(actionRequest);
+				deleteFolders(actionRequest, false);
+			}
+			else if (cmd.equals(Constants.MOVE_TO_TRASH)) {
+				deleteFolders(actionRequest, true);
 			}
 			else if (cmd.equals(Constants.SUBSCRIBE)) {
 				subscribeFolder(actionRequest);
@@ -88,8 +98,9 @@ public class EditFolderAction extends PortletAction {
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		try {
@@ -101,24 +112,56 @@ public class EditFolderAction extends PortletAction {
 
 				SessionErrors.add(renderRequest, e.getClass());
 
-				return mapping.findForward("portlet.bookmarks.error");
+				return actionMapping.findForward("portlet.bookmarks.error");
 			}
 			else {
 				throw e;
 			}
 		}
 
-		return mapping.findForward(
+		return actionMapping.findForward(
 			getForward(renderRequest, "portlet.bookmarks.edit_folder"));
 	}
 
-	protected void deleteFolder(ActionRequest actionRequest) throws Exception {
+	protected void deleteFolders(
+			ActionRequest actionRequest, boolean moveToTrash)
+		throws Exception {
+
+		long[] deleteFolderIds = null;
+
 		long folderId = ParamUtil.getLong(actionRequest, "folderId");
 
-		BookmarksFolderServiceUtil.deleteFolder(folderId);
+		if (folderId > 0) {
+			deleteFolderIds = new long[] {folderId};
+		}
+		else {
+			deleteFolderIds = StringUtil.split(
+				ParamUtil.getString(actionRequest, "folderIds"), 0L);
+		}
 
-		AssetPublisherUtil.removeRecentFolderId(
-			actionRequest, BookmarksEntry.class.getName(), folderId);
+		List<TrashedModel> trashedModels = new ArrayList<TrashedModel>();
+
+		for (long deleteFolderId : deleteFolderIds) {
+			if (moveToTrash) {
+				BookmarksFolder folder =
+					BookmarksFolderServiceUtil.moveFolderToTrash(
+						deleteFolderId);
+
+				trashedModels.add(folder);
+			}
+			else {
+				BookmarksFolderServiceUtil.deleteFolder(deleteFolderId);
+			}
+
+			AssetPublisherUtil.removeRecentFolderId(
+				actionRequest, BookmarksEntry.class.getName(), deleteFolderId);
+		}
+
+		if (moveToTrash && !trashedModels.isEmpty()) {
+			TrashUtil.addTrashSessionMessages(actionRequest, trashedModels);
+
+			hideDefaultSuccessMessage(actionRequest);
+		}
 	}
 
 	protected void subscribeFolder(ActionRequest actionRequest)

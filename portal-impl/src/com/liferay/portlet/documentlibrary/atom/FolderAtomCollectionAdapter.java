@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -23,8 +23,8 @@ import com.liferay.portal.kernel.repository.model.Folder;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.util.PortletKeys;
-import com.liferay.portlet.bookmarks.util.comparator.EntryNameComparator;
 import com.liferay.portlet.documentlibrary.service.DLAppServiceUtil;
+import com.liferay.portlet.documentlibrary.util.comparator.RepositoryModelNameComparator;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -36,10 +36,12 @@ import java.util.List;
 public class FolderAtomCollectionAdapter
 	extends BaseAtomCollectionAdapter<Folder> {
 
+	@Override
 	public String getCollectionName() {
 		return _COLLECTION_NAME;
 	}
 
+	@Override
 	public List<String> getEntryAuthors(Folder folder) {
 		List<String> authors = new ArrayList<String>();
 
@@ -48,6 +50,7 @@ public class FolderAtomCollectionAdapter
 		return authors;
 	}
 
+	@Override
 	public AtomEntryContent getEntryContent(
 		Folder folder, AtomRequestContext atomRequestContext) {
 
@@ -64,22 +67,27 @@ public class FolderAtomCollectionAdapter
 		return atomEntryContent;
 	}
 
+	@Override
 	public String getEntryId(Folder folder) {
 		return String.valueOf(folder.getPrimaryKey());
 	}
 
+	@Override
 	public String getEntrySummary(Folder folder) {
 		return folder.getDescription();
 	}
 
+	@Override
 	public String getEntryTitle(Folder folder) {
 		return folder.getName();
 	}
 
+	@Override
 	public Date getEntryUpdated(Folder folder) {
 		return folder.getModifiedDate();
 	}
 
+	@Override
 	public String getFeedTitle(AtomRequestContext atomRequestContext) {
 		return AtomUtil.createFeedTitleFromPortletName(
 			atomRequestContext, PortletKeys.DOCUMENT_LIBRARY) + " folders";
@@ -110,7 +118,7 @@ public class FolderAtomCollectionAdapter
 			AtomRequestContext atomRequestContext)
 		throws Exception {
 
-		long repositoryId = 0;
+		long repositoryId;
 
 		long parentFolderId = atomRequestContext.getLongParameter(
 			"parentFolderId");
@@ -133,7 +141,8 @@ public class FolderAtomCollectionAdapter
 
 		return DLAppServiceUtil.getFolders(
 			repositoryId, parentFolderId, atomPager.getStart(),
-			atomPager.getEnd() + 1, new EntryNameComparator());
+			atomPager.getEnd() + 1,
+			new RepositoryModelNameComparator<Folder>());
 	}
 
 	@Override
@@ -142,7 +151,7 @@ public class FolderAtomCollectionAdapter
 			AtomRequestContext atomRequestContext)
 		throws Exception {
 
-		long repositoryId = 0;
+		long repositoryId;
 
 		long parentFolderId = atomRequestContext.getLongParameter(
 			"parentFolderId");

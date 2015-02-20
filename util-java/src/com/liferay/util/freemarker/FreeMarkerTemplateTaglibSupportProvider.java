@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,10 +14,10 @@
 
 package com.liferay.util.freemarker;
 
-import com.liferay.portal.kernel.servlet.PortletServlet;
+import com.liferay.portal.kernel.servlet.JSPSupportServlet;
 import com.liferay.portal.kernel.servlet.ServletContextPool;
 import com.liferay.portal.kernel.template.Template;
-import com.liferay.portal.kernel.template.TemplateResource;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateTaglibSupportProvider;
 import com.liferay.portal.util.PortalUtil;
 
@@ -30,10 +30,11 @@ import freemarker.template.TemplateHashModel;
 import javax.portlet.PortletRequest;
 import javax.portlet.PortletResponse;
 
-import javax.servlet.ServletConfig;
+import javax.servlet.GenericServlet;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpServletResponseWrapper;
 
 /**
  * @author Raymond Augé
@@ -41,6 +42,7 @@ import javax.servlet.http.HttpServletResponse;
 public class FreeMarkerTemplateTaglibSupportProvider
 	implements TemplateTaglibSupportProvider {
 
+	@Override
 	public void addTaglibSupport(
 			Template template, String servletContextName,
 			PortletRequest portletRequest, PortletResponse portletResponse)
@@ -53,35 +55,35 @@ public class FreeMarkerTemplateTaglibSupportProvider
 
 		template.put(
 			"fullTemplatesPath", servletContextName.concat(
-				TemplateResource.SERVLET_SEPARATOR));
-
-		ServletConfig servletConfig =
-			(ServletConfig)portletRequest.getAttribute(
-				PortletServlet.PORTLET_SERVLET_CONFIG);
-
-		PortletServlet portletServlet = new PortletServlet();
-
-		portletServlet.init(servletConfig);
-
-		ServletContextHashModel servletContextHashModel =
-			new ServletContextHashModel(
-				portletServlet, ObjectWrapper.DEFAULT_WRAPPER);
-
-		template.put("Application", servletContextHashModel);
+				TemplateConstants.SERVLET_SEPARATOR));
 
 		ServletContext servletContext = ServletContextPool.get(
 			servletContextName);
+
+		GenericServlet genericServlet = new JSPSupportServlet(servletContext);
+
+		ServletContextHashModel servletContextHashModel =
+			new ServletContextHashModel(
+				genericServlet, ObjectWrapper.DEFAULT_WRAPPER);
+
+		template.put("Application", servletContextHashModel);
 
 		TemplateHashModel taglibsFactory =
 			FreeMarkerTaglibFactoryUtil.createTaglibFactory(servletContext);
 
 		template.put("PortletJspTagLibs", taglibsFactory);
 
-		HttpServletResponse response = PortalUtil.getHttpServletResponse(
-			portletResponse);
+		HttpServletRequestWrapper httpServletRequestWrapper =
+			new HttpServletRequestWrapper(
+				PortalUtil.getHttpServletRequest(portletRequest));
+		HttpServletResponseWrapper httpServletResponseWrapper =
+			new HttpServletResponseWrapper(
+				PortalUtil.getHttpServletResponse(portletResponse));
 
-		HttpRequestHashModel httpRequestHashModel = new HttpRequestHashModel(
-			request, response, ObjectWrapper.DEFAULT_WRAPPER);
+		HttpRequestHashModel httpRequestHashModel =
+			new HttpRequestHashModel(
+				httpServletRequestWrapper, httpServletResponseWrapper,
+				ObjectWrapper.DEFAULT_WRAPPER);
 
 		template.put("Request", httpRequestHashModel);
 	}

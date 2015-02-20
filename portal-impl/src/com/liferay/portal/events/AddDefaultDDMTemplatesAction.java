@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,12 +17,10 @@ package com.liferay.portal.events;
 import com.liferay.portal.kernel.events.ActionException;
 import com.liferay.portal.kernel.events.SimpleAction;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.language.LanguageUtil;
-import com.liferay.portal.kernel.portletdisplaytemplate.PortletDisplayTemplateHandler;
-import com.liferay.portal.kernel.portletdisplaytemplate.PortletDisplayTemplateHandlerRegistryUtil;
+import com.liferay.portal.kernel.template.TemplateHandler;
+import com.liferay.portal.kernel.template.TemplateHandlerRegistryUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
-import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.model.Group;
 import com.liferay.portal.service.GroupLocalServiceUtil;
@@ -30,6 +28,7 @@ import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.UserLocalServiceUtil;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portlet.dynamicdatamapping.model.DDMTemplate;
+import com.liferay.portlet.dynamicdatamapping.model.DDMTemplateConstants;
 import com.liferay.portlet.dynamicdatamapping.service.DDMTemplateLocalServiceUtil;
 import com.liferay.util.ContentUtil;
 
@@ -56,49 +55,48 @@ public class AddDefaultDDMTemplatesAction extends SimpleAction {
 	protected void addDDMTemplate(
 			long userId, long groupId, long classNameId, String templateKey,
 			String name, String description, String language,
-			String scriptFileName, ServiceContext serviceContext)
-		throws PortalException, SystemException {
+			String scriptFileName, boolean cacheable,
+			ServiceContext serviceContext)
+		throws PortalException {
 
 		DDMTemplate ddmTemplate = DDMTemplateLocalServiceUtil.fetchTemplate(
-			groupId, templateKey);
+			groupId, classNameId, templateKey);
 
 		if (ddmTemplate != null) {
 			return;
 		}
 
 		Map<Locale, String> nameMap = new HashMap<Locale, String>();
-
-		Locale locale = LocaleUtil.getDefault();
-
-		nameMap.put(locale, LanguageUtil.get(locale, name));
-
 		Map<Locale, String> descriptionMap = new HashMap<Locale, String>();
 
-		descriptionMap.put(locale, LanguageUtil.get(locale, description));
+		Locale[] locales = LanguageUtil.getAvailableLocales(groupId);
+
+		for (Locale locale : locales) {
+			nameMap.put(locale, LanguageUtil.get(locale, name));
+			descriptionMap.put(locale, LanguageUtil.get(locale, description));
+		}
 
 		String script = ContentUtil.get(scriptFileName);
 
 		DDMTemplateLocalServiceUtil.addTemplate(
 			userId, groupId, classNameId, 0, templateKey, nameMap,
-			descriptionMap, "list", null, language, script, serviceContext);
+			descriptionMap, DDMTemplateConstants.TEMPLATE_TYPE_DISPLAY, null,
+			language, script, cacheable, false, null, null, serviceContext);
 	}
 
 	protected void addDDMTemplates(
 			long userId, long groupId, ServiceContext serviceContext)
 		throws Exception {
 
-		List<PortletDisplayTemplateHandler> portletDisplayTemplateHandlers =
-			PortletDisplayTemplateHandlerRegistryUtil
-				.getPortletDisplayTemplateHandlers();
+		List<TemplateHandler> templateHandlers =
+			TemplateHandlerRegistryUtil.getTemplateHandlers();
 
-		for (PortletDisplayTemplateHandler portletDisplayTemplateHandler :
-				portletDisplayTemplateHandlers) {
-
+		for (TemplateHandler templateHandler : templateHandlers) {
 			long classNameId = PortalUtil.getClassNameId(
-				portletDisplayTemplateHandler.getClassName());
+				templateHandler.getClassName());
 
 			List<Element> templateElements =
-				portletDisplayTemplateHandler.getDefaultTemplateElements();
+				templateHandler.getDefaultTemplateElements();
 
 			for (Element templateElement : templateElements) {
 				String templateKey = templateElement.elementText(
@@ -106,7 +104,7 @@ public class AddDefaultDDMTemplatesAction extends SimpleAction {
 
 				DDMTemplate ddmTemplate =
 					DDMTemplateLocalServiceUtil.fetchTemplate(
-						groupId, templateKey);
+						groupId, classNameId, templateKey);
 
 				if (ddmTemplate != null) {
 					continue;
@@ -117,10 +115,13 @@ public class AddDefaultDDMTemplatesAction extends SimpleAction {
 				String language = templateElement.elementText("language");
 				String scriptFileName = templateElement.elementText(
 					"script-file");
+				boolean cacheable = GetterUtil.getBoolean(
+					templateElement.elementText("cacheable"));
 
 				addDDMTemplate(
 					userId, groupId, classNameId, templateKey, name,
-					description, language, scriptFileName, serviceContext);
+					description, language, scriptFileName, cacheable,
+					serviceContext);
 			}
 		}
 	}

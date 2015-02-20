@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -26,7 +26,8 @@ import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.upgrade.util.UpgradeTable;
 import com.liferay.portal.kernel.upgrade.util.UpgradeTableFactoryUtil;
-import com.liferay.portal.kernel.util.HttpUtil;
+import com.liferay.portal.kernel.upgrade.util.UpgradeTableListener;
+import com.liferay.portal.kernel.util.InstanceFactory;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.xml.Document;
@@ -35,21 +36,20 @@ import com.liferay.portal.kernel.xml.Element;
 import com.liferay.portal.kernel.xml.SAXReaderUtil;
 import com.liferay.portal.model.ModelHintsUtil;
 import com.liferay.portal.model.ServiceComponent;
-import com.liferay.portal.security.lang.PortalSecurityManagerThreadLocal;
-import com.liferay.portal.security.pacl.PACLPolicy;
-import com.liferay.portal.security.pacl.PACLPolicyManager;
 import com.liferay.portal.service.base.ServiceComponentLocalServiceBaseImpl;
+import com.liferay.portal.service.configuration.ServiceComponentConfiguration;
 import com.liferay.portal.tools.servicebuilder.Entity;
+import com.liferay.portal.util.PropsValues;
 
 import java.io.IOException;
 import java.io.InputStream;
 
 import java.lang.reflect.Field;
 
+import java.security.PrivilegedExceptionAction;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import javax.servlet.ServletContext;
 
 /**
  * @author Brian Wing Shun Chan
@@ -57,27 +57,30 @@ import javax.servlet.ServletContext;
 public class ServiceComponentLocalServiceImpl
 	extends ServiceComponentLocalServiceBaseImpl {
 
+	@Override
 	public void destroyServiceComponent(
-			ServletContext servletContext, ClassLoader classLoader)
-		throws SystemException {
+		ServiceComponentConfiguration serviceComponentConfiguration,
+		ClassLoader classLoader) {
 
 		try {
-			clearCacheRegistry(servletContext);
+			clearCacheRegistry(serviceComponentConfiguration);
 		}
 		catch (Exception e) {
 			throw new SystemException(e);
 		}
 	}
 
+	@Override
 	public ServiceComponent initServiceComponent(
-			ServletContext servletContext, ClassLoader classLoader,
-			String buildNamespace, long buildNumber, long buildDate,
-			boolean buildAutoUpgrade)
-		throws PortalException, SystemException {
+			ServiceComponentConfiguration serviceComponentConfiguration,
+			ClassLoader classLoader, String buildNamespace, long buildNumber,
+			long buildDate, boolean buildAutoUpgrade)
+		throws PortalException {
 
 		try {
 			ModelHintsUtil.read(
-				classLoader, "META-INF/portlet-model-hints.xml");
+				classLoader,
+				serviceComponentConfiguration.getModelHintsInputStream());
 		}
 		catch (Exception e) {
 			throw new SystemException(e);
@@ -85,7 +88,8 @@ public class ServiceComponentLocalServiceImpl
 
 		try {
 			ModelHintsUtil.read(
-				classLoader, "META-INF/portlet-model-hints-ext.xml");
+				classLoader,
+				serviceComponentConfiguration.getModelHintsExtInputStream());
 		}
 		catch (Exception e) {
 			throw new SystemException(e);
@@ -98,7 +102,7 @@ public class ServiceComponentLocalServiceImpl
 			serviceComponentPersistence.findByBuildNamespace(
 				buildNamespace, 0, 1);
 
-		if (serviceComponents.size() == 0) {
+		if (serviceComponents.isEmpty()) {
 			long serviceComponentId = counterLocalService.increment();
 
 			serviceComponent = serviceComponentPersistence.create(
@@ -139,26 +143,33 @@ public class ServiceComponentLocalServiceImpl
 
 			Element dataElement = document.addElement("data");
 
-			String tablesSQL = HttpUtil.URLtoString(servletContext.getResource(
-				"/WEB-INF/sql/tables.sql"));
+			Element tablesSQLElement = dataElement.addElement("tables-sql");
 
-			dataElement.addElement("tables-sql").addCDATA(tablesSQL);
+			String tablesSQL = StringUtil.read(
+				serviceComponentConfiguration.getSQLTablesInputStream());
 
-			String sequencesSQL = HttpUtil.URLtoString(
-				servletContext.getResource("/WEB-INF/sql/sequences.sql"));
+			tablesSQLElement.addCDATA(tablesSQL);
 
-			dataElement.addElement("sequences-sql").addCDATA(sequencesSQL);
+			Element sequencesSQLElement = dataElement.addElement(
+				"sequences-sql");
 
-			String indexesSQL = HttpUtil.URLtoString(servletContext.getResource(
-				"/WEB-INF/sql/indexes.sql"));
+			String sequencesSQL = StringUtil.read(
+				serviceComponentConfiguration.getSQLSequencesInputStream());
 
-			dataElement.addElement("indexes-sql").addCDATA(indexesSQL);
+			sequencesSQLElement.addCDATA(sequencesSQL);
+
+			Element indexesSQLElement = dataElement.addElement("indexes-sql");
+
+			String indexesSQL = StringUtil.read(
+				serviceComponentConfiguration.getSQLIndexesInputStream());
+
+			indexesSQLElement.addCDATA(indexesSQL);
 
 			String dataXML = document.formattedString();
 
 			serviceComponent.setData(dataXML);
 
-			serviceComponentPersistence.update(serviceComponent, false);
+			serviceComponentPersistence.update(serviceComponent);
 
 			serviceComponentLocalService.upgradeDB(
 				classLoader, buildNamespace, buildNumber, buildAutoUpgrade,
@@ -173,43 +184,23 @@ public class ServiceComponentLocalServiceImpl
 		}
 	}
 
+	@Override
 	public void upgradeDB(
-			ClassLoader classLoader, String buildNamespace, long buildNumber,
-			boolean buildAutoUpgrade, ServiceComponent previousServiceComponent,
-			String tablesSQL, String sequencesSQL, String indexesSQL)
+			final ClassLoader classLoader, final String buildNamespace,
+			final long buildNumber, final boolean buildAutoUpgrade,
+			final ServiceComponent previousServiceComponent,
+			final String tablesSQL, final String sequencesSQL,
+			final String indexesSQL)
 		throws Exception {
 
-		PACLPolicy previousPACLPolicy =
-			PortalSecurityManagerThreadLocal.getPACLPolicy();
-
-		boolean checkGetClassLoader =
-			PortalSecurityManagerThreadLocal.isCheckGetClassLoader();
-		boolean checkReadFile =
-			PortalSecurityManagerThreadLocal.isCheckReadFile();
-
-		try {
-			PACLPolicy paclPolicy = PACLPolicyManager.getPACLPolicy(
-				classLoader);
-
-			PortalSecurityManagerThreadLocal.setPACLPolicy(paclPolicy);
-
-			PortalSecurityManagerThreadLocal.setCheckGetClassLoader(false);
-			PortalSecurityManagerThreadLocal.setCheckReadFile(false);
-
-			doUpgradeDB(
+		_pacl.doUpgradeDB(
+			new DoUpgradeDBPrivilegedExceptionAction(
 				classLoader, buildNamespace, buildNumber, buildAutoUpgrade,
-				previousServiceComponent, tablesSQL, sequencesSQL, indexesSQL);
-		}
-		finally {
-			PortalSecurityManagerThreadLocal.setPACLPolicy(previousPACLPolicy);
-
-			PortalSecurityManagerThreadLocal.setCheckGetClassLoader(
-				checkGetClassLoader);
-			PortalSecurityManagerThreadLocal.setCheckReadFile(checkReadFile);
-		}
+				previousServiceComponent, tablesSQL, sequencesSQL, indexesSQL));
 	}
 
-	public void verifyDB() throws SystemException {
+	@Override
+	public void verifyDB() {
 		List<ServiceComponent> serviceComponents =
 			serviceComponentPersistence.findAll();
 
@@ -230,11 +221,64 @@ public class ServiceComponentLocalServiceImpl
 		}
 	}
 
-	protected void clearCacheRegistry(ServletContext servletContext)
+	public class DoUpgradeDBPrivilegedExceptionAction
+		implements PrivilegedExceptionAction<Void> {
+
+		public DoUpgradeDBPrivilegedExceptionAction(
+			ClassLoader classLoader, String buildNamespace, long buildNumber,
+			boolean buildAutoUpgrade, ServiceComponent previousServiceComponent,
+			String tablesSQL, String sequencesSQL, String indexesSQL) {
+
+			_classLoader = classLoader;
+			_buildNamespace = buildNamespace;
+			_buildNumber = buildNumber;
+			_buildAutoUpgrade = buildAutoUpgrade;
+			_previousServiceComponent = previousServiceComponent;
+			_tablesSQL = tablesSQL;
+			_sequencesSQL = sequencesSQL;
+			_indexesSQL = indexesSQL;
+		}
+
+		public ClassLoader getClassLoader() {
+			return _classLoader;
+		}
+
+		@Override
+		public Void run() throws Exception {
+			doUpgradeDB(
+				_classLoader, _buildNamespace, _buildNumber, _buildAutoUpgrade,
+				_previousServiceComponent, _tablesSQL, _sequencesSQL,
+				_indexesSQL);
+
+			return null;
+		}
+
+		private boolean _buildAutoUpgrade;
+		private String _buildNamespace;
+		private long _buildNumber;
+		private ClassLoader _classLoader;
+		private String _indexesSQL;
+		private ServiceComponent _previousServiceComponent;
+		private String _sequencesSQL;
+		private String _tablesSQL;
+
+	}
+
+	public interface PACL {
+
+		public void doUpgradeDB(
+				DoUpgradeDBPrivilegedExceptionAction
+					doUpgradeDBPrivilegedExceptionAction)
+			throws Exception;
+
+	}
+
+	protected void clearCacheRegistry(
+			ServiceComponentConfiguration serviceComponentConfiguration)
 		throws DocumentException {
 
-		InputStream inputStream = servletContext.getResourceAsStream(
-			"/WEB-INF/classes/META-INF/portlet-hbm.xml");
+		InputStream inputStream =
+			serviceComponentConfiguration.getHibernateInputStream();
 
 		if (inputStream == null) {
 			return;
@@ -254,8 +298,10 @@ public class ServiceComponentLocalServiceImpl
 
 		CacheRegistryUtil.clear();
 
-		EntityCacheUtil.clearCache();
-		FinderCacheUtil.clearCache();
+		if (PropsValues.CACHE_CLEAR_ON_PLUGIN_UNDEPLOY) {
+			EntityCacheUtil.clearCache();
+			FinderCacheUtil.clearCache();
+		}
 	}
 
 	protected void doUpgradeDB(
@@ -289,7 +335,7 @@ public class ServiceComponentLocalServiceImpl
 
 				db.runSQLTemplateString(tablesSQL, true, false);
 
-				upgradeModels(classLoader);
+				upgradeModels(classLoader, previousServiceComponent);
 			}
 
 			if (!sequencesSQL.equals(
@@ -302,7 +348,9 @@ public class ServiceComponentLocalServiceImpl
 				db.runSQLTemplateString(sequencesSQL, true, false);
 			}
 
-			if (!indexesSQL.equals(previousServiceComponent.getIndexesSQL())) {
+			if (!indexesSQL.equals(previousServiceComponent.getIndexesSQL()) ||
+				!tablesSQL.equals(previousServiceComponent.getTablesSQL())) {
+
 				if (_log.isInfoEnabled()) {
 					_log.info("Upgrading database with indexes.sql");
 				}
@@ -357,9 +405,40 @@ public class ServiceComponentLocalServiceImpl
 		return models;
 	}
 
-	protected void removeOldServiceComponents(String buildNamespace)
-		throws SystemException {
+	protected UpgradeTableListener getUpgradeTableListener(
+		ClassLoader classLoader, Class<?> modelClass) {
 
+		String modelClassName = modelClass.getName();
+
+		String upgradeTableListenerClassName = modelClassName;
+
+		upgradeTableListenerClassName = StringUtil.replaceLast(
+			upgradeTableListenerClassName, ".model.impl.", ".model.upgrade.");
+		upgradeTableListenerClassName = StringUtil.replaceLast(
+			upgradeTableListenerClassName, "ModelImpl", "UpgradeTableListener");
+
+		try {
+			UpgradeTableListener upgradeTableListener =
+				(UpgradeTableListener)InstanceFactory.newInstance(
+					classLoader, upgradeTableListenerClassName);
+
+			if (_log.isInfoEnabled()) {
+				_log.info("Instantiated " + upgradeTableListenerClassName);
+			}
+
+			return upgradeTableListener;
+		}
+		catch (Exception e) {
+			if (_log.isDebugEnabled()) {
+				_log.debug(
+					"Unable to instantiate " + upgradeTableListenerClassName);
+			}
+
+			return null;
+		}
+	}
+
+	protected void removeOldServiceComponents(String buildNamespace) {
 		int serviceComponentsCount =
 			serviceComponentPersistence.countByBuildNamespace(buildNamespace);
 
@@ -379,7 +458,10 @@ public class ServiceComponentLocalServiceImpl
 		}
 	}
 
-	protected void upgradeModels(ClassLoader classLoader) throws Exception {
+	protected void upgradeModels(
+			ClassLoader classLoader, ServiceComponent previousServiceComponent)
+		throws Exception {
+
 		List<String> models = getModels(classLoader);
 
 		for (String name : models) {
@@ -408,9 +490,22 @@ public class ServiceComponentLocalServiceImpl
 			UpgradeTable upgradeTable = UpgradeTableFactoryUtil.getUpgradeTable(
 				tableName, tableColumns);
 
+			UpgradeTableListener upgradeTableListener = getUpgradeTableListener(
+				classLoader, modelClass);
+
 			upgradeTable.setCreateSQL(tableSQLCreate);
 
+			if (upgradeTableListener != null) {
+				upgradeTableListener.onBeforeUpdateTable(
+					previousServiceComponent, upgradeTable);
+			}
+
 			upgradeTable.updateTable();
+
+			if (upgradeTableListener != null) {
+				upgradeTableListener.onAfterUpdateTable(
+					previousServiceComponent, upgradeTable);
+			}
 		}
 	}
 
@@ -418,5 +513,20 @@ public class ServiceComponentLocalServiceImpl
 
 	private static Log _log = LogFactoryUtil.getLog(
 		ServiceComponentLocalServiceImpl.class);
+
+	private static PACL _pacl = new NoPACL();
+
+	private static class NoPACL implements PACL {
+
+		@Override
+		public void doUpgradeDB(
+				DoUpgradeDBPrivilegedExceptionAction
+					doUpgradeDBPrivilegedExceptionAction)
+			throws Exception {
+
+			doUpgradeDBPrivilegedExceptionAction.run();
+		}
+
+	}
 
 }

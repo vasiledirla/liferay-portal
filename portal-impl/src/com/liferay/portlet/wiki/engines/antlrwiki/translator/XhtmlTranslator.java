@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,6 +16,7 @@ package com.liferay.portlet.wiki.engines.antlrwiki.translator;
 
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
@@ -141,7 +142,16 @@ public class XhtmlTranslator extends XhtmlTranslationVisitor {
 
 		append("<div class=\"toc\">");
 		append("<div class=\"collapsebox\">");
-		append("<h4>Table of Contents");
+		append("<h4>");
+
+		String title = tableOfContentsNode.getTitle();
+
+		if (title == null) {
+			title = "Table of Contents";
+		}
+
+		append(title);
+
 		append(StringPool.NBSP);
 		append("<a class=\"toc-trigger\" href=\"javascript:;\">[-]</a></h4>");
 		append("<div class=\"toc-index\">");
@@ -177,36 +187,38 @@ public class XhtmlTranslator extends XhtmlTranslationVisitor {
 	protected void appendTableOfContents(
 		TreeNode<HeadingNode> tableOfContents, int depth) {
 
-		append("<ol>");
-
 		List<TreeNode<HeadingNode>> treeNodes = tableOfContents.getChildNodes();
 
-		if (treeNodes != null) {
-			for (TreeNode<HeadingNode> treeNode : treeNodes) {
-				append("<li class=\"toc-level-");
-				append(depth);
-				append("\">");
+		if ((treeNodes == null) || treeNodes.isEmpty()) {
+			return;
+		}
 
-				HeadingNode headingNode = treeNode.getValue();
+		append("<ol>");
 
-				String content = getUnformattedHeadingText(headingNode);
+		for (TreeNode<HeadingNode> treeNode : treeNodes) {
+			append("<li class=\"toc-level-");
+			append(depth);
+			append("\">");
 
-				append("<a class=\"wikipage\" href=\"");
+			HeadingNode headingNode = treeNode.getValue();
 
-				if (_viewPageURL != null) {
-					append(_viewPageURL.toString());
-				}
+			String content = getUnformattedHeadingText(headingNode);
 
-				append(StringPool.POUND);
-				append(getHeadingMarkup(_page.getTitle(), content));
-				append("\">");
-				append(content);
-				append("</a>");
+			append("<a class=\"wikipage\" href=\"");
 
-				appendTableOfContents(treeNode, depth + 1);
-
-				append("</li>");
+			if (_viewPageURL != null) {
+				append(_viewPageURL.toString());
 			}
+
+			append(StringPool.POUND);
+			append(getHeadingMarkup(_page.getTitle(), content));
+			append("\">");
+			append(content);
+			append("</a>");
+
+			appendTableOfContents(treeNode, depth + 1);
+
+			append("</li>");
 		}
 
 		append("</ol>");
@@ -274,25 +286,16 @@ public class XhtmlTranslator extends XhtmlTranslationVisitor {
 	}
 
 	protected String searchLinkInAttachments(LinkNode linkNode) {
-		String[] attachments = null;
-
 		try {
-			attachments = _page.getAttachmentsFiles();
+			for (FileEntry fileEntry : _page.getAttachmentsFileEntries()) {
+				String title = fileEntry.getTitle();
+
+				if (title.equals(linkNode.getLink())) {
+					return title;
+				}
+			}
 		}
 		catch (Exception e) {
-			return null;
-		}
-
-		String link =
-			StringPool.SLASH + _page.getAttachmentsDir() +
-				StringPool.SLASH + linkNode.getLink();
-
-		for (String attachment : attachments) {
-			if (attachment.equals(link)) {
-				int pos = attachment.lastIndexOf(StringPool.SLASH);
-
-				return attachment.substring(pos + 1);
-			}
 		}
 
 		return null;

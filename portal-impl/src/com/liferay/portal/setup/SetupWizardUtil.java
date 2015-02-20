@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,7 +14,6 @@
 
 package com.liferay.portal.setup;
 
-import com.liferay.portal.NoSuchUserException;
 import com.liferay.portal.dao.jdbc.util.DataSourceSwapper;
 import com.liferay.portal.events.StartupAction;
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
@@ -93,6 +92,12 @@ public class SetupWizardUtil {
 	public static final String PROPERTIES_FILE_NAME =
 		"portal-setup-wizard.properties";
 
+	public static String getDefaultLanguageId() {
+		Locale defaultLocale = LocaleUtil.getDefault();
+
+		return LocaleUtil.toLanguageId(defaultLocale);
+	}
+
 	public static boolean isDefaultDatabase(HttpServletRequest request) {
 		boolean hsqldb = ParamUtil.getBoolean(
 			request, "defaultDatabase",
@@ -111,6 +116,29 @@ public class SetupWizardUtil {
 		return true;
 	}
 
+	public static void reloadDataSources(Properties jdbcProperties)
+		throws Exception {
+
+		// Data sources
+
+		jdbcProperties = PropertiesUtil.getProperties(
+			jdbcProperties,"jdbc.default.",true);
+
+		DataSourceSwapper.swapCounterDataSource(jdbcProperties);
+		DataSourceSwapper.swapLiferayDataSource(jdbcProperties);
+
+		// Caches
+
+		CacheRegistryUtil.clear();
+		MultiVMPoolUtil.clear();
+		WebCachePoolUtil.clear();
+		CentralizedThreadLocal.clearShortLivedThreadLocals();
+
+		// Persistence beans
+
+		_reconfigurePersistenceBeans();
+	}
+
 	public static void setSetupFinished(boolean setupFinished) {
 		_setupFinished = setupFinished;
 	}
@@ -127,14 +155,20 @@ public class SetupWizardUtil {
 		String password = _getParameter(
 			request, PropsKeys.JDBC_DEFAULT_PASSWORD, null);
 
-		_testConnection(driverClassName, url, userName, password);
+		String jndiName = StringPool.BLANK;
+
+		if (Validator.isNotNull(PropsValues.JDBC_DEFAULT_JNDI_NAME)) {
+			jndiName = PropsValues.JDBC_DEFAULT_JNDI_NAME;
+		}
+
+		_testConnection(driverClassName, url, userName, password, jndiName);
 	}
 
 	public static void updateLanguage(
 		HttpServletRequest request, HttpServletResponse response) {
 
 		String languageId = ParamUtil.getString(
-			request, "companyLocale", PropsValues.COMPANY_DEFAULT_LOCALE);
+			request, "companyLocale", getDefaultLanguageId());
 
 		Locale locale = LocaleUtil.fromLanguageId(languageId);
 
@@ -191,7 +225,10 @@ public class SetupWizardUtil {
 
 		_initPlugins();
 
-		boolean propertiesFileCreated = _writePropertiesFile(unicodeProperties);
+		if (ParamUtil.getBoolean(request, "addSampleData")) {
+			SetupWizardSampleDataUtil.addSampleData(
+				PortalInstances.getDefaultCompanyId());
+		}
 
 		HttpSession session = request.getSession();
 
@@ -199,7 +236,7 @@ public class SetupWizardUtil {
 			WebKeys.SETUP_WIZARD_PROPERTIES, unicodeProperties);
 		session.setAttribute(
 			WebKeys.SETUP_WIZARD_PROPERTIES_FILE_CREATED,
-			propertiesFileCreated);
+			_writePropertiesFile(unicodeProperties));
 	}
 
 	private static String _getParameter(
@@ -211,7 +248,7 @@ public class SetupWizardUtil {
 	}
 
 	/**
-	 * @see {@link com.liferay.portal.servlet.MainServlet#initPlugins}
+	 * @see com.liferay.portal.servlet.MainServlet#initPlugins
 	 */
 	private static void _initPlugins() {
 		HotDeployUtil.setCapturePrematureEvents(false);
@@ -285,22 +322,7 @@ public class SetupWizardUtil {
 
 		jdbcProperties.putAll(unicodeProperties);
 
-		jdbcProperties = PropertiesUtil.getProperties(
-			jdbcProperties,"jdbc.default.",true);
-
-		DataSourceSwapper.swapCounterDataSource(jdbcProperties);
-		DataSourceSwapper.swapLiferayDataSource(jdbcProperties);
-
-		// Caches
-
-		CacheRegistryUtil.clear();
-		MultiVMPoolUtil.clear();
-		WebCachePoolUtil.clear();
-		CentralizedThreadLocal.clearShortLivedThreadLocals();
-
-		// Persistence beans
-
-		_reconfigurePersistenceBeans();
+		reloadDataSources(jdbcProperties);
 
 		// Quartz
 
@@ -321,21 +343,25 @@ public class SetupWizardUtil {
 
 	private static void _testConnection(
 			String driverClassName, String url, String userName,
-			String password)
+			String password, String jndiName)
 		throws Exception {
 
-		Class.forName(driverClassName);
+		if (Validator.isNull(jndiName)) {
+			Class.forName(driverClassName);
+		}
 
+		DataSource dataSource = null;
 		Connection connection = null;
 
 		try {
-			DataSource dataSource = DataSourceFactoryUtil.initDataSource(
-				driverClassName, url, userName, password);
+			dataSource = DataSourceFactoryUtil.initDataSource(
+				driverClassName, url, userName, password, jndiName);
 
 			connection = dataSource.getConnection();
 		}
 		finally {
 			DataAccess.cleanUp(connection);
+			DataSourceFactoryUtil.destroyDataSource(dataSource);
 		}
 	}
 
@@ -385,15 +411,12 @@ public class SetupWizardUtil {
 
 		unicodeProperties.put(PropsKeys.ADMIN_EMAIL_FROM_NAME, fullName);
 
-		User user = null;
+		User user = UserLocalServiceUtil.fetchUserByEmailAddress(
+			themeDisplay.getCompanyId(), emailAddress);
 
-		try {
-			user = UserLocalServiceUtil.getUserByEmailAddress(
-				themeDisplay.getCompanyId(), emailAddress);
-
+		if (user != null) {
 			String greeting = LanguageUtil.format(
-				themeDisplay.getLocale(), "welcome-x",
-				StringPool.SPACE + fullName, false);
+				themeDisplay.getLocale(), "welcome-x", fullName, false);
 
 			Contact contact = user.getContact();
 
@@ -409,7 +432,7 @@ public class SetupWizardUtil {
 				user.getUserId(), StringPool.BLANK, StringPool.BLANK,
 				StringPool.BLANK, false, user.getReminderQueryQuestion(),
 				user.getReminderQueryAnswer(), screenName, emailAddress,
-				user.getFacebookId(), user.getOpenId(),
+				user.getFacebookId(), user.getOpenId(), false, null,
 				themeDisplay.getLanguageId(), user.getTimeZoneId(), greeting,
 				user.getComments(), firstName, user.getMiddleName(), lastName,
 				contact.getPrefixId(), contact.getSuffixId(), contact.isMale(),
@@ -421,7 +444,7 @@ public class SetupWizardUtil {
 				contact.getJobTitle(), null, null, null, null, null,
 				new ServiceContext());
 		}
-		catch (NoSuchUserException nsue) {
+		else {
 			UserLocalServiceUtil.addDefaultAdminUser(
 				themeDisplay.getCompanyId(), screenName, emailAddress,
 				themeDisplay.getLocale(), firstName, StringPool.BLANK,
@@ -440,8 +463,8 @@ public class SetupWizardUtil {
 
 				if (testUser != null) {
 					UserLocalServiceUtil.updateStatus(
-						testUser.getUserId(),
-						WorkflowConstants.STATUS_INACTIVE);
+						testUser.getUserId(), WorkflowConstants.STATUS_INACTIVE,
+						new ServiceContext());
 				}
 			}
 		}
@@ -475,7 +498,7 @@ public class SetupWizardUtil {
 		}
 
 		String languageId = ParamUtil.getString(
-			request, "companyLocale", PropsValues.COMPANY_DEFAULT_LOCALE);
+			request, "companyLocale", getDefaultLanguageId());
 
 		User defaultUser = company.getDefaultUser();
 

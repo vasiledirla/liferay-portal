@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,20 +14,31 @@
 
 package com.liferay.portal.dao.orm.hibernate.region;
 
+import com.liferay.portal.cache.ehcache.CacheManagerUtil;
 import com.liferay.portal.cache.ehcache.EhcacheConfigurationUtil;
+import com.liferay.portal.cache.ehcache.EhcachePortalCache;
 import com.liferay.portal.cache.ehcache.ModifiableEhcacheWrapper;
+import com.liferay.portal.kernel.cache.CacheManagerListener;
+import com.liferay.portal.kernel.cache.PortalCache;
+import com.liferay.portal.kernel.cache.PortalCacheManager;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.PortalLifecycle;
 import com.liferay.portal.kernel.util.ReflectionUtil;
+import com.liferay.portal.kernel.util.SystemProperties;
 import com.liferay.portal.kernel.util.Validator;
+
+import java.io.Serializable;
 
 import java.lang.reflect.Field;
 
 import java.net.URL;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
 import net.sf.ehcache.Cache;
 import net.sf.ehcache.CacheManager;
@@ -57,6 +68,8 @@ public class LiferayEhcacheRegionFactory extends EhCacheRegionFactory {
 
 	public LiferayEhcacheRegionFactory(Properties properties) {
 		super(properties);
+
+		_portalCacheManager = new HibernatePortalCacheManager(manager);
 	}
 
 	@Override
@@ -120,14 +133,21 @@ public class LiferayEhcacheRegionFactory extends EhCacheRegionFactory {
 		return timestampsRegion;
 	}
 
-	public CacheManager getCacheManager() {
-		return manager;
+	public PortalCacheManager<Serializable, Serializable>
+		getPortalCacheManager() {
+
+		return _portalCacheManager;
 	}
 
 	public void reconfigureCaches(URL cacheConfigFile) {
+		if (manager == null) {
+			return;
+		}
+
 		synchronized (manager) {
-			Configuration configuration = EhcacheConfigurationUtil.
-				getConfiguration(cacheConfigFile, true, _usingDefault);
+			Configuration configuration =
+				EhcacheConfigurationUtil.getConfiguration(
+					cacheConfigFile, true, _usingDefault);
 
 			Map<String, CacheConfiguration> cacheConfigurations =
 				configuration.getCacheConfigurations();
@@ -176,20 +196,28 @@ public class LiferayEhcacheRegionFactory extends EhCacheRegionFactory {
 
 			configuration.setDefaultTransactionManager(transactionManager);*/
 
-			manager = new CacheManager(configuration);
+			manager = CacheManagerUtil.createCacheManager(configuration);
 
-			FailSafeTimer failSafeTimer = manager.getTimer();
+			boolean skipUpdateCheck = GetterUtil.getBoolean(
+				SystemProperties.get("net.sf.ehcache.skipUpdateCheck"));
+			boolean tcActive = GetterUtil.getBoolean(
+				SystemProperties.get("tc.active"));
 
-			failSafeTimer.cancel();
+			if (skipUpdateCheck && !tcActive) {
+				FailSafeTimer failSafeTimer = manager.getTimer();
 
-			try {
-				Field cacheManagerTimerField = ReflectionUtil.getDeclaredField(
-					CacheManager.class, "cacheManagerTimer");
+				failSafeTimer.cancel();
 
-				cacheManagerTimerField.set(manager, null);
-			}
-			catch (Exception e) {
-				throw new RuntimeException(e);
+				try {
+					Field cacheManagerTimerField =
+						ReflectionUtil.getDeclaredField(
+							CacheManager.class, "cacheManagerTimer");
+
+					cacheManagerTimerField.set(manager, null);
+				}
+				catch (Exception e) {
+					throw new RuntimeException(e);
+				}
 			}
 
 			mbeanRegistrationHelper.registerMBean(manager, properties);
@@ -276,6 +304,107 @@ public class LiferayEhcacheRegionFactory extends EhCacheRegionFactory {
 		LiferayEhcacheRegionFactory.class);
 
 	private MBeanRegisteringPortalLifecycle _mBeanRegisteringPortalLifecycle;
+	private PortalCacheManager<Serializable, Serializable> _portalCacheManager;
 	private boolean _usingDefault;
+
+	private class HibernatePortalCacheManager
+		implements PortalCacheManager<Serializable, Serializable> {
+
+		public HibernatePortalCacheManager(CacheManager cacheManager) {
+			_cacheManager = cacheManager;
+		}
+
+		@Override
+		public void clearAll() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void destroy() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public PortalCache<Serializable, Serializable> getCache(String name) {
+			PortalCache<Serializable, Serializable> portalCache =
+				_portalCaches.get(name);
+
+			if (portalCache != null) {
+				return portalCache;
+			}
+
+			synchronized (_cacheManager) {
+				portalCache = _portalCaches.get(name);
+
+				if (portalCache == null) {
+					if (!_cacheManager.cacheExists(name)) {
+						return null;
+					}
+
+					Cache cache = _cacheManager.getCache(name);
+
+					portalCache =
+						new EhcachePortalCache<Serializable, Serializable>(
+							cache);
+
+					_portalCaches.put(name, portalCache);
+				}
+			}
+
+			return portalCache;
+		}
+
+		@Override
+		public PortalCache<Serializable, Serializable> getCache(
+			String name, boolean blocking) {
+
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public Set<CacheManagerListener> getCacheManagerListeners() {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public String getName() {
+			return _cacheManager.getName();
+		}
+
+		@Override
+		public void reconfigureCaches(URL configurationURL) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean registerCacheManagerListener(
+			CacheManagerListener cacheManagerListener) {
+
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void removeCache(String name) {
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public boolean unregisterCacheManagerListener(
+			CacheManagerListener cacheManagerListener) {
+
+			throw new UnsupportedOperationException();
+		}
+
+		@Override
+		public void unregisterCacheManagerListeners() {
+			throw new UnsupportedOperationException();
+		}
+
+		private CacheManager _cacheManager;
+		private Map<String, PortalCache<Serializable, Serializable>>
+			_portalCaches =
+				new HashMap<String, PortalCache<Serializable, Serializable>>();
+
+	}
 
 }

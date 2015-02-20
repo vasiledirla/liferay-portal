@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,7 +15,6 @@
 package com.liferay.portal.security.ac;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.model.User;
 import com.liferay.portal.security.auth.AccessControlContext;
 import com.liferay.portal.security.auth.AuthException;
@@ -38,8 +37,10 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class AccessControlImpl implements AccessControl {
 
+	@Override
 	public void initAccessControlContext(
-		HttpServletRequest request, HttpServletResponse response) {
+		HttpServletRequest request, HttpServletResponse response,
+		Map<String, Object> settings) {
 
 		AccessControlContext accessControlContext =
 			AccessControlUtil.getAccessControlContext();
@@ -54,9 +55,15 @@ public class AccessControlImpl implements AccessControl {
 		accessControlContext.setRequest(request);
 		accessControlContext.setResponse(response);
 
+		Map<String, Object> accessControlContextSettings =
+			accessControlContext.getSettings();
+
+		accessControlContextSettings.putAll(settings);
+
 		AccessControlUtil.setAccessControlContext(accessControlContext);
 	}
 
+	@Override
 	public void initContextUser(long userId) throws AuthException {
 		try {
 			User user = UserLocalServiceUtil.getUser(userId);
@@ -77,9 +84,8 @@ public class AccessControlImpl implements AccessControl {
 		}
 	}
 
-	public AuthVerifierResult.State verifyRequest()
-		throws PortalException, SystemException {
-
+	@Override
+	public AuthVerifierResult.State verifyRequest() throws PortalException {
 		AccessControlContext accessControlContext =
 			AccessControlUtil.getAccessControlContext();
 
@@ -90,10 +96,9 @@ public class AccessControlImpl implements AccessControl {
 			authVerifierResult.getSettings();
 
 		if (authVerifierResultSettings != null) {
-			Map<String, Object> accessControlContextSettings =
-				accessControlContext.getSettings();
+			Map<String, Object> settings = accessControlContext.getSettings();
 
-			accessControlContextSettings.putAll(authVerifierResultSettings);
+			settings.putAll(authVerifierResultSettings);
 		}
 
 		accessControlContext.setAuthVerifierResult(authVerifierResult);

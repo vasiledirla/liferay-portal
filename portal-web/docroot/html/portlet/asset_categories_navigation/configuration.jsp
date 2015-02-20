@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,15 +16,13 @@
 
 <%@ include file="/html/portlet/asset_categories_navigation/init.jsp" %>
 
-<%
-String redirect = ParamUtil.getString(request, "redirect");
-%>
+<liferay-portlet:actionURL portletConfiguration="true" var="configurationActionURL" />
 
-<liferay-portlet:actionURL portletConfiguration="true" var="configurationURL" />
+<liferay-portlet:renderURL portletConfiguration="true" var="configurationRenderURL" />
 
-<aui:form action="<%= configurationURL %>" method="post" name="fm" onSubmit='<%= "event.preventDefault(); " + renderResponse.getNamespace() + "saveConfiguration();" %>'>
+<aui:form action="<%= configurationActionURL %>" method="post" name="fm" onSubmit='<%= "event.preventDefault(); " + renderResponse.getNamespace() + "saveConfiguration();" %>'>
 	<aui:input name="<%= Constants.CMD %>" type="hidden" value="<%= Constants.UPDATE %>" />
-	<aui:input name="redirect" type="hidden" value="<%= redirect %>" />
+	<aui:input name="redirect" type="hidden" value="<%= configurationRenderURL %>" />
 
 	<aui:fieldset>
 		<aui:select label="vocabularies" name="preferences--allAssetVocabularies--">
@@ -72,7 +70,7 @@ String redirect = ParamUtil.getString(request, "redirect");
 		typesRightList = ListUtil.sort(typesRightList, new KeyValuePairComparator(false, true));
 		%>
 
-		<div class="<%= allAssetVocabularies ? "aui-helper-hidden" : "" %>" id="<portlet:namespace />assetVocabulariesBoxes">
+		<div class="<%= allAssetVocabularies ? "hide" : "" %>" id="<portlet:namespace />assetVocabulariesBoxes">
 			<liferay-ui:input-move-boxes
 				leftBoxName="currentAssetVocabularyIds"
 				leftList="<%= typesLeftList %>"
@@ -87,20 +85,15 @@ String redirect = ParamUtil.getString(request, "redirect");
 		<div class="display-template">
 
 			<%
-			PortletDisplayTemplateHandler portletDisplayTemplateHandler = PortletDisplayTemplateHandlerRegistryUtil.getPortletDisplayTemplateHandler(AssetCategory.class.getName());
+			TemplateHandler templateHandler = TemplateHandlerRegistryUtil.getTemplateHandler(AssetCategory.class.getName());
 			%>
 
-			<liferay-ui:ddm-template-menu
-				classNameId="<%= PortalUtil.getClassNameId(portletDisplayTemplateHandler.getClassName()) %>"
-				preferenceName="displayTemplate"
-				preferenceValue="<%= displayTemplate %>"
-				showEmptyOption="<%= true %>"
-			/>
-
 			<liferay-ui:ddm-template-selector
-				classNameId="<%= PortalUtil.getClassNameId(portletDisplayTemplateHandler.getClassName()) %>"
-				message='<%= LanguageUtil.format(pageContext, "manage-display-templates-for-x", themeDisplay.getScopeGroupName(), false) %>'
-				refreshURL="<%= configurationURL %>"
+				classNameId="<%= PortalUtil.getClassNameId(templateHandler.getClassName()) %>"
+				displayStyle="<%= displayStyle %>"
+				displayStyleGroupId="<%= displayStyleGroupId %>"
+				refreshURL="<%= configurationRenderURL %>"
+				showEmptyOption="<%= true %>"
 			/>
 		</div>
 	</aui:fieldset>

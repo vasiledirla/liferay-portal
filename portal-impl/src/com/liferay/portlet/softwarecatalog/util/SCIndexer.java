@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,13 +14,8 @@
 
 package com.liferay.portlet.softwarecatalog.util;
 
-import com.liferay.portal.kernel.dao.orm.DynamicQuery;
-import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.Projection;
-import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.ProjectionList;
-import com.liferay.portal.kernel.dao.orm.Property;
-import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.search.BaseIndexer;
 import com.liferay.portal.kernel.search.BooleanClauseOccur;
 import com.liferay.portal.kernel.search.BooleanQuery;
@@ -35,18 +30,16 @@ import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portal.util.PortletKeys;
 import com.liferay.portlet.softwarecatalog.model.SCProductEntry;
 import com.liferay.portlet.softwarecatalog.model.SCProductVersion;
 import com.liferay.portlet.softwarecatalog.service.SCProductEntryLocalServiceUtil;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 
+import javax.portlet.PortletRequest;
+import javax.portlet.PortletResponse;
 import javax.portlet.PortletURL;
 
 /**
@@ -63,23 +56,20 @@ public class SCIndexer extends BaseIndexer {
 	public static final String PORTLET_ID = PortletKeys.SOFTWARE_CATALOG;
 
 	public SCIndexer() {
+		setDefaultSelectedFieldNames(
+			Field.COMPANY_ID, Field.CONTENT, Field.ENTRY_CLASS_NAME,
+			Field.ENTRY_CLASS_PK, Field.TITLE, Field.UID);
 		setStagingAware(false);
 	}
 
+	@Override
 	public String[] getClassNames() {
 		return CLASS_NAMES;
 	}
 
+	@Override
 	public String getPortletId() {
 		return PORTLET_ID;
-	}
-
-	protected void addReindexCriteria(
-		DynamicQuery dynamicQuery, long companyId) {
-
-		Property property = PropertyFactoryUtil.forName("companyId");
-
-		dynamicQuery.add(property.eq(companyId));
 	}
 
 	@Override
@@ -153,8 +143,8 @@ public class SCIndexer extends BaseIndexer {
 
 	@Override
 	protected Summary doGetSummary(
-		Document document, Locale locale, String snippet,
-		PortletURL portletURL) {
+		Document document, Locale locale, String snippet, PortletURL portletURL,
+		PortletRequest portletRequest, PortletResponse portletResponse) {
 
 		String productEntryId = document.get(Field.ENTRY_CLASS_PK);
 
@@ -217,82 +207,31 @@ public class SCIndexer extends BaseIndexer {
 		}
 	}
 
-	protected void reindexProductEntries(long companyId) throws Exception {
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			SCProductEntry.class, PACLClassLoaderUtil.getPortalClassLoader());
+	protected void reindexProductEntries(long companyId)
+		throws PortalException {
 
-		Projection minProductEntryIdProjection = ProjectionFactoryUtil.min(
-			"productEntryId");
-		Projection maxProductEntryIdProjection = ProjectionFactoryUtil.max(
-			"productEntryId");
+		final ActionableDynamicQuery actionableDynamicQuery =
+			SCProductEntryLocalServiceUtil.getActionableDynamicQuery();
 
-		ProjectionList projectionList = ProjectionFactoryUtil.projectionList();
+		actionableDynamicQuery.setCompanyId(companyId);
+		actionableDynamicQuery.setPerformActionMethod(
+			new ActionableDynamicQuery.PerformActionMethod() {
 
-		projectionList.add(minProductEntryIdProjection);
-		projectionList.add(maxProductEntryIdProjection);
+				@Override
+				public void performAction(Object object)
+					throws PortalException {
 
-		dynamicQuery.setProjection(projectionList);
+					SCProductEntry productEntry = (SCProductEntry)object;
 
-		addReindexCriteria(dynamicQuery, companyId);
+					Document document = getDocument(productEntry);
 
-		List<Object[]> results = SCProductEntryLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
+					actionableDynamicQuery.addDocument(document);
+				}
 
-		Object[] minAndMaxProductEntryIds = results.get(0);
+			});
+		actionableDynamicQuery.setSearchEngineId(getSearchEngineId());
 
-		if ((minAndMaxProductEntryIds[0] == null) ||
-			(minAndMaxProductEntryIds[1] == null)) {
-
-			return;
-		}
-
-		long minProductEntryId = (Long)minAndMaxProductEntryIds[0];
-		long maxProductEntryId = (Long)minAndMaxProductEntryIds[1];
-
-		long startProductEntryId = minProductEntryId;
-		long endProductEntryId = startProductEntryId + DEFAULT_INTERVAL;
-
-		while (startProductEntryId <= maxProductEntryId) {
-			reindexProductEntries(
-				companyId, startProductEntryId, endProductEntryId);
-
-			startProductEntryId = endProductEntryId;
-			endProductEntryId += DEFAULT_INTERVAL;
-		}
-	}
-
-	protected void reindexProductEntries(
-			long companyId, long startProductEntryId, long endProductEntryId)
-		throws Exception {
-
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			SCProductEntry.class, PACLClassLoaderUtil.getPortalClassLoader());
-
-		Property property = PropertyFactoryUtil.forName("productEntryId");
-
-		dynamicQuery.add(property.ge(startProductEntryId));
-		dynamicQuery.add(property.lt(endProductEntryId));
-
-		addReindexCriteria(dynamicQuery, companyId);
-
-		List<SCProductEntry> productEntries =
-			SCProductEntryLocalServiceUtil.dynamicQuery(dynamicQuery);
-
-		if (productEntries.isEmpty()) {
-			return;
-		}
-
-		Collection<Document> documents = new ArrayList<Document>(
-			productEntries.size());
-
-		for (SCProductEntry productEntry : productEntries) {
-			Document document = getDocument(productEntry);
-
-			documents.add(document);
-		}
-
-		SearchEngineUtil.updateDocuments(
-			getSearchEngineId(), companyId, documents);
+		actionableDynamicQuery.performActions();
 	}
 
 }

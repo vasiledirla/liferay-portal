@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -18,7 +18,6 @@ import com.liferay.portal.CompanyMaxUsersException;
 import com.liferay.portal.ContactFirstNameException;
 import com.liferay.portal.ContactFullNameException;
 import com.liferay.portal.ContactLastNameException;
-import com.liferay.portal.DuplicateUserEmailAddressException;
 import com.liferay.portal.EmailAddressException;
 import com.liferay.portal.GroupFriendlyURLException;
 import com.liferay.portal.ReservedUserEmailAddressException;
@@ -72,8 +71,9 @@ public class CreateAnonymousAccountAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
@@ -82,6 +82,12 @@ public class CreateAnonymousAccountAction extends PortletAction {
 		Company company = themeDisplay.getCompany();
 
 		if (!company.isStrangers()) {
+			throw new PrincipalException();
+		}
+
+		String portletName = portletConfig.getPortletName();
+
+		if (!portletName.equals(PortletKeys.FAST_LOGIN)) {
 			throw new PrincipalException();
 		}
 
@@ -97,14 +103,13 @@ public class CreateAnonymousAccountAction extends PortletAction {
 			actionRequest, "emailAddress");
 
 		PortletURL portletURL = PortletURLFactoryUtil.create(
-			actionRequest, PortletKeys.LOGIN, themeDisplay.getPlid(),
+			actionRequest, PortletKeys.FAST_LOGIN, themeDisplay.getPlid(),
 			PortletRequest.RENDER_PHASE);
-
-		portletURL.setWindowState(LiferayWindowState.POP_UP);
 
 		portletURL.setParameter("struts_action", "/login/login_redirect");
 		portletURL.setParameter("emailAddress", emailAddress);
 		portletURL.setParameter("anonymousUser", Boolean.TRUE.toString());
+		portletURL.setWindowState(LiferayWindowState.POP_UP);
 
 		JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
 
@@ -128,18 +133,6 @@ public class CreateAnonymousAccountAction extends PortletAction {
 
 				writeJSON(actionRequest, actionResponse, jsonObject);
 			}
-			else if (e instanceof DuplicateUserEmailAddressException) {
-				User user = UserLocalServiceUtil.getUserByEmailAddress(
-					themeDisplay.getCompanyId(), emailAddress);
-
-				if (user.getStatus() != WorkflowConstants.STATUS_INCOMPLETE) {
-					SessionErrors.add(actionRequest, e.getClass());
-				}
-				else {
-					sendRedirect(
-						actionRequest, actionResponse, portletURL.toString());
-				}
-			}
 			else if (e instanceof CaptchaTextException ||
 					 e instanceof CompanyMaxUsersException ||
 					 e instanceof ContactFirstNameException ||
@@ -152,6 +145,20 @@ public class CreateAnonymousAccountAction extends PortletAction {
 
 				SessionErrors.add(actionRequest, e.getClass(), e);
 			}
+			else if (e instanceof
+						UserEmailAddressException.MustNotBeDuplicate) {
+
+				User user = UserLocalServiceUtil.getUserByEmailAddress(
+					themeDisplay.getCompanyId(), emailAddress);
+
+				if (user.getStatus() != WorkflowConstants.STATUS_INCOMPLETE) {
+					SessionErrors.add(actionRequest, e.getClass());
+				}
+				else {
+					sendRedirect(
+						actionRequest, actionResponse, portletURL.toString());
+				}
+			}
 			else {
 				_log.error("Unable to create anonymous account", e);
 
@@ -162,8 +169,9 @@ public class CreateAnonymousAccountAction extends PortletAction {
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		ThemeDisplay themeDisplay = (ThemeDisplay)renderRequest.getAttribute(
@@ -172,12 +180,19 @@ public class CreateAnonymousAccountAction extends PortletAction {
 		Company company = themeDisplay.getCompany();
 
 		if (!company.isStrangers()) {
-			return mapping.findForward("portlet.login.login");
+			return actionMapping.findForward("portlet.login.login");
+		}
+
+		String portletName = portletConfig.getPortletName();
+
+		if (!portletName.equals(PortletKeys.FAST_LOGIN)) {
+			return actionMapping.findForward("portlet.login.login");
 		}
 
 		renderResponse.setTitle(themeDisplay.translate("anonymous-account"));
 
-		return mapping.findForward("portlet.login.create_anonymous_account");
+		return actionMapping.findForward(
+			"portlet.login.create_anonymous_account");
 	}
 
 	protected void addAnonymousUser(
@@ -223,6 +238,8 @@ public class CreateAnonymousAccountAction extends PortletAction {
 			CaptchaUtil.check(actionRequest);
 		}
 
+		serviceContext.setWorkflowAction(WorkflowConstants.ACTION_SAVE_DRAFT);
+
 		User user = UserServiceUtil.addUser(
 			themeDisplay.getCompanyId(), autoPassword, password1, password2,
 			autoScreenName, screenName, emailAddress, facebookId, openId,
@@ -232,13 +249,14 @@ public class CreateAnonymousAccountAction extends PortletAction {
 			serviceContext);
 
 		UserLocalServiceUtil.updateStatus(
-			user.getUserId(), WorkflowConstants.STATUS_INCOMPLETE);
+			user.getUserId(), WorkflowConstants.STATUS_INCOMPLETE,
+			new ServiceContext());
 
 		// Session messages
 
-		SessionMessages.add(request, "user_added", user.getEmailAddress());
+		SessionMessages.add(request, "userAdded", user.getEmailAddress());
 		SessionMessages.add(
-			request, "user_added_password", user.getPasswordUnencrypted());
+			request, "userAddedPassword", user.getPasswordUnencrypted());
 	}
 
 	@Override

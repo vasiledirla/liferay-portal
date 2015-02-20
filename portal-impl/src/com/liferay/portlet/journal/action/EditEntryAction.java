@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,11 +14,14 @@
 
 package com.liferay.portlet.journal.action;
 
+import com.liferay.portal.kernel.portlet.LiferayWindowState;
 import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.util.Constants;
+import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.model.TrashedModel;
 import com.liferay.portal.security.auth.PrincipalException;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.ServiceContextFactory;
@@ -26,22 +29,31 @@ import com.liferay.portal.struts.PortletAction;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portal.util.WebKeys;
+import com.liferay.portlet.PortletURLFactoryUtil;
 import com.liferay.portlet.asset.AssetCategoryException;
 import com.liferay.portlet.asset.AssetTagException;
 import com.liferay.portlet.journal.DuplicateArticleIdException;
 import com.liferay.portlet.journal.DuplicateFolderNameException;
+import com.liferay.portlet.journal.InvalidDDMStructureException;
 import com.liferay.portlet.journal.NoSuchArticleException;
 import com.liferay.portlet.journal.NoSuchFolderException;
 import com.liferay.portlet.journal.model.JournalArticle;
-import com.liferay.portlet.journal.service.JournalArticleLocalServiceUtil;
+import com.liferay.portlet.journal.model.JournalFolder;
 import com.liferay.portlet.journal.service.JournalArticleServiceUtil;
 import com.liferay.portlet.journal.service.JournalFolderServiceUtil;
+import com.liferay.portlet.trash.util.TrashUtil;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
 import javax.portlet.PortletConfig;
+import javax.portlet.PortletRequest;
+import javax.portlet.PortletURL;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
+import javax.portlet.WindowState;
 
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
@@ -54,8 +66,9 @@ public class EditEntryAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
@@ -64,7 +77,7 @@ public class EditEntryAction extends PortletAction {
 			if (cmd.equals(Constants.DELETE) ||
 				cmd.equals(Constants.DELETE_VERSIONS)) {
 
-				deleteEntries(actionRequest);
+				deleteEntries(actionRequest, false);
 			}
 			else if (cmd.equals(Constants.EXPIRE)) {
 				expireEntries(actionRequest);
@@ -72,18 +85,45 @@ public class EditEntryAction extends PortletAction {
 			else if (cmd.equals(Constants.MOVE)) {
 				moveEntries(actionRequest);
 			}
+			else if (cmd.equals(Constants.MOVE_TO_TRASH)) {
+				deleteEntries(actionRequest, true);
+			}
 
 			String redirect = PortalUtil.escapeRedirect(
 				ParamUtil.getString(actionRequest, "redirect"));
 
 			if (cmd.equals(Constants.DELETE_VERSIONS) &&
-				hasArticle(actionRequest)) {
+				!ActionUtil.hasArticle(actionRequest)) {
 
-				redirect = ParamUtil.getString(
-					actionRequest, "originalRedirect");
+				String referringPortletResource = ParamUtil.getString(
+					actionRequest, "referringPortletResource");
+
+				if (Validator.isNotNull(referringPortletResource)) {
+					setForward(
+						actionRequest,
+						"portlet.journal.asset.add_asset_redirect");
+
+					return;
+				}
+				else {
+					ThemeDisplay themeDisplay =
+						(ThemeDisplay)actionRequest.getAttribute(
+							WebKeys.THEME_DISPLAY);
+
+					PortletURL portletURL = PortletURLFactoryUtil.create(
+						actionRequest, portletConfig.getPortletName(),
+						themeDisplay.getPlid(), PortletRequest.RENDER_PHASE);
+
+					redirect = portletURL.toString();
+				}
 			}
 
-			if (Validator.isNotNull(redirect)) {
+			WindowState windowState = actionRequest.getWindowState();
+
+			if (!windowState.equals(LiferayWindowState.POP_UP)) {
+				sendRedirect(actionRequest, actionResponse);
+			}
+			else if (Validator.isNotNull(redirect)) {
 				actionResponse.sendRedirect(redirect);
 			}
 		}
@@ -98,7 +138,7 @@ public class EditEntryAction extends PortletAction {
 			}
 			else if (e instanceof DuplicateArticleIdException ||
 					 e instanceof DuplicateFolderNameException ||
-					 e instanceof NoSuchFolderException) {
+					 e instanceof InvalidDDMStructureException) {
 
 				SessionErrors.add(actionRequest, e.getClass());
 			}
@@ -115,8 +155,9 @@ public class EditEntryAction extends PortletAction {
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		try {
@@ -129,7 +170,7 @@ public class EditEntryAction extends PortletAction {
 
 				SessionErrors.add(renderRequest, e.getClass());
 
-				return mapping.findForward("portlet.journal.error");
+				return actionMapping.findForward("portlet.journal.error");
 			}
 			else {
 				throw e;
@@ -138,22 +179,55 @@ public class EditEntryAction extends PortletAction {
 
 		String forward = "portlet.journal.edit_entry";
 
-		return mapping.findForward(getForward(renderRequest, forward));
+		return actionMapping.findForward(getForward(renderRequest, forward));
 	}
 
-	protected void deleteEntries(ActionRequest actionRequest) throws Exception {
+	protected void deleteEntries(
+			ActionRequest actionRequest, boolean moveToTrash)
+		throws Exception {
+
+		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
+
+		List<TrashedModel> trashedModels = new ArrayList<TrashedModel>();
+
 		long[] deleteFolderIds = StringUtil.split(
 			ParamUtil.getString(actionRequest, "folderIds"), 0L);
 
 		for (long deleteFolderId : deleteFolderIds) {
-			JournalFolderServiceUtil.deleteFolder(deleteFolderId);
+			if (moveToTrash) {
+				JournalFolder folder =
+					JournalFolderServiceUtil.moveFolderToTrash(deleteFolderId);
+
+				trashedModels.add(folder);
+			}
+			else {
+				JournalFolderServiceUtil.deleteFolder(deleteFolderId);
+			}
 		}
 
 		String[] deleteArticleIds = StringUtil.split(
 			ParamUtil.getString(actionRequest, "articleIds"));
 
 		for (String deleteArticleId : deleteArticleIds) {
-			ActionUtil.deleteArticle(actionRequest, deleteArticleId);
+			if (moveToTrash) {
+				JournalArticle article =
+					JournalArticleServiceUtil.moveArticleToTrash(
+						themeDisplay.getScopeGroupId(),
+						HtmlUtil.unescape(deleteArticleId));
+
+				trashedModels.add(article);
+			}
+			else {
+				ActionUtil.deleteArticle(
+					actionRequest, HtmlUtil.unescape(deleteArticleId));
+			}
+		}
+
+		if (moveToTrash && !trashedModels.isEmpty()) {
+			TrashUtil.addTrashSessionMessages(actionRequest, trashedModels);
+
+			hideDefaultSuccessMessage(actionRequest);
 		}
 	}
 
@@ -176,25 +250,9 @@ public class EditEntryAction extends PortletAction {
 			ParamUtil.getString(actionRequest, "articleIds"));
 
 		for (String expireArticleId : expireArticleIds) {
-			ActionUtil.expireArticle(actionRequest, expireArticleId);
+			ActionUtil.expireArticle(
+				actionRequest, HtmlUtil.unescape(expireArticleId));
 		}
-	}
-
-	protected boolean hasArticle(ActionRequest actionRequest) throws Exception {
-		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
-			WebKeys.THEME_DISPLAY);
-
-		String articleId = ParamUtil.getString(actionRequest, "articleId");
-
-		try {
-			JournalArticleLocalServiceUtil.getArticle(
-				themeDisplay.getScopeGroupId(), articleId);
-		}
-		catch (NoSuchArticleException nsae) {
-			return true;
-		}
-
-		return false;
 	}
 
 	protected void moveEntries(ActionRequest actionRequest) throws Exception {
@@ -211,6 +269,8 @@ public class EditEntryAction extends PortletAction {
 				folderId, newFolderId, serviceContext);
 		}
 
+		List<String> invalidArticleIds = new ArrayList<String>();
+
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
 			WebKeys.THEME_DISPLAY);
 
@@ -218,8 +278,18 @@ public class EditEntryAction extends PortletAction {
 			ParamUtil.getString(actionRequest, "articleIds"));
 
 		for (String articleId : articleIds) {
-			JournalArticleServiceUtil.moveArticle(
-				themeDisplay.getScopeGroupId(), articleId, newFolderId);
+			try {
+				JournalArticleServiceUtil.moveArticle(
+					themeDisplay.getScopeGroupId(),
+					HtmlUtil.unescape(articleId), newFolderId);
+			}
+			catch (InvalidDDMStructureException idse) {
+				invalidArticleIds.add(articleId);
+			}
+		}
+
+		if (!invalidArticleIds.isEmpty()) {
+			throw new InvalidDDMStructureException();
 		}
 	}
 

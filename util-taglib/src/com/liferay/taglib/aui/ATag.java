@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -60,8 +60,7 @@ public class ATag extends BaseATag {
 		if (Validator.isNotNull(getHref())) {
 			if (isOpensNewWindow()) {
 				jspWriter.write("<span class=\"opens-new-window-accessible\">");
-				jspWriter.write(
-					LanguageUtil.get(pageContext, "opens-new-window"));
+				jspWriter.write(LanguageUtil.get(request, "opens-new-window"));
 				jspWriter.write("</span>");
 			}
 
@@ -78,129 +77,95 @@ public class ATag extends BaseATag {
 	protected int processStartTag() throws Exception {
 		JspWriter jspWriter = pageContext.getOut();
 
-		String href = getHref();
+		String ariaRole = getAriaRole();
 		String cssClass = getCssClass();
+		Map<String, Object> data = getData();
+		String href = getHref();
 		String id = getId();
-		String namespace = _getNamespace();
+		String label = getLabel();
 		String lang = getLang();
+		Boolean localizeLabel = getLocalizeLabel();
+		String namespace = _getNamespace();
 		String onClick = getOnClick();
 		String target = getTarget();
 		String title = getTitle();
-		Map<String, Object> data = getData();
-		String label = getLabel();
 
 		if (Validator.isNotNull(href)) {
 			jspWriter.write("<a ");
 
-			if (Validator.isNotNull(cssClass)) {
-				jspWriter.write("class=\"");
-				jspWriter.write(cssClass);
-				jspWriter.write("\" ");
-			}
-
 			jspWriter.write("href=\"");
 			jspWriter.write(HtmlUtil.escape(href));
 			jspWriter.write("\" ");
-
-			if (Validator.isNotNull(id)) {
-				jspWriter.write("id=\"");
-				jspWriter.write(namespace);
-				jspWriter.write(id);
-				jspWriter.write("\" ");
-			}
-
-			if (Validator.isNotNull(lang)) {
-				jspWriter.write("lang=\"");
-				jspWriter.write(lang);
-				jspWriter.write("\" ");
-			}
-
-			if (Validator.isNotNull(onClick)) {
-				jspWriter.write("onClick=\"");
-				jspWriter.write(onClick);
-				jspWriter.write("\" ");
-			}
 
 			if (Validator.isNotNull(target)) {
 				jspWriter.write("target=\"");
 				jspWriter.write(target);
 				jspWriter.write("\" ");
 			}
-
-			if (Validator.isNotNull(title) || isOpensNewWindow()) {
-				jspWriter.write("title=\"");
-
-				if (Validator.isNotNull(title)) {
-					jspWriter.write(LanguageUtil.get(pageContext, title));
-				}
-
-				if (isOpensNewWindow()) {
-					jspWriter.write(
-						LanguageUtil.get(pageContext, "opens-new-window"));
-				}
-
-				jspWriter.write("\" ");
-			}
-
-			if (data != null) {
-				jspWriter.write(AUIUtil.buildData(data));
-			}
-
-			_writeDynamicAttributes(jspWriter);
-
-			jspWriter.write(">");
-
-			if (Validator.isNotNull(label)) {
-				jspWriter.write(LanguageUtil.get(pageContext, label));
-			}
 		}
 		else {
 			jspWriter.write("<span ");
+		}
 
-			if (Validator.isNotNull(cssClass)) {
-				jspWriter.write("class=\"");
-				jspWriter.write(cssClass);
-				jspWriter.write("\" ");
+		if (Validator.isNotNull(cssClass)) {
+			jspWriter.write("class=\"");
+			jspWriter.write(cssClass);
+			jspWriter.write("\" ");
+		}
+
+		if (Validator.isNotNull(id)) {
+			jspWriter.write("id=\"");
+			jspWriter.write(namespace);
+			jspWriter.write(id);
+			jspWriter.write("\" ");
+		}
+
+		if (Validator.isNotNull(lang)) {
+			jspWriter.write("lang=\"");
+			jspWriter.write(lang);
+			jspWriter.write("\" ");
+		}
+
+		if (Validator.isNotNull(onClick)) {
+			jspWriter.write("onClick=\"");
+			jspWriter.write(onClick);
+			jspWriter.write("\" ");
+		}
+
+		if (Validator.isNotNull(ariaRole)) {
+			jspWriter.write("role=\"");
+			jspWriter.write(ariaRole);
+			jspWriter.write("\" ");
+		}
+
+		if (Validator.isNotNull(title) || isOpensNewWindow()) {
+			jspWriter.write("title=\"");
+
+			if (Validator.isNotNull(title)) {
+				jspWriter.write(LanguageUtil.get(request, title));
 			}
 
-			if (Validator.isNotNull(id)) {
-				jspWriter.write("id=\"");
-				jspWriter.write(namespace);
-				jspWriter.write(id);
-				jspWriter.write("\" ");
+			if (isOpensNewWindow()) {
+				jspWriter.write(LanguageUtil.get(request, "opens-new-window"));
 			}
 
-			if (Validator.isNotNull(lang)) {
-				jspWriter.write("lang=\"");
-				jspWriter.write(lang);
-				jspWriter.write("\" ");
+			jspWriter.write("\" ");
+		}
+
+		if (data != null) {
+			jspWriter.write(AUIUtil.buildData(data));
+		}
+
+		_writeDynamicAttributes(jspWriter);
+
+		jspWriter.write(">");
+
+		if (Validator.isNotNull(label)) {
+			if (localizeLabel) {
+				jspWriter.write(LanguageUtil.get(request, label));
 			}
-
-			if (Validator.isNotNull(title) || isOpensNewWindow()) {
-				jspWriter.write("title=\"");
-
-				if (Validator.isNotNull(title)) {
-					jspWriter.write(LanguageUtil.get(pageContext, title));
-				}
-
-				if (isOpensNewWindow()) {
-					jspWriter.write(
-						LanguageUtil.get(pageContext, "opens-new-window"));
-				}
-
-				jspWriter.write("\" ");
-			}
-
-			if (data != null) {
-				jspWriter.write(AUIUtil.buildData(data));
-			}
-
-			_writeDynamicAttributes(jspWriter);
-
-			jspWriter.write(">");
-
-			if (Validator.isNotNull(label)) {
-				jspWriter.write(LanguageUtil.get(pageContext, label));
+			else {
+				jspWriter.write(label);
 			}
 		}
 

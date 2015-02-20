@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,8 +17,6 @@
 <%@ include file="/html/portlet/shopping/init.jsp" %>
 
 <%
-String orderId = ParamUtil.getString(request, "orderId");
-
 try {
 	ShoppingCart cart = ShoppingUtil.getCart(renderRequest);
 
@@ -32,8 +30,25 @@ catch (Exception e) {
 	<liferay-util:param name="tabs1" value="cart" />
 </liferay-util:include>
 
-<div class="portlet-msg-success">
+<div class="alert alert-success">
 	<liferay-ui:message key="thank-you-for-your-purchase" />
 </div>
 
-<liferay-ui:message key="your-order-number-is" /> <strong><%= orderId %></strong>. <liferay-ui:message key="you-will-receive-an-email-shortly-with-your-order-summary-and-further-details" />
+<%
+ShoppingOrder order = null;
+
+try {
+	order = ShoppingOrderLocalServiceUtil.getOrder(ParamUtil.getLong(request, "orderId"));
+}
+catch (NoSuchOrderException nsoe) {
+}
+%>
+
+<c:choose>
+	<c:when test="<%= order != null %>">
+		<liferay-ui:message key="your-order-number-is" /> <strong><%= HtmlUtil.escape(order.getNumber()) %></strong>. <liferay-ui:message key="you-will-receive-an-email-shortly-with-your-order-summary-and-further-details" />
+	</c:when>
+	<c:otherwise >
+		<liferay-ui:message key="your-order-was-already-processed.-please-check-your-email-for-your-order-summary-and-further-details" />
+	</c:otherwise>
+</c:choose>

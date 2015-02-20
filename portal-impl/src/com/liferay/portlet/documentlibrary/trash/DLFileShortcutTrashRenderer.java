@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,23 +15,22 @@
 package com.liferay.portlet.documentlibrary.trash;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.trash.BaseTrashRenderer;
 import com.liferay.portal.kernel.util.HtmlUtil;
-import com.liferay.portal.security.permission.ActionKeys;
-import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PortletKeys;
 import com.liferay.portal.util.WebKeys;
 import com.liferay.portlet.asset.model.AssetRenderer;
 import com.liferay.portlet.documentlibrary.model.DLFileShortcut;
 import com.liferay.portlet.documentlibrary.service.DLAppLocalServiceUtil;
-import com.liferay.portlet.documentlibrary.service.permission.DLFileShortcutPermission;
+import com.liferay.portlet.documentlibrary.util.DLUtil;
 
 import java.util.Locale;
 
+import javax.portlet.PortletRequest;
+import javax.portlet.PortletResponse;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
 
@@ -43,7 +42,7 @@ public class DLFileShortcutTrashRenderer extends BaseTrashRenderer {
 	public static final String TYPE = "shortcut";
 
 	public DLFileShortcutTrashRenderer(DLFileShortcut fileShortcut)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		_fileShortcut = fileShortcut;
 
@@ -52,53 +51,50 @@ public class DLFileShortcutTrashRenderer extends BaseTrashRenderer {
 	}
 
 	@Override
+	public String getClassName() {
+		return DLFileShortcut.class.getName();
+	}
+
+	@Override
+	public long getClassPK() {
+		return _fileShortcut.getPrimaryKey();
+	}
+
+	@Override
+	public String getIconCssClass() {
+		return DLUtil.getFileIconCssClass(_fileEntry.getExtension());
+	}
+
+	@Override
 	public String getIconPath(ThemeDisplay themeDisplay) {
 		return themeDisplay.getPathThemeImages() + "/file_system/small/" +
 			_fileEntry.getIcon() + ".png";
 	}
 
+	@Override
 	public String getPortletId() {
 		return PortletKeys.DOCUMENT_LIBRARY;
 	}
 
 	@Override
-	public String getRestorePath(RenderRequest renderRequest) {
-		if (_fileShortcut.isInTrashFolder()) {
-			renderRequest.setAttribute(
-				WebKeys.DOCUMENT_LIBRARY_FILE_ENTRY, _fileEntry);
-			renderRequest.setAttribute(
-				WebKeys.DOCUMENT_LIBRARY_FILE_SHORTCUT, _fileShortcut);
+	public String getSummary(
+		PortletRequest portletRequest, PortletResponse portletResponse) {
 
-			return
-				"/html/portlet/document_library/trash/file_entry_restore.jsp";
-		}
-
-		return null;
-	}
-
-	public String getSummary(Locale locale) {
 		return HtmlUtil.stripHtml(_fileEntry.getDescription());
 	}
 
+	@Override
 	public String getTitle(Locale locale) {
 		return LanguageUtil.format(
-			locale, "shortcut-to-x", _fileShortcut.getToTitle());
+			locale, "shortcut-to-x", _fileShortcut.getToTitle(), false);
 	}
 
+	@Override
 	public String getType() {
 		return TYPE;
 	}
 
-	public boolean hasDeletePermission(PermissionChecker permissionChecker) {
-		return DLFileShortcutPermission.contains(
-			permissionChecker, _fileShortcut, ActionKeys.DELETE);
-	}
-
-	public boolean hasViewPermission(PermissionChecker permissionChecker) {
-		return DLFileShortcutPermission.contains(
-			permissionChecker, _fileShortcut, ActionKeys.VIEW);
-	}
-
+	@Override
 	public String render(
 			RenderRequest renderRequest, RenderResponse renderResponse,
 			String template)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,14 +16,13 @@ package com.liferay.portlet.ratings.service.impl;
 
 import com.liferay.portal.kernel.configuration.Filter;
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.json.JSONFactoryUtil;
+import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.PropsUtil;
-import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.model.User;
 import com.liferay.portal.service.ServiceContext;
-import com.liferay.portal.util.PortalUtil;
 import com.liferay.portal.util.PropsValues;
 import com.liferay.portlet.asset.model.AssetEntry;
 import com.liferay.portlet.blogs.model.BlogsEntry;
@@ -44,12 +43,13 @@ import java.util.List;
 public class RatingsEntryLocalServiceImpl
 	extends RatingsEntryLocalServiceBaseImpl {
 
+	@Override
 	public void deleteEntry(long userId, String className, long classPK)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		// Entry
 
-		long classNameId = PortalUtil.getClassNameId(className);
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		RatingsEntry entry = ratingsEntryPersistence.fetchByU_C_C(
 			userId, classNameId, classPK);
@@ -79,72 +79,73 @@ public class RatingsEntryLocalServiceImpl
 		stats.setTotalScore(totalScore);
 		stats.setAverageScore(averageScore);
 
-		ratingsStatsPersistence.update(stats, false);
+		ratingsStatsPersistence.update(stats);
 	}
 
-	public RatingsEntry fetchEntry(long userId, String className, long classPK)
-		throws SystemException {
+	@Override
+	public RatingsEntry fetchEntry(
+		long userId, String className, long classPK) {
 
-		long classNameId = PortalUtil.getClassNameId(className);
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		return ratingsEntryPersistence.fetchByU_C_C(
 			userId, classNameId, classPK);
 	}
 
+	@Override
 	public List<RatingsEntry> getEntries(
-			long userId, String className, List<Long> classPKs)
-		throws SystemException {
+		long userId, String className, List<Long> classPKs) {
 
-		long classNameId = PortalUtil.getClassNameId(className);
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		return ratingsEntryFinder.findByU_C_C(userId, classNameId, classPKs);
 	}
 
-	public List<RatingsEntry> getEntries(String className, long classPK)
-		throws SystemException {
-
-		long classNameId = PortalUtil.getClassNameId(className);
+	@Override
+	public List<RatingsEntry> getEntries(String className, long classPK) {
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		return ratingsEntryPersistence.findByC_C(classNameId, classPK);
 	}
 
+	@Override
 	public List<RatingsEntry> getEntries(
-			String className, long classPK, double score)
-		throws SystemException {
+		String className, long classPK, double score) {
 
-		long classNameId = PortalUtil.getClassNameId(className);
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		return ratingsEntryPersistence.findByC_C_S(classNameId, classPK, score);
 	}
 
-	public int getEntriesCount(String className, long classPK, double score)
-		throws SystemException {
-
-		long classNameId = PortalUtil.getClassNameId(className);
+	@Override
+	public int getEntriesCount(String className, long classPK, double score) {
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		return ratingsEntryPersistence.countByC_C_S(
 			classNameId, classPK, score);
 	}
 
+	@Override
 	public RatingsEntry getEntry(long userId, String className, long classPK)
-		throws PortalException, SystemException {
+		throws PortalException {
 
-		long classNameId = PortalUtil.getClassNameId(className);
+		long classNameId = classNameLocalService.getClassNameId(className);
 
 		return ratingsEntryPersistence.findByU_C_C(
 			userId, classNameId, classPK);
 	}
 
+	@Override
 	public RatingsEntry updateEntry(
 			long userId, String className, long classPK, double score,
 			ServiceContext serviceContext)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		// Entry
 
 		boolean newEntry = false;
 
-		long classNameId = PortalUtil.getClassNameId(className);
+		long classNameId = classNameLocalService.getClassNameId(className);
 		double oldScore = 0;
 		Date now = new Date();
 
@@ -159,7 +160,7 @@ public class RatingsEntryLocalServiceImpl
 			entry.setModifiedDate(serviceContext.getModifiedDate(now));
 			entry.setScore(score);
 
-			ratingsEntryPersistence.update(entry, false);
+			ratingsEntryPersistence.update(entry);
 
 			// Stats
 
@@ -170,7 +171,7 @@ public class RatingsEntryLocalServiceImpl
 			stats.setAverageScore(
 				stats.getTotalScore() / stats.getTotalEntries());
 
-			ratingsStatsPersistence.update(stats, false);
+			ratingsStatsPersistence.update(stats);
 		}
 		else {
 			newEntry = true;
@@ -190,7 +191,7 @@ public class RatingsEntryLocalServiceImpl
 			entry.setClassPK(classPK);
 			entry.setScore(score);
 
-			ratingsEntryPersistence.update(entry, false);
+			ratingsEntryPersistence.update(entry);
 
 			// Stats
 
@@ -202,7 +203,7 @@ public class RatingsEntryLocalServiceImpl
 			stats.setAverageScore(
 				stats.getTotalScore() / stats.getTotalEntries());
 
-			ratingsStatsPersistence.update(stats, false);
+			ratingsStatsPersistence.update(stats);
 		}
 
 		// Blogs entry
@@ -234,7 +235,7 @@ public class RatingsEntryLocalServiceImpl
 			blogsStatsUser.setRatingsTotalScore(ratingsTotalScore);
 			blogsStatsUser.setRatingsAverageScore(ratingsAverageScore);
 
-			blogsStatsUserPersistence.update(blogsStatsUser, false);
+			blogsStatsUserPersistence.update(blogsStatsUser);
 		}
 
 		// Social
@@ -243,9 +244,14 @@ public class RatingsEntryLocalServiceImpl
 			className, classPK);
 
 		if (assetEntry != null) {
+			JSONObject extraDataJSONObject = JSONFactoryUtil.createJSONObject();
+
+			extraDataJSONObject.put("title", assetEntry.getTitle());
+
 			socialActivityLocalService.addActivity(
 				userId, assetEntry.getGroupId(), className, classPK,
-				SocialActivityConstants.TYPE_ADD_VOTE, StringPool.BLANK, 0);
+				SocialActivityConstants.TYPE_ADD_VOTE,
+				extraDataJSONObject.toString(), 0);
 		}
 
 		return entry;

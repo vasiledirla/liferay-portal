@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,72 +14,100 @@
 
 package com.liferay.portlet.mobiledevicerules.service.persistence;
 
-import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.template.TemplateException;
+import com.liferay.portal.kernel.template.TemplateManagerUtil;
+import com.liferay.portal.kernel.transaction.Propagation;
+import com.liferay.portal.kernel.util.IntegerWrapper;
+import com.liferay.portal.kernel.util.OrderByComparator;
+import com.liferay.portal.kernel.util.OrderByComparatorFactoryUtil;
+import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.Time;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.service.ServiceTestUtil;
-import com.liferay.portal.service.persistence.BasePersistence;
-import com.liferay.portal.service.persistence.PersistenceExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayPersistenceIntegrationJUnitTestRunner;
-import com.liferay.portal.test.persistence.TransactionalPersistenceAdvice;
+import com.liferay.portal.model.ModelListener;
+import com.liferay.portal.test.TransactionalTestRule;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.tools.DBUpgrader;
 import com.liferay.portal.util.PropsValues;
+import com.liferay.portal.util.test.RandomTestUtil;
 
 import com.liferay.portlet.mobiledevicerules.NoSuchRuleGroupInstanceException;
 import com.liferay.portlet.mobiledevicerules.model.MDRRuleGroupInstance;
 import com.liferay.portlet.mobiledevicerules.model.impl.MDRRuleGroupInstanceModelImpl;
+import com.liferay.portlet.mobiledevicerules.service.MDRRuleGroupInstanceLocalServiceUtil;
 
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import org.junit.runner.RunWith;
 
 import java.io.Serializable;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * @author Edward C. Han
+ * @generated
  */
-@ExecutionTestListeners(listeners =  {
-	PersistenceExecutionTestListener.class})
-@RunWith(LiferayPersistenceIntegrationJUnitTestRunner.class)
+@RunWith(LiferayIntegrationJUnitTestRunner.class)
 public class MDRRuleGroupInstancePersistenceTest {
-	@After
-	public void tearDown() throws Exception {
-		Map<Serializable, BasePersistence<?>> basePersistences = _transactionalPersistenceAdvice.getBasePersistences();
+	@ClassRule
+	public static TransactionalTestRule transactionalTestRule = new TransactionalTestRule(Propagation.REQUIRED);
 
-		Set<Serializable> primaryKeys = basePersistences.keySet();
-
-		for (Serializable primaryKey : primaryKeys) {
-			BasePersistence<?> basePersistence = basePersistences.get(primaryKey);
-
-			try {
-				basePersistence.remove(primaryKey);
-			}
-			catch (Exception e) {
-				if (_log.isDebugEnabled()) {
-					_log.debug("The model with primary key " + primaryKey +
-						" was already deleted");
-				}
-			}
+	@BeforeClass
+	public static void setupClass() throws TemplateException {
+		try {
+			DBUpgrader.upgrade();
+		}
+		catch (Exception e) {
+			_log.error(e, e);
 		}
 
-		_transactionalPersistenceAdvice.reset();
+		TemplateManagerUtil.init();
+	}
+
+	@Before
+	public void setUp() {
+		_modelListeners = _persistence.getListeners();
+
+		for (ModelListener<MDRRuleGroupInstance> modelListener : _modelListeners) {
+			_persistence.unregisterListener(modelListener);
+		}
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		Iterator<MDRRuleGroupInstance> iterator = _mdrRuleGroupInstances.iterator();
+
+		while (iterator.hasNext()) {
+			_persistence.remove(iterator.next());
+
+			iterator.remove();
+		}
+
+		for (ModelListener<MDRRuleGroupInstance> modelListener : _modelListeners) {
+			_persistence.registerListener(modelListener);
+		}
 	}
 
 	@Test
 	public void testCreate() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		MDRRuleGroupInstance mdrRuleGroupInstance = _persistence.create(pk);
 
@@ -106,33 +134,33 @@ public class MDRRuleGroupInstancePersistenceTest {
 
 	@Test
 	public void testUpdateExisting() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		MDRRuleGroupInstance newMDRRuleGroupInstance = _persistence.create(pk);
 
-		newMDRRuleGroupInstance.setUuid(ServiceTestUtil.randomString());
+		newMDRRuleGroupInstance.setUuid(RandomTestUtil.randomString());
 
-		newMDRRuleGroupInstance.setGroupId(ServiceTestUtil.nextLong());
+		newMDRRuleGroupInstance.setGroupId(RandomTestUtil.nextLong());
 
-		newMDRRuleGroupInstance.setCompanyId(ServiceTestUtil.nextLong());
+		newMDRRuleGroupInstance.setCompanyId(RandomTestUtil.nextLong());
 
-		newMDRRuleGroupInstance.setUserId(ServiceTestUtil.nextLong());
+		newMDRRuleGroupInstance.setUserId(RandomTestUtil.nextLong());
 
-		newMDRRuleGroupInstance.setUserName(ServiceTestUtil.randomString());
+		newMDRRuleGroupInstance.setUserName(RandomTestUtil.randomString());
 
-		newMDRRuleGroupInstance.setCreateDate(ServiceTestUtil.nextDate());
+		newMDRRuleGroupInstance.setCreateDate(RandomTestUtil.nextDate());
 
-		newMDRRuleGroupInstance.setModifiedDate(ServiceTestUtil.nextDate());
+		newMDRRuleGroupInstance.setModifiedDate(RandomTestUtil.nextDate());
 
-		newMDRRuleGroupInstance.setClassNameId(ServiceTestUtil.nextLong());
+		newMDRRuleGroupInstance.setClassNameId(RandomTestUtil.nextLong());
 
-		newMDRRuleGroupInstance.setClassPK(ServiceTestUtil.nextLong());
+		newMDRRuleGroupInstance.setClassPK(RandomTestUtil.nextLong());
 
-		newMDRRuleGroupInstance.setRuleGroupId(ServiceTestUtil.nextLong());
+		newMDRRuleGroupInstance.setRuleGroupId(RandomTestUtil.nextLong());
 
-		newMDRRuleGroupInstance.setPriority(ServiceTestUtil.nextInt());
+		newMDRRuleGroupInstance.setPriority(RandomTestUtil.nextInt());
 
-		_persistence.update(newMDRRuleGroupInstance, false);
+		_mdrRuleGroupInstances.add(_persistence.update(newMDRRuleGroupInstance));
 
 		MDRRuleGroupInstance existingMDRRuleGroupInstance = _persistence.findByPrimaryKey(newMDRRuleGroupInstance.getPrimaryKey());
 
@@ -165,6 +193,113 @@ public class MDRRuleGroupInstancePersistenceTest {
 	}
 
 	@Test
+	public void testCountByUuid() {
+		try {
+			_persistence.countByUuid(StringPool.BLANK);
+
+			_persistence.countByUuid(StringPool.NULL);
+
+			_persistence.countByUuid((String)null);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByUUID_G() {
+		try {
+			_persistence.countByUUID_G(StringPool.BLANK,
+				RandomTestUtil.nextLong());
+
+			_persistence.countByUUID_G(StringPool.NULL, 0L);
+
+			_persistence.countByUUID_G((String)null, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByUuid_C() {
+		try {
+			_persistence.countByUuid_C(StringPool.BLANK,
+				RandomTestUtil.nextLong());
+
+			_persistence.countByUuid_C(StringPool.NULL, 0L);
+
+			_persistence.countByUuid_C((String)null, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByGroupId() {
+		try {
+			_persistence.countByGroupId(RandomTestUtil.nextLong());
+
+			_persistence.countByGroupId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByRuleGroupId() {
+		try {
+			_persistence.countByRuleGroupId(RandomTestUtil.nextLong());
+
+			_persistence.countByRuleGroupId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByC_C() {
+		try {
+			_persistence.countByC_C(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong());
+
+			_persistence.countByC_C(0L, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByG_C_C() {
+		try {
+			_persistence.countByG_C_C(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextLong());
+
+			_persistence.countByG_C_C(0L, 0L, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByC_C_R() {
+		try {
+			_persistence.countByC_C_R(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextLong());
+
+			_persistence.countByC_C_R(0L, 0L, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
 	public void testFindByPrimaryKeyExisting() throws Exception {
 		MDRRuleGroupInstance newMDRRuleGroupInstance = addMDRRuleGroupInstance();
 
@@ -176,7 +311,7 @@ public class MDRRuleGroupInstancePersistenceTest {
 
 	@Test
 	public void testFindByPrimaryKeyMissing() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		try {
 			_persistence.findByPrimaryKey(pk);
@@ -186,6 +321,36 @@ public class MDRRuleGroupInstancePersistenceTest {
 		}
 		catch (NoSuchRuleGroupInstanceException nsee) {
 		}
+	}
+
+	@Test
+	public void testFindAll() throws Exception {
+		try {
+			_persistence.findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+				getOrderByComparator());
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testFilterFindByGroupId() throws Exception {
+		try {
+			_persistence.filterFindByGroupId(0, QueryUtil.ALL_POS,
+				QueryUtil.ALL_POS, getOrderByComparator());
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	protected OrderByComparator<MDRRuleGroupInstance> getOrderByComparator() {
+		return OrderByComparatorFactoryUtil.create("MDRRuleGroupInstance",
+			"uuid", true, "ruleGroupInstanceId", true, "groupId", true,
+			"companyId", true, "userId", true, "userName", true, "createDate",
+			true, "modifiedDate", true, "classNameId", true, "classPK", true,
+			"ruleGroupId", true, "priority", true);
 	}
 
 	@Test
@@ -200,11 +365,115 @@ public class MDRRuleGroupInstancePersistenceTest {
 
 	@Test
 	public void testFetchByPrimaryKeyMissing() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		MDRRuleGroupInstance missingMDRRuleGroupInstance = _persistence.fetchByPrimaryKey(pk);
 
 		Assert.assertNull(missingMDRRuleGroupInstance);
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithMultiplePrimaryKeysWhereAllPrimaryKeysExist()
+		throws Exception {
+		MDRRuleGroupInstance newMDRRuleGroupInstance1 = addMDRRuleGroupInstance();
+		MDRRuleGroupInstance newMDRRuleGroupInstance2 = addMDRRuleGroupInstance();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(newMDRRuleGroupInstance1.getPrimaryKey());
+		primaryKeys.add(newMDRRuleGroupInstance2.getPrimaryKey());
+
+		Map<Serializable, MDRRuleGroupInstance> mdrRuleGroupInstances = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertEquals(2, mdrRuleGroupInstances.size());
+		Assert.assertEquals(newMDRRuleGroupInstance1,
+			mdrRuleGroupInstances.get(newMDRRuleGroupInstance1.getPrimaryKey()));
+		Assert.assertEquals(newMDRRuleGroupInstance2,
+			mdrRuleGroupInstances.get(newMDRRuleGroupInstance2.getPrimaryKey()));
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithMultiplePrimaryKeysWhereNoPrimaryKeysExist()
+		throws Exception {
+		long pk1 = RandomTestUtil.nextLong();
+
+		long pk2 = RandomTestUtil.nextLong();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(pk1);
+		primaryKeys.add(pk2);
+
+		Map<Serializable, MDRRuleGroupInstance> mdrRuleGroupInstances = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertTrue(mdrRuleGroupInstances.isEmpty());
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithMultiplePrimaryKeysWhereSomePrimaryKeysExist()
+		throws Exception {
+		MDRRuleGroupInstance newMDRRuleGroupInstance = addMDRRuleGroupInstance();
+
+		long pk = RandomTestUtil.nextLong();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(newMDRRuleGroupInstance.getPrimaryKey());
+		primaryKeys.add(pk);
+
+		Map<Serializable, MDRRuleGroupInstance> mdrRuleGroupInstances = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertEquals(1, mdrRuleGroupInstances.size());
+		Assert.assertEquals(newMDRRuleGroupInstance,
+			mdrRuleGroupInstances.get(newMDRRuleGroupInstance.getPrimaryKey()));
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithNoPrimaryKeys()
+		throws Exception {
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		Map<Serializable, MDRRuleGroupInstance> mdrRuleGroupInstances = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertTrue(mdrRuleGroupInstances.isEmpty());
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithOnePrimaryKey()
+		throws Exception {
+		MDRRuleGroupInstance newMDRRuleGroupInstance = addMDRRuleGroupInstance();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(newMDRRuleGroupInstance.getPrimaryKey());
+
+		Map<Serializable, MDRRuleGroupInstance> mdrRuleGroupInstances = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertEquals(1, mdrRuleGroupInstances.size());
+		Assert.assertEquals(newMDRRuleGroupInstance,
+			mdrRuleGroupInstances.get(newMDRRuleGroupInstance.getPrimaryKey()));
+	}
+
+	@Test
+	public void testActionableDynamicQuery() throws Exception {
+		final IntegerWrapper count = new IntegerWrapper();
+
+		ActionableDynamicQuery actionableDynamicQuery = MDRRuleGroupInstanceLocalServiceUtil.getActionableDynamicQuery();
+
+		actionableDynamicQuery.setPerformActionMethod(new ActionableDynamicQuery.PerformActionMethod() {
+				@Override
+				public void performAction(Object object) {
+					MDRRuleGroupInstance mdrRuleGroupInstance = (MDRRuleGroupInstance)object;
+
+					Assert.assertNotNull(mdrRuleGroupInstance);
+
+					count.increment();
+				}
+			});
+
+		actionableDynamicQuery.performActions();
+
+		Assert.assertEquals(count.getValue(), _persistence.countAll());
 	}
 
 	@Test
@@ -234,7 +503,7 @@ public class MDRRuleGroupInstancePersistenceTest {
 				MDRRuleGroupInstance.class.getClassLoader());
 
 		dynamicQuery.add(RestrictionsFactoryUtil.eq("ruleGroupInstanceId",
-				ServiceTestUtil.nextLong()));
+				RandomTestUtil.nextLong()));
 
 		List<MDRRuleGroupInstance> result = _persistence.findWithDynamicQuery(dynamicQuery);
 
@@ -275,7 +544,7 @@ public class MDRRuleGroupInstancePersistenceTest {
 				"ruleGroupInstanceId"));
 
 		dynamicQuery.add(RestrictionsFactoryUtil.in("ruleGroupInstanceId",
-				new Object[] { ServiceTestUtil.nextLong() }));
+				new Object[] { RandomTestUtil.nextLong() }));
 
 		List<Object> result = _persistence.findWithDynamicQuery(dynamicQuery);
 
@@ -310,38 +579,39 @@ public class MDRRuleGroupInstancePersistenceTest {
 
 	protected MDRRuleGroupInstance addMDRRuleGroupInstance()
 		throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		MDRRuleGroupInstance mdrRuleGroupInstance = _persistence.create(pk);
 
-		mdrRuleGroupInstance.setUuid(ServiceTestUtil.randomString());
+		mdrRuleGroupInstance.setUuid(RandomTestUtil.randomString());
 
-		mdrRuleGroupInstance.setGroupId(ServiceTestUtil.nextLong());
+		mdrRuleGroupInstance.setGroupId(RandomTestUtil.nextLong());
 
-		mdrRuleGroupInstance.setCompanyId(ServiceTestUtil.nextLong());
+		mdrRuleGroupInstance.setCompanyId(RandomTestUtil.nextLong());
 
-		mdrRuleGroupInstance.setUserId(ServiceTestUtil.nextLong());
+		mdrRuleGroupInstance.setUserId(RandomTestUtil.nextLong());
 
-		mdrRuleGroupInstance.setUserName(ServiceTestUtil.randomString());
+		mdrRuleGroupInstance.setUserName(RandomTestUtil.randomString());
 
-		mdrRuleGroupInstance.setCreateDate(ServiceTestUtil.nextDate());
+		mdrRuleGroupInstance.setCreateDate(RandomTestUtil.nextDate());
 
-		mdrRuleGroupInstance.setModifiedDate(ServiceTestUtil.nextDate());
+		mdrRuleGroupInstance.setModifiedDate(RandomTestUtil.nextDate());
 
-		mdrRuleGroupInstance.setClassNameId(ServiceTestUtil.nextLong());
+		mdrRuleGroupInstance.setClassNameId(RandomTestUtil.nextLong());
 
-		mdrRuleGroupInstance.setClassPK(ServiceTestUtil.nextLong());
+		mdrRuleGroupInstance.setClassPK(RandomTestUtil.nextLong());
 
-		mdrRuleGroupInstance.setRuleGroupId(ServiceTestUtil.nextLong());
+		mdrRuleGroupInstance.setRuleGroupId(RandomTestUtil.nextLong());
 
-		mdrRuleGroupInstance.setPriority(ServiceTestUtil.nextInt());
+		mdrRuleGroupInstance.setPriority(RandomTestUtil.nextInt());
 
-		_persistence.update(mdrRuleGroupInstance, false);
+		_mdrRuleGroupInstances.add(_persistence.update(mdrRuleGroupInstance));
 
 		return mdrRuleGroupInstance;
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(MDRRuleGroupInstancePersistenceTest.class);
-	private MDRRuleGroupInstancePersistence _persistence = (MDRRuleGroupInstancePersistence)PortalBeanLocatorUtil.locate(MDRRuleGroupInstancePersistence.class.getName());
-	private TransactionalPersistenceAdvice _transactionalPersistenceAdvice = (TransactionalPersistenceAdvice)PortalBeanLocatorUtil.locate(TransactionalPersistenceAdvice.class.getName());
+	private List<MDRRuleGroupInstance> _mdrRuleGroupInstances = new ArrayList<MDRRuleGroupInstance>();
+	private ModelListener<MDRRuleGroupInstance>[] _modelListeners;
+	private MDRRuleGroupInstancePersistence _persistence = MDRRuleGroupInstanceUtil.getPersistence();
 }

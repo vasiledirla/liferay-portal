@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,57 +14,32 @@
 
 package com.liferay.portal.security.auth;
 
-import com.liferay.portal.kernel.log.Log;
-import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.util.InstanceFactory;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
-import com.liferay.portal.util.PropsValues;
+import com.liferay.registry.Registry;
+import com.liferay.registry.RegistryUtil;
+import com.liferay.registry.ServiceTracker;
 
 /**
  * @author Brian Wing Shun Chan
+ * @author Shuyang Zhou
+ * @author Peter Fellwock
  */
 public class EmailAddressValidatorFactory {
 
 	public static EmailAddressValidator getInstance() {
-		if (_emailAddressValidator == null) {
-			if (_log.isDebugEnabled()) {
-				_log.debug(
-					"Instantiate " + PropsValues.USERS_EMAIL_ADDRESS_VALIDATOR);
-			}
-
-			ClassLoader classLoader =
-				PACLClassLoaderUtil.getPortalClassLoader();
-
-			try {
-				_emailAddressValidator =
-					(EmailAddressValidator)InstanceFactory.newInstance(
-						classLoader, PropsValues.USERS_EMAIL_ADDRESS_VALIDATOR);
-			}
-			catch (Exception e) {
-				_log.error(e, e);
-			}
-		}
-
-		if (_log.isDebugEnabled()) {
-			_log.debug("Return " + _emailAddressValidator.getClass().getName());
-		}
-
-		return _emailAddressValidator;
+		return _instance._serviceTracker.getService();
 	}
 
-	public static void setInstance(
-		EmailAddressValidator emailAddressValidator) {
+	private EmailAddressValidatorFactory() {
+		Registry registry = RegistryUtil.getRegistry();
 
-		if (_log.isDebugEnabled()) {
-			_log.debug("Set " + emailAddressValidator.getClass().getName());
-		}
+		_serviceTracker = registry.trackServices(EmailAddressValidator.class);
 
-		_emailAddressValidator = emailAddressValidator;
+		_serviceTracker.open();
 	}
 
-	private static Log _log = LogFactoryUtil.getLog(
-		EmailAddressValidatorFactory.class);
+	private static EmailAddressValidatorFactory _instance =
+		new EmailAddressValidatorFactory();
 
-	private static EmailAddressValidator _emailAddressValidator;
+	private ServiceTracker<?, EmailAddressValidator> _serviceTracker;
 
 }

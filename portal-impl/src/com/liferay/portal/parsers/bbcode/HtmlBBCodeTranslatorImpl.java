@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,17 +17,24 @@ package com.liferay.portal.parsers.bbcode;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.parsers.bbcode.BBCodeTranslator;
+import com.liferay.portal.kernel.security.pacl.DoPrivileged;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.IntegerWrapper;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.model.ThemeConstants;
+import com.liferay.portlet.messageboards.util.MBUtil;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Stack;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,16 +42,17 @@ import java.util.regex.Pattern;
 /**
  * @author Iliyan Peychev
  */
+@DoPrivileged
 public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 
 	public HtmlBBCodeTranslatorImpl() {
 		_listStyles = new HashMap<String, String>();
 
-		_listStyles.put("a", "list-style: lower-alpha inside;");
-		_listStyles.put("A", "list-style: upper-alpha inside;");
-		_listStyles.put("1", "list-style: decimal inside;");
-		_listStyles.put("i", "list-style: lower-roman inside;");
-		_listStyles.put("I", "list-style: upper-roman inside;");
+		_listStyles.put("a", "list-style: lower-alpha outside;");
+		_listStyles.put("A", "list-style: upper-alpha outside;");
+		_listStyles.put("1", "list-style: decimal outside;");
+		_listStyles.put("i", "list-style: lower-roman outside;");
+		_listStyles.put("I", "list-style: upper-roman outside;");
 
 		_excludeNewLineTypes = new HashMap<String, Integer>();
 
@@ -78,28 +86,45 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 
 			String image = emoticon[0];
 
-			emoticon[0] =
-				"<img alt=\"emoticon\" src=\"@theme_images_path@/emoticons/" +
-					image + "\" >";
+			StringBuilder sb = new StringBuilder(6);
+
+			sb.append("<img alt=\"emoticon\" src=\"");
+			sb.append(ThemeConstants.TOKEN_THEME_IMAGES_PATH);
+			sb.append(MBUtil.EMOTICONS);
+			sb.append("/");
+			sb.append(image);
+			sb.append("\" >");
+
+			emoticon[0] = sb.toString();
 		}
+
+		_imageAttributes = new HashSet<String>(
+			Arrays.asList(
+				"alt", "class", "dir", "height", "id", "lang", "longdesc",
+				"style", "title", "width"));
 	}
 
+	@Override
 	public String[] getEmoticonDescriptions() {
 		return _emoticonDescriptions;
 	}
 
+	@Override
 	public String[] getEmoticonFiles() {
 		return _emoticonFiles;
 	}
 
+	@Override
 	public String[][] getEmoticons() {
 		return _EMOTICONS;
 	}
 
+	@Override
 	public String[] getEmoticonSymbols() {
 		return _emoticonSymbols;
 	}
 
+	@Override
 	public String getHTML(String bbcode) {
 		try {
 			bbcode = parse(bbcode);
@@ -113,6 +138,7 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 		return bbcode;
 	}
 
+	@Override
 	public String parse(String text) {
 		StringBundler sb = new StringBundler();
 
@@ -205,7 +231,6 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 			if ((bbCodeItem.getType() & type) > 0) {
 				sb.append(bbCodeItem.getValue());
 			}
-
 		}
 		while ((bbCodeItem.getType() != BBCodeParser.TYPE_TAG_END) &&
 			   !tag.equals(bbCodeItem.getValue()));
@@ -224,41 +249,49 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 	protected void handleCode(
 		StringBundler sb, List<BBCodeItem> bbCodeItems, IntegerWrapper marker) {
 
-		sb.append("<div class=\"code\">");
+		sb.append("<div class=\"lfr-code\">");
+		sb.append("<table>");
+		sb.append("<tbody>");
 
 		String code = extractData(
 			bbCodeItems, marker, "code", BBCodeParser.TYPE_DATA, true);
 
 		code = HtmlUtil.escape(code);
-		code = code.replaceAll(StringPool.TAB, StringPool.FOUR_SPACES);
+		code = StringUtil.replace(code, StringPool.TAB, StringPool.FOUR_SPACES);
 
 		String[] lines = code.split("\r?\n");
 
-		String digits = String.valueOf(lines.length + 1);
-
 		for (int i = 0; i < lines.length; i++) {
+			sb.append("<tr>");
+			sb.append("<td class=\"line-numbers\">");
+			sb.append("<span class=\"number\">");
+
 			String index = String.valueOf(i + 1);
-
-			sb.append("<span class=\"code-lines\">");
-
-			for (int j = 0; j < digits.length() - index.length(); j++) {
-				sb.append(StringPool.NBSP);
-			}
-
-			lines[i] = StringUtil.replace(
-				lines[i], StringPool.THREE_SPACES, "&nbsp; &nbsp;");
-			lines[i] = StringUtil.replace(
-				lines[i], StringPool.DOUBLE_SPACE, "&nbsp; ");
 
 			sb.append(index);
 			sb.append("</span>");
-			sb.append(lines[i]);
+			sb.append("</td>");
+			sb.append("<td class=\"lines\">");
 
-			if (index.length() < lines.length) {
-				sb.append("<br />");
+			String line = lines[i];
+
+			line = StringUtil.replace(
+				line, StringPool.THREE_SPACES, "&nbsp; &nbsp;");
+			line = StringUtil.replace(line, StringPool.DOUBLE_SPACE, "&nbsp; ");
+
+			if (Validator.isNull(line)) {
+				line = "<br />";
 			}
+
+			sb.append("<div class=\"line\">");
+			sb.append(line);
+			sb.append("</div>");
+			sb.append("</td>");
+			sb.append("</tr>");
 		}
 
+		sb.append("</tbody>");
+		sb.append("</table>");
 		sb.append("</div>");
 	}
 
@@ -362,6 +395,8 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 
 		sb.append("<img src=\"");
 
+		int pos = marker.getValue();
+
 		String src = extractData(
 			bbCodeItems, marker, "img", BBCodeParser.TYPE_DATA, true);
 
@@ -371,7 +406,41 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 			sb.append(HtmlUtil.escapeAttribute(src));
 		}
 
-		sb.append("\" />");
+		sb.append("\"");
+
+		BBCodeItem bbCodeItem = bbCodeItems.get(pos);
+
+		String attributes = bbCodeItem.getAttribute();
+
+		if (Validator.isNotNull(attributes)) {
+			sb.append(StringPool.SPACE);
+
+			handleImageAttributes(sb, attributes);
+		}
+
+		sb.append(" />");
+	}
+
+	protected void handleImageAttributes(StringBundler sb, String attributes) {
+		Matcher matcher = _attributesPattern.matcher(attributes);
+
+		while (matcher.find()) {
+			String attributeName = matcher.group(1);
+
+			if (Validator.isNotNull(attributeName) &&
+				_imageAttributes.contains(
+					StringUtil.toLowerCase(attributeName))) {
+
+				String attributeValue = matcher.group(2);
+
+				sb.append(StringPool.SPACE);
+				sb.append(attributeName);
+				sb.append(StringPool.EQUAL);
+				sb.append(StringPool.QUOTE);
+				sb.append(HtmlUtil.escapeAttribute(attributeValue));
+				sb.append(StringPool.QUOTE);
+			}
+		}
 	}
 
 	protected void handleItalic(StringBundler sb, Stack<String> tags) {
@@ -393,7 +462,7 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 			tag = "ol";
 		}
 		else {
-			tag = "ul style=\"list-style: disc inside;\"";
+			tag = "ul style=\"list-style: disc outside;\"";
 		}
 
 		if (listStyle == null) {
@@ -457,7 +526,9 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 		}
 
 		if (data.length() > 0) {
-			data = data.replaceAll("\r?\n", "<br />");
+			data = StringUtil.replace(
+				data, StringPool.RETURN_NEW_LINE, "<br />");
+			data = StringUtil.replace(data, StringPool.NEW_LINE, "<br />");
 		}
 
 		return data;
@@ -682,6 +753,8 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 	private static Log _log = LogFactoryUtil.getLog(
 		HtmlBBCodeTranslatorImpl.class);
 
+	private Pattern _attributesPattern = Pattern.compile(
+		"\\s*([^=]+)\\s*=\\s*\"([^\"]+)\"\\s*");
 	private Map<String, String> _bbCodeCharacters;
 	private BBCodeParser _bbCodeParser = new BBCodeParser();
 	private Pattern _bbCodePattern = Pattern.compile("[]&<>'\"`\\[()]");
@@ -694,6 +767,7 @@ public class HtmlBBCodeTranslatorImpl implements BBCodeTranslator {
 	private String[] _emoticonSymbols = new String[_EMOTICONS.length];
 	private Map<String, Integer> _excludeNewLineTypes;
 	private int[] _fontSizes = {10, 12, 16, 18, 24, 32, 48};
+	private Set<String> _imageAttributes;
 	private Pattern _imagePattern = Pattern.compile(
 		"^(?:https?://|/)[-;/?:@&=+$,_.!~*'()%0-9a-z]{1,512}$",
 		Pattern.CASE_INSENSITIVE);

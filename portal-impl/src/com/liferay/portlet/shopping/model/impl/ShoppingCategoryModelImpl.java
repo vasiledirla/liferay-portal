@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,16 +15,17 @@
 package com.liferay.portlet.shopping.model.impl;
 
 import com.liferay.portal.kernel.bean.AutoEscapeBeanHandler;
-import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSON;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.model.CacheModel;
+import com.liferay.portal.model.User;
 import com.liferay.portal.model.impl.BaseModelImpl;
 import com.liferay.portal.service.ServiceContext;
-import com.liferay.portal.util.PortalUtil;
+import com.liferay.portal.service.UserLocalServiceUtil;
 
 import com.liferay.portlet.expando.model.ExpandoBridge;
 import com.liferay.portlet.expando.util.ExpandoBridgeFactoryUtil;
@@ -94,6 +95,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 			true);
 	public static long GROUPID_COLUMN_BITMASK = 1L;
 	public static long PARENTCATEGORYID_COLUMN_BITMASK = 2L;
+	public static long NAME_COLUMN_BITMASK = 4L;
 
 	/**
 	 * Converts the soap model instance into a normal model instance.
@@ -149,26 +151,32 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	public ShoppingCategoryModelImpl() {
 	}
 
+	@Override
 	public long getPrimaryKey() {
 		return _categoryId;
 	}
 
+	@Override
 	public void setPrimaryKey(long primaryKey) {
 		setCategoryId(primaryKey);
 	}
 
+	@Override
 	public Serializable getPrimaryKeyObj() {
-		return new Long(_categoryId);
+		return _categoryId;
 	}
 
+	@Override
 	public void setPrimaryKeyObj(Serializable primaryKeyObj) {
 		setPrimaryKey(((Long)primaryKeyObj).longValue());
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return ShoppingCategory.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return ShoppingCategory.class.getName();
 	}
@@ -187,6 +195,9 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 		attributes.put("parentCategoryId", getParentCategoryId());
 		attributes.put("name", getName());
 		attributes.put("description", getDescription());
+
+		attributes.put("entityCacheEnabled", isEntityCacheEnabled());
+		attributes.put("finderCacheEnabled", isFinderCacheEnabled());
 
 		return attributes;
 	}
@@ -255,19 +266,23 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	}
 
 	@JSON
+	@Override
 	public long getCategoryId() {
 		return _categoryId;
 	}
 
+	@Override
 	public void setCategoryId(long categoryId) {
 		_categoryId = categoryId;
 	}
 
 	@JSON
+	@Override
 	public long getGroupId() {
 		return _groupId;
 	}
 
+	@Override
 	public void setGroupId(long groupId) {
 		_columnBitmask |= GROUPID_COLUMN_BITMASK;
 
@@ -285,32 +300,45 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	}
 
 	@JSON
+	@Override
 	public long getCompanyId() {
 		return _companyId;
 	}
 
+	@Override
 	public void setCompanyId(long companyId) {
 		_companyId = companyId;
 	}
 
 	@JSON
+	@Override
 	public long getUserId() {
 		return _userId;
 	}
 
+	@Override
 	public void setUserId(long userId) {
 		_userId = userId;
 	}
 
-	public String getUserUuid() throws SystemException {
-		return PortalUtil.getUserValue(getUserId(), "uuid", _userUuid);
+	@Override
+	public String getUserUuid() {
+		try {
+			User user = UserLocalServiceUtil.getUserById(getUserId());
+
+			return user.getUuid();
+		}
+		catch (PortalException pe) {
+			return StringPool.BLANK;
+		}
 	}
 
+	@Override
 	public void setUserUuid(String userUuid) {
-		_userUuid = userUuid;
 	}
 
 	@JSON
+	@Override
 	public String getUserName() {
 		if (_userName == null) {
 			return StringPool.BLANK;
@@ -320,33 +348,40 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 		}
 	}
 
+	@Override
 	public void setUserName(String userName) {
 		_userName = userName;
 	}
 
 	@JSON
+	@Override
 	public Date getCreateDate() {
 		return _createDate;
 	}
 
+	@Override
 	public void setCreateDate(Date createDate) {
 		_createDate = createDate;
 	}
 
 	@JSON
+	@Override
 	public Date getModifiedDate() {
 		return _modifiedDate;
 	}
 
+	@Override
 	public void setModifiedDate(Date modifiedDate) {
 		_modifiedDate = modifiedDate;
 	}
 
 	@JSON
+	@Override
 	public long getParentCategoryId() {
 		return _parentCategoryId;
 	}
 
+	@Override
 	public void setParentCategoryId(long parentCategoryId) {
 		_columnBitmask = -1L;
 
@@ -364,6 +399,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	}
 
 	@JSON
+	@Override
 	public String getName() {
 		if (_name == null) {
 			return StringPool.BLANK;
@@ -373,6 +409,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 		}
 	}
 
+	@Override
 	public void setName(String name) {
 		_columnBitmask = -1L;
 
@@ -380,6 +417,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	}
 
 	@JSON
+	@Override
 	public String getDescription() {
 		if (_description == null) {
 			return StringPool.BLANK;
@@ -389,6 +427,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 		}
 	}
 
+	@Override
 	public void setDescription(String description) {
 		_description = description;
 	}
@@ -412,13 +451,12 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 
 	@Override
 	public ShoppingCategory toEscapedModel() {
-		if (_escapedModelProxy == null) {
-			_escapedModelProxy = (ShoppingCategory)ProxyUtil.newProxyInstance(_classLoader,
-					_escapedModelProxyInterfaces,
-					new AutoEscapeBeanHandler(this));
+		if (_escapedModel == null) {
+			_escapedModel = (ShoppingCategory)ProxyUtil.newProxyInstance(_classLoader,
+					_escapedModelInterfaces, new AutoEscapeBeanHandler(this));
 		}
 
-		return _escapedModelProxy;
+		return _escapedModel;
 	}
 
 	@Override
@@ -441,6 +479,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 		return shoppingCategoryImpl;
 	}
 
+	@Override
 	public int compareTo(ShoppingCategory shoppingCategory) {
 		int value = 0;
 
@@ -458,8 +497,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 			return value;
 		}
 
-		value = getName().toLowerCase()
-					.compareTo(shoppingCategory.getName().toLowerCase());
+		value = getName().compareToIgnoreCase(shoppingCategory.getName());
 
 		if (value != 0) {
 			return value;
@@ -470,18 +508,15 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 
 	@Override
 	public boolean equals(Object obj) {
-		if (obj == null) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof ShoppingCategory)) {
 			return false;
 		}
 
-		ShoppingCategory shoppingCategory = null;
-
-		try {
-			shoppingCategory = (ShoppingCategory)obj;
-		}
-		catch (ClassCastException cce) {
-			return false;
-		}
+		ShoppingCategory shoppingCategory = (ShoppingCategory)obj;
 
 		long primaryKey = shoppingCategory.getPrimaryKey();
 
@@ -496,6 +531,16 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	@Override
 	public int hashCode() {
 		return (int)getPrimaryKey();
+	}
+
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return ENTITY_CACHE_ENABLED;
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return FINDER_CACHE_ENABLED;
 	}
 
 	@Override
@@ -601,6 +646,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 		return sb.toString();
 	}
 
+	@Override
 	public String toXmlString() {
 		StringBundler sb = new StringBundler(34);
 
@@ -655,7 +701,7 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	}
 
 	private static ClassLoader _classLoader = ShoppingCategory.class.getClassLoader();
-	private static Class<?>[] _escapedModelProxyInterfaces = new Class[] {
+	private static Class<?>[] _escapedModelInterfaces = new Class[] {
 			ShoppingCategory.class
 		};
 	private long _categoryId;
@@ -664,7 +710,6 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	private boolean _setOriginalGroupId;
 	private long _companyId;
 	private long _userId;
-	private String _userUuid;
 	private String _userName;
 	private Date _createDate;
 	private Date _modifiedDate;
@@ -674,5 +719,5 @@ public class ShoppingCategoryModelImpl extends BaseModelImpl<ShoppingCategory>
 	private String _name;
 	private String _description;
 	private long _columnBitmask;
-	private ShoppingCategory _escapedModelProxy;
+	private ShoppingCategory _escapedModel;
 }

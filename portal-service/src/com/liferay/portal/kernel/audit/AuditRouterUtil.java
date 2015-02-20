@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -26,6 +26,10 @@ public class AuditRouterUtil {
 		PortalRuntimePermission.checkGetBeanProperty(AuditRouterUtil.class);
 
 		return _auditRouter;
+	}
+
+	public static boolean isDeployed() {
+		return getAuditRouter().isDeployed();
 	}
 
 	public static void route(AuditMessage auditMessage) throws AuditException {

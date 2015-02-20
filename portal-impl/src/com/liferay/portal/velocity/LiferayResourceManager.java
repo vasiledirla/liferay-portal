@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,17 +16,24 @@ package com.liferay.portal.velocity;
 
 import com.liferay.portal.kernel.cache.PortalCache;
 import com.liferay.portal.kernel.cache.SingleVMPoolUtil;
-import com.liferay.portal.kernel.template.TemplateManager;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateResource;
 import com.liferay.portal.kernel.template.TemplateResourceLoaderUtil;
+import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.ReflectionUtil;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.template.TemplateResourceThreadLocal;
+import com.liferay.portal.util.PropsUtil;
+import com.liferay.portal.util.PropsValues;
 
 import java.io.IOException;
 import java.io.Reader;
 
 import java.lang.reflect.Field;
+
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import org.apache.commons.collections.ExtendedProperties;
 import org.apache.velocity.Template;
@@ -48,7 +55,7 @@ public class LiferayResourceManager extends ResourceManagerImpl {
 		String cacheName = TemplateResource.class.getName();
 
 		cacheName = cacheName.concat(StringPool.POUND).concat(
-			TemplateManager.VELOCITY);
+			TemplateConstants.LANG_TYPE_VM);
 
 		_portalCache = SingleVMPoolUtil.getCache(cacheName);
 	}
@@ -77,39 +84,27 @@ public class LiferayResourceManager extends ResourceManagerImpl {
 			final String encoding)
 		throws Exception, ParseErrorException, ResourceNotFoundException {
 
-		if (resourceType != ResourceManager.RESOURCE_TEMPLATE) {
-			return super.getResource(resourceName, resourceType, encoding);
+		String[] macroTemplateIds = PropsUtil.getArray(
+			PropsKeys.VELOCITY_ENGINE_VELOCIMACRO_LIBRARY);
+
+		for (String macroTemplateId : macroTemplateIds) {
+			if (resourceName.equals(macroTemplateId)) {
+
+				// This resource is provided by the portal, so invoke it from an
+				// access controller
+
+				try {
+					return AccessController.doPrivileged(
+						new ResourcePrivilegedExceptionAction(
+							resourceName, resourceType, encoding));
+				}
+				catch (PrivilegedActionException pae) {
+					throw (IOException)pae.getException();
+				}
+			}
 		}
 
-		TemplateResource templateResource = null;
-
-		if (resourceName.startsWith(
-			TemplateResource.TEMPLATE_RESOURCE_UUID_PREFIX)) {
-
-			templateResource = TemplateResourceThreadLocal.getTemplateResource(
-				TemplateManager.VELOCITY);
-		}
-		else {
-			templateResource = TemplateResourceLoaderUtil.getTemplateResource(
-				TemplateManager.VELOCITY, resourceName);
-		}
-
-		if (templateResource == null) {
-			throw new ResourceNotFoundException(
-				"Unable to find Velocity template with ID " + resourceName);
-		}
-
-		Object object = _portalCache.get(templateResource);
-
-		if ((object != null) && (object instanceof Template)) {
-			return (Template)object;
-		}
-
-		Template template = _createTemplate(templateResource);
-
-		_portalCache.put(templateResource, template);
-
-		return template;
+		return doGetResource(resourceName, resourceType, encoding);
 	}
 
 	@Override
@@ -133,7 +128,7 @@ public class LiferayResourceManager extends ResourceManagerImpl {
 
 		Template template = new LiferayTemplate(templateResource.getReader());
 
-		template.setEncoding(TemplateResource.DEFAUT_ENCODING);
+		template.setEncoding(TemplateConstants.DEFAUT_ENCODING);
 		template.setName(templateResource.getTemplateId());
 		template.setResourceLoader(new LiferayResourceLoader());
 		template.setRuntimeServices(rsvc);
@@ -143,7 +138,51 @@ public class LiferayResourceManager extends ResourceManagerImpl {
 		return template;
 	}
 
-	private PortalCache _portalCache;
+	private Resource doGetResource(
+			final String resourceName, final int resourceType,
+			final String encoding)
+		throws Exception, ParseErrorException, ResourceNotFoundException {
+
+		if (resourceType != ResourceManager.RESOURCE_TEMPLATE) {
+			return super.getResource(resourceName, resourceType, encoding);
+		}
+
+		TemplateResource templateResource = null;
+
+		if (resourceName.startsWith(
+				TemplateConstants.TEMPLATE_RESOURCE_UUID_PREFIX)) {
+
+			templateResource = TemplateResourceThreadLocal.getTemplateResource(
+				TemplateConstants.LANG_TYPE_VM);
+		}
+		else {
+			templateResource = TemplateResourceLoaderUtil.getTemplateResource(
+				TemplateConstants.LANG_TYPE_VM, resourceName);
+		}
+
+		if (templateResource == null) {
+			throw new ResourceNotFoundException(
+				"Unable to find Velocity template with ID " + resourceName);
+		}
+
+		Object object = _portalCache.get(templateResource);
+
+		if ((object != null) && (object instanceof Template)) {
+			return (Template)object;
+		}
+
+		Template template = _createTemplate(templateResource);
+
+		if (PropsValues.VELOCITY_ENGINE_RESOURCE_MODIFICATION_CHECK_INTERVAL !=
+				0) {
+
+			_portalCache.put(templateResource, template);
+		}
+
+		return template;
+	}
+
+	private PortalCache<TemplateResource, Object> _portalCache;
 
 	private class LiferayTemplate extends Template {
 
@@ -174,6 +213,28 @@ public class LiferayResourceManager extends ResourceManagerImpl {
 		}
 
 		private Reader _reader;
+
+	}
+
+	private class ResourcePrivilegedExceptionAction
+		implements PrivilegedExceptionAction<Resource> {
+
+		public ResourcePrivilegedExceptionAction(
+			String resourceName, int resourceType, String encoding) {
+
+			_resourceName = resourceName;
+			_resourceType = resourceType;
+			_encoding = encoding;
+		}
+
+		@Override
+		public Resource run() throws Exception {
+			return doGetResource(_resourceName, _resourceType, _encoding);
+		}
+
+		private String _encoding;
+		private String _resourceName;
+		private int _resourceType;
 
 	}
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -32,6 +32,10 @@ public class BaseATag extends com.liferay.taglib.util.IncludeTag {
 		return super.doStartTag();
 	}
 
+	public java.lang.String getAriaRole() {
+		return _ariaRole;
+	}
+
 	public java.lang.String getCssClass() {
 		return _cssClass;
 	}
@@ -56,6 +60,10 @@ public class BaseATag extends com.liferay.taglib.util.IncludeTag {
 		return _lang;
 	}
 
+	public boolean getLocalizeLabel() {
+		return _localizeLabel;
+	}
+
 	public java.lang.String getOnClick() {
 		return _onClick;
 	}
@@ -66,6 +74,12 @@ public class BaseATag extends com.liferay.taglib.util.IncludeTag {
 
 	public java.lang.String getTitle() {
 		return _title;
+	}
+
+	public void setAriaRole(java.lang.String ariaRole) {
+		_ariaRole = ariaRole;
+
+		setScopedAttribute("ariaRole", ariaRole);
 	}
 
 	public void setCssClass(java.lang.String cssClass) {
@@ -104,6 +118,12 @@ public class BaseATag extends com.liferay.taglib.util.IncludeTag {
 		setScopedAttribute("lang", lang);
 	}
 
+	public void setLocalizeLabel(boolean localizeLabel) {
+		_localizeLabel = localizeLabel;
+
+		setScopedAttribute("localizeLabel", localizeLabel);
+	}
+
 	public void setOnClick(java.lang.String onClick) {
 		_onClick = onClick;
 
@@ -124,12 +144,14 @@ public class BaseATag extends com.liferay.taglib.util.IncludeTag {
 
 	@Override
 	protected void cleanUp() {
+		_ariaRole = null;
 		_cssClass = null;
 		_data = null;
 		_href = null;
 		_id = null;
 		_label = null;
 		_lang = null;
+		_localizeLabel = true;
 		_onClick = null;
 		_target = null;
 		_title = null;
@@ -153,12 +175,14 @@ public class BaseATag extends com.liferay.taglib.util.IncludeTag {
 	private static final String _START_PAGE =
 		"/html/taglib/aui/a/start.jsp";
 
+	private java.lang.String _ariaRole = null;
 	private java.lang.String _cssClass = null;
 	private java.util.Map<java.lang.String, java.lang.Object> _data = null;
 	private java.lang.String _href = null;
 	private java.lang.String _id = null;
 	private java.lang.String _label = null;
 	private java.lang.String _lang = null;
+	private boolean _localizeLabel = true;
 	private java.lang.String _onClick = null;
 	private java.lang.String _target = null;
 	private java.lang.String _title = null;

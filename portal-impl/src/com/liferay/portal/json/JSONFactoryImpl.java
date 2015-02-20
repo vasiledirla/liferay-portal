@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -25,8 +25,11 @@ import com.liferay.portal.kernel.json.JSONFactory;
 import com.liferay.portal.kernel.json.JSONObject;
 import com.liferay.portal.kernel.json.JSONSerializer;
 import com.liferay.portal.kernel.json.JSONTransformer;
+import com.liferay.portal.kernel.json.JSONValidator;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.security.pacl.DoPrivileged;
+import com.liferay.portal.kernel.util.ClassUtil;
 import com.liferay.portal.kernel.util.Validator;
 
 import java.lang.reflect.InvocationTargetException;
@@ -40,6 +43,7 @@ import org.json.JSONML;
 /**
  * @author Brian Wing Shun Chan
  */
+@DoPrivileged
 public class JSONFactoryImpl implements JSONFactory {
 
 	public JSONFactoryImpl() {
@@ -58,6 +62,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public String convertJSONMLArrayToXML(String jsonml) {
 		try {
 			org.json.JSONArray jsonArray = new org.json.JSONArray(jsonml);
@@ -73,6 +78,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public String convertJSONMLObjectToXML(String jsonml) {
 		try {
 			org.json.JSONObject jsonObject = new org.json.JSONObject(jsonml);
@@ -88,6 +94,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public String convertXMLtoJSONMLArray(String xml) {
 		try {
 			org.json.JSONArray jsonArray = JSONML.toJSONArray(xml);
@@ -103,6 +110,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public String convertXMLtoJSONMLObject(String xml) {
 		try {
 			org.json.JSONObject jsonObject = JSONML.toJSONObject(xml);
@@ -118,6 +126,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public JSONTransformer createJavaScriptNormalizerJSONTransformer(
 		List<String> javaScriptAttributes) {
 
@@ -128,34 +137,49 @@ public class JSONFactoryImpl implements JSONFactory {
 		return stringTransformer;
 	}
 
+	@Override
 	public JSONArray createJSONArray() {
 		return new JSONArrayImpl();
 	}
 
+	@Override
 	public JSONArray createJSONArray(String json) throws JSONException {
 		return new JSONArrayImpl(json);
 	}
 
+	@Override
 	public <T> JSONDeserializer<T> createJSONDeserializer() {
 		return new JSONDeserializerImpl<T>();
 	}
 
+	@Override
 	public JSONObject createJSONObject() {
 		return new JSONObjectImpl();
 	}
 
+	@Override
 	public JSONObject createJSONObject(String json) throws JSONException {
 		return new JSONObjectImpl(json);
 	}
 
+	@Override
 	public JSONSerializer createJSONSerializer() {
 		return new JSONSerializerImpl();
 	}
 
+	@Override
+	public JSONValidator createJSONValidator(String jsonSchema)
+		throws JSONException {
+
+		return new JSONValidatorImpl(jsonSchema);
+	}
+
+	@Override
 	public Object deserialize(JSONObject jsonObj) {
 		return deserialize(jsonObj.toString());
 	}
 
+	@Override
 	public Object deserialize(String json) {
 		try {
 			return _jsonSerializer.fromJSON(json);
@@ -169,10 +193,17 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public String getNullJSON() {
 		return _NULL_JSON;
 	}
 
+	@Override
+	public JSONObject getUnmodifiableJSONObject() {
+		return _unmodifiableJSONObject;
+	}
+
+	@Override
 	public Object looseDeserialize(String json) {
 		try {
 			JSONDeserializer<?> jsonDeserializer = createJSONDeserializer();
@@ -188,6 +219,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public <T> T looseDeserialize(String json, Class<T> clazz) {
 		JSONDeserializer<?> jsonDeserializer = createJSONDeserializer();
 
@@ -196,6 +228,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		return (T)jsonDeserializer.deserialize(json);
 	}
 
+	@Override
 	public Object looseDeserializeSafe(String json) {
 		try {
 			JSONDeserializer<?> jsonDeserializer = createJSONDeserializer();
@@ -213,6 +246,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		}
 	}
 
+	@Override
 	public <T> T looseDeserializeSafe(String json, Class<T> clazz) {
 		JSONDeserializer<?> jsonDeserializer = createJSONDeserializer();
 
@@ -223,12 +257,14 @@ public class JSONFactoryImpl implements JSONFactory {
 		return (T)jsonDeserializer.deserialize(json);
 	}
 
+	@Override
 	public String looseSerialize(Object object) {
 		JSONSerializer jsonSerializer = createJSONSerializer();
 
 		return jsonSerializer.serialize(object);
 	}
 
+	@Override
 	public String looseSerialize(
 		Object object, JSONTransformer jsonTransformer, Class<?> clazz) {
 
@@ -239,6 +275,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		return jsonSerializer.serialize(object);
 	}
 
+	@Override
 	public String looseSerialize(Object object, String... includes) {
 		JSONSerializer jsonSerializer = createJSONSerializer();
 
@@ -247,12 +284,14 @@ public class JSONFactoryImpl implements JSONFactory {
 		return jsonSerializer.serialize(object);
 	}
 
+	@Override
 	public String looseSerializeDeep(Object object) {
 		JSONSerializer jsonSerializer = createJSONSerializer();
 
 		return jsonSerializer.serializeDeep(object);
 	}
 
+	@Override
 	public String looseSerializeDeep(
 		Object object, JSONTransformer jsonTransformer, Class<?> clazz) {
 
@@ -263,6 +302,7 @@ public class JSONFactoryImpl implements JSONFactory {
 		return jsonSerializer.serializeDeep(object);
 	}
 
+	@Override
 	public String serialize(Object object) {
 		try {
 			return _jsonSerializer.toJSON(object);
@@ -272,47 +312,58 @@ public class JSONFactoryImpl implements JSONFactory {
 				_log.warn(me, me);
 			}
 
-			throw new IllegalStateException("Unable to serialize oject", me);
+			throw new IllegalStateException("Unable to serialize object", me);
 		}
 	}
 
-	public String serializeException(Exception exception) {
-		JSONObject jsonObject = createJSONObject();
-
-		String message = null;
-
-		if (exception instanceof InvocationTargetException) {
-			Throwable cause = exception.getCause();
-
-			message = cause.toString();
-		}
-		else {
-			message = exception.getMessage();
-		}
-
-		if (Validator.isNull(message)) {
-			message = exception.toString();
-		}
-
-		jsonObject.put("exception", message);
-
-		return jsonObject.toString();
-	}
-
+	@Override
 	public String serializeThrowable(Throwable throwable) {
-		if (throwable instanceof Exception) {
-			return serializeException((Exception)throwable);
-		}
-
 		JSONObject jsonObject = createJSONObject();
 
-		String message = throwable.getMessage();
-
-		if (Validator.isNull(message)) {
-			message = throwable.toString();
+		if (throwable instanceof InvocationTargetException) {
+			throwable = throwable.getCause();
 		}
 
-		jsonObject.put("throwable", message);
+		String throwableMessage = throwable.getMessage();
+
+		if (Validator.isNull(throwableMessage)) {
+			throwableMessage = throwable.toString();
+		}
+
+		JSONObject errorJSONObject = createJSONObject();
+
+		errorJSONObject.put("message", throwableMessage);
+		errorJSONObject.put("type", ClassUtil.getClassName(throwable));
+
+		jsonObject.put("error", errorJSONObject);
+
+		jsonObject.put("exception", throwableMessage);
+		jsonObject.put("throwable", throwable.toString());
+
+		if (throwable.getCause() == null) {
+			return jsonObject.toString();
+		}
+
+		Throwable rootCauseThrowable = throwable;
+
+		while (rootCauseThrowable.getCause() != null) {
+			rootCauseThrowable = rootCauseThrowable.getCause();
+		}
+
+		JSONObject rootCauseJSONObject = createJSONObject();
+
+		throwableMessage = rootCauseThrowable.getMessage();
+
+		if (Validator.isNull(throwableMessage)) {
+			throwableMessage = rootCauseThrowable.toString();
+		}
+
+		rootCauseJSONObject.put("message", throwableMessage);
+
+		rootCauseJSONObject.put(
+			"type", ClassUtil.getClassName(rootCauseThrowable));
+
+		jsonObject.put("rootCause", rootCauseJSONObject);
 
 		return jsonObject.toString();
 	}
@@ -322,5 +373,7 @@ public class JSONFactoryImpl implements JSONFactory {
 	private static Log _log = LogFactoryUtil.getLog(JSONFactoryImpl.class);
 
 	private org.jabsorb.JSONSerializer _jsonSerializer;
+	private JSONObject _unmodifiableJSONObject =
+		new UnmodifiableJSONObjectImpl();
 
 }

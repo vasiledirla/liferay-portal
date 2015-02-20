@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,149 +14,117 @@
 
 package com.liferay.portal.cache.transactional;
 
-import com.liferay.portal.kernel.cache.CacheListener;
-import com.liferay.portal.kernel.cache.CacheListenerScope;
 import com.liferay.portal.kernel.cache.PortalCache;
+import com.liferay.portal.kernel.cache.PortalCacheWrapper;
 
 import java.io.Serializable;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 
 /**
  * @author Shuyang Zhou
  * @author Edward Han
  */
-public class TransactionalPortalCache implements PortalCache {
+public class TransactionalPortalCache<K extends Serializable, V>
+	extends PortalCacheWrapper<K, V> {
 
-	public TransactionalPortalCache(PortalCache portalCache) {
-		_portalCache = portalCache;
+	public TransactionalPortalCache(PortalCache<K, V> portalCache) {
+		super(portalCache);
 	}
 
-	public void destroy() {
-	}
-
-	public Collection<Object> get(Collection<Serializable> keys) {
-		List<Object> values = new ArrayList<Object>(keys.size());
-
-		for (Serializable key : keys) {
-			values.add(get(key));
-		}
-
-		return values;
-	}
-
-	public Object get(Serializable key) {
-		Object result = null;
+	@Override
+	public V get(K key) {
+		V result = null;
 
 		if (TransactionalPortalCacheHelper.isEnabled()) {
-			result = TransactionalPortalCacheHelper.get(_portalCache, key);
+			if (key == null) {
+				throw new NullPointerException("Key is null");
+			}
 
-			if (result == _nullHolder) {
+			result = TransactionalPortalCacheHelper.get(portalCache, key);
+
+			if (result == NULL_HOLDER) {
 				return null;
 			}
 		}
 
 		if (result == null) {
-			result = _portalCache.get(key);
+			result = portalCache.get(key);
 		}
 
 		return result;
 	}
 
-	public String getName() {
-		return _portalCache.getName();
+	@Override
+	public void put(K key, V value) {
+		doPut(key, value, DEFAULT_TIME_TO_LIVE, false);
 	}
 
-	public void put(Serializable key, Object value) {
+	@Override
+	public void put(K key, V value, int timeToLive) {
+		doPut(key, value, timeToLive, false);
+	}
+
+	@Override
+	public void putQuiet(K key, V value) {
+		doPut(key, value, DEFAULT_TIME_TO_LIVE, true);
+	}
+
+	@Override
+	public void putQuiet(K key, V value, int timeToLive) {
+		doPut(key, value, timeToLive, true);
+	}
+
+	@Override
+	public void remove(K key) {
 		if (TransactionalPortalCacheHelper.isEnabled()) {
-			if (value == null) {
-				value = _nullHolder;
+			if (key == null) {
+				throw new NullPointerException("Key is null");
 			}
 
-			TransactionalPortalCacheHelper.put(_portalCache, key, value);
+			TransactionalPortalCacheHelper.put(
+				portalCache, key, (V)NULL_HOLDER, false, DEFAULT_TIME_TO_LIVE);
 		}
 		else {
-			_portalCache.put(key, value);
+			portalCache.remove(key);
 		}
 	}
 
-	public void put(Serializable key, Object value, int timeToLive) {
-		if (TransactionalPortalCacheHelper.isEnabled()) {
-			if (value == null) {
-				value = _nullHolder;
-			}
-
-			TransactionalPortalCacheHelper.put(_portalCache, key, value);
-		}
-		else {
-			_portalCache.put(key, value, timeToLive);
-		}
-	}
-
-	public void put(Serializable key, Serializable value) {
-		if (TransactionalPortalCacheHelper.isEnabled()) {
-			if (value == null) {
-				value = _nullHolder;
-			}
-
-			TransactionalPortalCacheHelper.put(_portalCache, key, value);
-		}
-		else {
-			_portalCache.put(key, value);
-		}
-	}
-
-	public void put(Serializable key, Serializable value, int timeToLive) {
-		if (TransactionalPortalCacheHelper.isEnabled()) {
-			if (value == null) {
-				value = _nullHolder;
-			}
-
-			TransactionalPortalCacheHelper.put(_portalCache, key, value);
-		}
-		else {
-			_portalCache.put(key, value, timeToLive);
-		}
-	}
-
-	public void registerCacheListener(CacheListener cacheListener) {
-		_portalCache.registerCacheListener(cacheListener);
-	}
-
-	public void registerCacheListener(
-		CacheListener cacheListener, CacheListenerScope cacheListenerScope) {
-
-		_portalCache.registerCacheListener(cacheListener, cacheListenerScope);
-	}
-
-	public void remove(Serializable key) {
-		if (TransactionalPortalCacheHelper.isEnabled()) {
-			TransactionalPortalCacheHelper.remove(_portalCache, key);
-		}
-
-		_portalCache.remove(key);
-	}
-
+	@Override
 	public void removeAll() {
 		if (TransactionalPortalCacheHelper.isEnabled()) {
-			TransactionalPortalCacheHelper.removeAll(_portalCache);
+			TransactionalPortalCacheHelper.removeAll(portalCache);
 		}
-
-		_portalCache.removeAll();
+		else {
+			portalCache.removeAll();
+		}
 	}
 
-	public void unregisterCacheListener(CacheListener cacheListener) {
-		_portalCache.unregisterCacheListener(cacheListener);
+	protected void doPut(K key, V value, int timeToLive, boolean quiet) {
+		if (TransactionalPortalCacheHelper.isEnabled()) {
+			if (key == null) {
+				throw new NullPointerException("Key is null");
+			}
+
+			if (value == null) {
+				throw new NullPointerException("Value is null");
+			}
+
+			if ((timeToLive != DEFAULT_TIME_TO_LIVE) && (timeToLive < 0)) {
+				throw new IllegalArgumentException("Time to live is negative");
+			}
+
+			TransactionalPortalCacheHelper.put(
+				portalCache, key, value, quiet, timeToLive);
+		}
+		else {
+			if (quiet) {
+				portalCache.putQuiet(key, value, timeToLive);
+			}
+			else {
+				portalCache.put(key, value, timeToLive);
+			}
+		}
 	}
 
-	public void unregisterCacheListeners() {
-		_portalCache.unregisterCacheListeners();
-	}
-
-	private static Serializable _nullHolder = new String();
-
-	private PortalCache _portalCache;
+	protected static Serializable NULL_HOLDER = "NULL_HOLDER";
 
 }

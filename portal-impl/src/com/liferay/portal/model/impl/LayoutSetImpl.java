@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,13 +15,13 @@
 package com.liferay.portal.model.impl;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.model.CacheField;
 import com.liferay.portal.model.ColorScheme;
 import com.liferay.portal.model.Group;
 import com.liferay.portal.model.LayoutSet;
@@ -45,18 +45,19 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 	public LayoutSetImpl() {
 	}
 
-	public ColorScheme getColorScheme() throws SystemException {
+	@Override
+	public ColorScheme getColorScheme() {
 		return ThemeLocalServiceUtil.getColorScheme(
 			getCompanyId(), getTheme().getThemeId(), getColorSchemeId(), false);
 	}
 
-	public Group getGroup() throws PortalException, SystemException {
+	@Override
+	public Group getGroup() throws PortalException {
 		return GroupLocalServiceUtil.getGroup(getGroupId());
 	}
 
-	public long getLayoutSetPrototypeId()
-		throws PortalException, SystemException {
-
+	@Override
+	public long getLayoutSetPrototypeId() throws PortalException {
 		String layoutSetPrototypeUuid = getLayoutSetPrototypeUuid();
 
 		if (Validator.isNull(layoutSetPrototypeUuid)) {
@@ -71,6 +72,7 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 		return layoutSetPrototype.getLayoutSetPrototypeId();
 	}
 
+	@Override
 	public long getLiveLogoId() {
 		long logoId = 0;
 
@@ -102,6 +104,15 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 	}
 
 	@Override
+	public boolean getLogo() {
+		if (getLogoId() > 0) {
+			return true;
+		}
+
+		return false;
+	}
+
+	@Override
 	public String getSettings() {
 		if (_settingsProperties == null) {
 			return super.getSettings();
@@ -111,6 +122,7 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 		}
 	}
 
+	@Override
 	public UnicodeProperties getSettingsProperties() {
 		if (_settingsProperties == null) {
 			_settingsProperties = new UnicodeProperties(true);
@@ -126,20 +138,21 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 		return _settingsProperties;
 	}
 
+	@Override
 	public String getSettingsProperty(String key) {
 		UnicodeProperties settingsProperties = getSettingsProperties();
 
 		return settingsProperties.getProperty(key);
 	}
 
-	public Theme getTheme() throws SystemException {
+	@Override
+	public Theme getTheme() {
 		return ThemeLocalServiceUtil.getTheme(
 			getCompanyId(), getThemeId(), false);
 	}
 
-	public String getThemeSetting(String key, String device)
-		throws SystemException {
-
+	@Override
+	public String getThemeSetting(String key, String device) {
 		UnicodeProperties settingsProperties = getSettingsProperties();
 
 		String value = settingsProperties.getProperty(
@@ -156,35 +169,45 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 		return value;
 	}
 
+	@Override
 	public String getVirtualHostname() {
+		if (_virtualHostname != null) {
+			return _virtualHostname;
+		}
+
 		try {
 			VirtualHost virtualHost =
 				VirtualHostLocalServiceUtil.fetchVirtualHost(
 					getCompanyId(), getLayoutSetId());
 
 			if (virtualHost == null) {
-				return StringPool.BLANK;
+				_virtualHostname = StringPool.BLANK;
 			}
 			else {
-				return virtualHost.getHostname();
+				_virtualHostname = virtualHost.getHostname();
 			}
 		}
 		catch (Exception e) {
-			return StringPool.BLANK;
+			_virtualHostname = StringPool.BLANK;
 		}
+
+		return _virtualHostname;
 	}
 
-	public ColorScheme getWapColorScheme() throws SystemException {
+	@Override
+	public ColorScheme getWapColorScheme() {
 		return ThemeLocalServiceUtil.getColorScheme(
 			getCompanyId(), getWapTheme().getThemeId(), getWapColorSchemeId(),
 			true);
 	}
 
-	public Theme getWapTheme() throws SystemException {
+	@Override
+	public Theme getWapTheme() {
 		return ThemeLocalServiceUtil.getTheme(
 			getCompanyId(), getWapThemeId(), true);
 	}
 
+	@Override
 	public boolean isLayoutSetPrototypeLinkActive() {
 		if (isLayoutSetPrototypeLinkEnabled() &&
 			Validator.isNotNull(getLayoutSetPrototypeUuid())) {
@@ -196,19 +219,30 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 	}
 
 	@Override
+	public boolean isLogo() {
+		return getLogo();
+	}
+
+	@Override
 	public void setSettings(String settings) {
 		_settingsProperties = null;
 
 		super.setSettings(settings);
 	}
 
+	@Override
 	public void setSettingsProperties(UnicodeProperties settingsProperties) {
 		_settingsProperties = settingsProperties;
 
 		super.setSettings(_settingsProperties.toString());
 	}
 
-	protected Theme getTheme(String device) throws SystemException {
+	@Override
+	public void setVirtualHostname(String virtualHostname) {
+		_virtualHostname = virtualHostname;
+	}
+
+	protected Theme getTheme(String device) {
 		boolean controlPanel = false;
 
 		try {
@@ -238,5 +272,8 @@ public class LayoutSetImpl extends LayoutSetBaseImpl {
 	private static Log _log = LogFactoryUtil.getLog(LayoutSetImpl.class);
 
 	private UnicodeProperties _settingsProperties;
+
+	@CacheField
+	private String _virtualHostname;
 
 }

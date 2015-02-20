@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,8 +17,7 @@ package com.liferay.portal.velocity;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.servlet.ServletContextPool;
-import com.liferay.portal.kernel.template.TemplateResource;
-import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.template.URLResourceParser;
 import com.liferay.portal.util.PortalUtil;
 
@@ -36,7 +35,7 @@ public class VelocityServletResourceParser extends URLResourceParser {
 
 	@Override
 	public URL getURL(String source) throws IOException {
-		int pos = source.indexOf(TemplateResource.SERVLET_SEPARATOR);
+		int pos = source.indexOf(TemplateConstants.SERVLET_SEPARATOR);
 
 		if (pos == -1) {
 			return null;
@@ -44,8 +43,8 @@ public class VelocityServletResourceParser extends URLResourceParser {
 
 		String servletContextName = source.substring(0, pos);
 
-		if (Validator.isNull(servletContextName)) {
-			servletContextName = PortalUtil.getPathContext();
+		if (servletContextName.equals(PortalUtil.getPathContext())) {
+			servletContextName = PortalUtil.getServletContextName();
 		}
 
 		ServletContext servletContext = ServletContextPool.get(
@@ -60,7 +59,7 @@ public class VelocityServletResourceParser extends URLResourceParser {
 		}
 
 		String name = source.substring(
-			pos + TemplateResource.SERVLET_SEPARATOR.length());
+			pos + TemplateConstants.SERVLET_SEPARATOR.length());
 
 		if (_log.isDebugEnabled()) {
 			_log.debug(
@@ -75,13 +74,11 @@ public class VelocityServletResourceParser extends URLResourceParser {
 				_log.warn("The template " + name + " should be created");
 			}
 
-			String portalServletContextName = PortalUtil.getPathContext();
-
 			ServletContext portalServletContext = ServletContextPool.get(
-				portalServletContextName);
+				PortalUtil.getServletContextName());
 
 			url = portalServletContext.getResource(
-				"/html/themes/_unstyled/template/init_custom.vm");
+				"/html/themes/_unstyled/templates/init_custom.vm");
 		}
 
 		return url;

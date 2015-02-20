@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -25,8 +25,6 @@ long messageId = BeanParamUtil.getLong(message, request, "messageId");
 
 long categoryId = MBUtil.getCategoryId(request, message);
 
-List<String> attachments = ListUtil.fromArray(message.getDeletedAttachmentsFiles());
-
 MBUtil.addPortletBreadcrumbEntries(message, request, renderResponse);
 
 PortletURL portletURL = renderResponse.createRenderURL();
@@ -34,9 +32,9 @@ PortletURL portletURL = renderResponse.createRenderURL();
 portletURL.setParameter("struts_action", "/message_boards/edit_message");
 portletURL.setParameter("messageId", String.valueOf(message.getMessageId()));
 
-PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(pageContext, "edit"), portletURL.toString());
+PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(request, "edit"), portletURL.toString());
 
-PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(pageContext, "deleted-attachments"), currentURL);
+PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(request, "removed-attachments"), currentURL);
 
 PortletURL iteratorURL = renderResponse.createRenderURL();
 
@@ -47,7 +45,7 @@ iteratorURL.setParameter("messageId", String.valueOf(messageId));
 
 <liferay-ui:header
 	backURL="<%= redirect %>"
-	title="deleted-attachments"
+	title="removed-attachments"
 />
 
 <portlet:actionURL var="emptyTrashURL">
@@ -56,60 +54,71 @@ iteratorURL.setParameter("messageId", String.valueOf(messageId));
 </portlet:actionURL>
 
 <liferay-ui:trash-empty
-	confirmMessage="are-you-sure-you-want-to-delete-the-attachments-for-this-message"
-	emptyMessage="delete-the-attachments-for-this-message"
+	confirmMessage="are-you-sure-you-want-to-remove-the-attachments-for-this-message"
+	emptyMessage="remove-the-attachments-for-this-message"
+	infoMessage="attachments-that-have-been-removed-for-more-than-x-will-be-automatically-deleted"
 	portletURL="<%= emptyTrashURL.toString() %>"
-	totalEntries="<%= attachments.size() %>"
+	totalEntries="<%= message.getDeletedAttachmentsFileEntriesCount() %>"
 />
 
 <liferay-ui:search-container
 	emptyResultsMessage="this-message-does-not-have-file-attachments-in-the-recycle-bin"
 	iteratorURL="<%= iteratorURL %>"
+	total="<%= message.getDeletedAttachmentsFileEntriesCount() %>"
 >
 
 	<liferay-ui:search-container-results
-		results="<%= ListUtil.subList(attachments, searchContainer.getStart(), searchContainer.getEnd()) %>"
-		total="<%= attachments.size() %>"
+		results="<%= message.getDeletedAttachmentsFileEntries(searchContainer.getStart(), searchContainer.getEnd()) %>"
 	/>
 
 	<liferay-ui:search-container-row
-		className="java.lang.String"
-		modelVar="fileName"
-		rowVar="row"
+		className="com.liferay.portal.kernel.repository.model.FileEntry"
+		escapedModel="<%= true %>"
+		keyProperty="fileEntryId"
+		modelVar="fileEntry"
 	>
 
 		<%
-		String shortFileName = FileUtil.getShortFileName(fileName);
-
-		long fileSize = DLStoreUtil.getFileSize(company.getCompanyId(), CompanyConstants.SYSTEM, fileName);
-
-		row.setObject(new Object[] {categoryId, messageId, fileName});
-
-		row.setPrimaryKey(fileName);
-
-		String displayName = TrashUtil.stripTrashNamespace(shortFileName, StringPool.UNDERLINE);
+		String rowHREF = PortletFileRepositoryUtil.getDownloadPortletFileEntryURL(themeDisplay, fileEntry, "status=" + WorkflowConstants.STATUS_IN_TRASH);
 		%>
 
 		<liferay-ui:search-container-column-text
+			href="<%= rowHREF %>"
 			name="file-name"
 		>
+
+			<%
+			AssetRendererFactory assetRendererFactory = AssetRendererFactoryRegistryUtil.getAssetRendererFactoryByClassName(DLFileEntry.class.getName());
+
+			AssetRenderer assetRenderer = assetRendererFactory.getAssetRenderer(fileEntry.getFileEntryId());
+			%>
+
 			<liferay-ui:icon
-				image='<%= "../file_system/small/" + DLUtil.getFileIcon(FileUtil.getExtension(displayName)) %>'
+				iconCssClass="<%= assetRenderer.getIconCssClass() %>"
 				label="<%= true %>"
-				message="<%= displayName %>"
+				message="<%= TrashUtil.getOriginalTitle(fileEntry.getTitle()) %>"
 			/>
 		</liferay-ui:search-container-column-text>
 
 		<liferay-ui:search-container-column-text
+			href="<%= rowHREF %>"
 			name="size"
-			value="<%= TextFormatter.formatStorageSize(fileSize, locale) %>"
+			value="<%= TextFormatter.formatStorageSize(fileEntry.getSize(), locale) %>"
 		/>
 
 		<liferay-ui:search-container-column-jsp
 			align="right"
+			cssClass="entry-action"
 			path="/html/portlet/message_boards/deleted_message_attachment_action.jsp"
 		/>
 	</liferay-ui:search-container-row>
 
 	<liferay-ui:search-iterator />
 </liferay-ui:search-container>
+
+<liferay-ui:restore-entry
+	duplicateEntryAction="/message_boards/restore_entry"
+	overrideMessage="overwrite-the-existing-attachment-with-the-removed-one"
+	renameMessage="keep-both-attachments-and-rename-the-removed-attachment-as"
+	restoreEntryAction="/message_boards/restore_message_attachment"
+/>

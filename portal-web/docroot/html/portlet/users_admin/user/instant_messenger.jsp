@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -27,7 +27,9 @@ Contact selContact = (Contact)request.getAttribute("user.selContact");
 		<aui:model-context bean="<%= selContact %>" model="<%= Contact.class %>" />
 
 		<aui:fieldset>
-			<aui:input label="aim" name="aimSn" />
+			<div class="instant-messenger">
+				<aui:input label="aim" name="aimSn" />
+			</div>
 
 			<div class="instant-messenger">
 				<aui:input label="icq" name="icqSn" />
@@ -37,17 +39,21 @@ Contact selContact = (Contact)request.getAttribute("user.selContact");
 				</c:if>
 			</div>
 
-			<aui:input label="jabber" name="jabberSn" />
+			<div class="instant-messenger">
+				<aui:input label="jabber" name="jabberSn" />
+			</div>
 
 			<div class="instant-messenger">
 				<aui:input label="skype" name="skypeSn" />
 
 				<c:if test="<%= Validator.isNotNull(selContact.getSkypeSn()) %>">
-					<a href="callto://<%= HtmlUtil.escapeAttribute(selContact.getSkypeSn()) %>"><img alt="<liferay-ui:message key="call-this-user" />" src="http://mystatus.skype.com/smallicon/<%= HtmlUtil.escapeAttribute(selContact.getSkypeSn()) %>" /></a>
+					<a href="callto://<%= HtmlUtil.escapeAttribute(selContact.getSkypeSn()) %>"><img alt="<liferay-ui:message escapeAttribute="<%= true %>" key="call-this-user" />" src="http://mystatus.skype.com/smallicon/<%= HtmlUtil.escapeAttribute(selContact.getSkypeSn()) %>" /></a>
 				</c:if>
 			</div>
 
-			<aui:input label="windows-live-messenger" name="msnSn" />
+			<div class="instant-messenger">
+				<aui:input label="windows-live-messenger" name="msnSn" />
+			</div>
 
 			<div class="instant-messenger">
 				<aui:input label="yim" name="ymSn" />
@@ -59,6 +65,6 @@ Contact selContact = (Contact)request.getAttribute("user.selContact");
 		</aui:fieldset>
 	</c:when>
 	<c:otherwise>
-		<div class="portlet-msg-info"><liferay-ui:message key="this-section-will-be-editable-after-creating-the-user" /></div>
+		<div class="alert alert-info"><liferay-ui:message key="this-section-will-be-editable-after-creating-the-user" /></div>
 	</c:otherwise>
 </c:choose>

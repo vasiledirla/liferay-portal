@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,22 +14,30 @@
 
 package com.liferay.portal.servlet;
 
+import com.liferay.portal.kernel.servlet.PersistentHttpServletRequestWrapper;
 import com.liferay.portal.kernel.util.AutoResetThreadLocal;
+import com.liferay.portal.kernel.util.WebKeys;
 
 import java.io.Closeable;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
+import java.util.List;
+import java.util.Locale;
+import java.util.concurrent.locks.Lock;
 
+import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletRequestWrapper;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletRequestWrapper;
+import javax.servlet.http.HttpSession;
 
 /**
  * @author Shuyang Zhou
  */
 public class ThreadLocalFacadeHttpServletRequestWrapper
-	extends HttpServletRequestWrapper implements Closeable {
+	extends PersistentHttpServletRequestWrapper implements Closeable {
 
 	public ThreadLocalFacadeHttpServletRequestWrapper(
 		ServletRequestWrapper servletRequestWrapper,
@@ -40,8 +48,17 @@ public class ThreadLocalFacadeHttpServletRequestWrapper
 		_servletRequestWrapper = servletRequestWrapper;
 
 		_nextHttpServletRequestThreadLocal.set(httpServletRequest);
+
+		_locales = new ArrayList<Locale>();
+
+		Enumeration<Locale> enumeration = httpServletRequest.getLocales();
+
+		while (enumeration.hasMoreElements()) {
+			_locales.add(enumeration.nextElement());
+		}
 	}
 
+	@Override
 	public void close() {
 		if (_servletRequestWrapper != null) {
 			HttpServletRequest nextHttpServletRequest =
@@ -62,12 +79,59 @@ public class ThreadLocalFacadeHttpServletRequestWrapper
 	public Enumeration<String> getAttributeNames() {
 		ServletRequest servletRequest = getRequest();
 
-		return servletRequest.getAttributeNames();
+		Lock lock = (Lock)servletRequest.getAttribute(
+			WebKeys.PARALLEL_RENDERING_MERGE_LOCK);
+
+		if (lock != null) {
+			lock.lock();
+		}
+
+		try {
+			return servletRequest.getAttributeNames();
+		}
+		finally {
+			if (lock != null) {
+				lock.unlock();
+			}
+		}
+	}
+
+	@Override
+	public Enumeration<Locale> getLocales() {
+		return Collections.enumeration(_locales);
 	}
 
 	@Override
 	public ServletRequest getRequest() {
 		return _nextHttpServletRequestThreadLocal.get();
+	}
+
+	@Override
+	public RequestDispatcher getRequestDispatcher(String uri) {
+		ServletRequest servletRequest = getRequest();
+
+		return servletRequest.getRequestDispatcher(uri);
+	}
+
+	@Override
+	public HttpSession getSession() {
+		return getSession(true);
+	}
+
+	@Override
+	public HttpSession getSession(boolean create) {
+		HttpServletRequest httpServletRequest =
+			(HttpServletRequest)getRequest();
+
+		HttpSession httpSession = httpServletRequest.getSession(false);
+
+		if (!create || (httpSession != null)) {
+			return httpSession;
+		}
+
+		synchronized (httpServletRequest.getServletContext()) {
+			return httpServletRequest.getSession(true);
+		}
 	}
 
 	@Override
@@ -85,8 +149,9 @@ public class ThreadLocalFacadeHttpServletRequestWrapper
 	}
 
 	@Override
-	public void setRequest(ServletRequest request) {
-		_nextHttpServletRequestThreadLocal.set((HttpServletRequest)request);
+	public void setRequest(ServletRequest servletRequest) {
+		_nextHttpServletRequestThreadLocal.set(
+			(HttpServletRequest)servletRequest);
 	}
 
 	private static ThreadLocal<HttpServletRequest>
@@ -104,6 +169,7 @@ public class ThreadLocalFacadeHttpServletRequestWrapper
 
 			};
 
+	private List<Locale> _locales;
 	private ServletRequestWrapper _servletRequestWrapper;
 
 }

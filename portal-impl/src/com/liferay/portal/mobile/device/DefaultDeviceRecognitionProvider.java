@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -31,6 +31,7 @@ import javax.servlet.http.HttpServletRequest;
 public class DefaultDeviceRecognitionProvider
 	implements DeviceRecognitionProvider {
 
+	@Override
 	public Device detectDevice(HttpServletRequest request) {
 		if (_log.isWarnEnabled()) {
 			_log.warn("Device recognition provider is not available");
@@ -39,6 +40,7 @@ public class DefaultDeviceRecognitionProvider
 		return UnknownDevice.getInstance();
 	}
 
+	@Override
 	public KnownDevices getKnownDevices() {
 		if (_log.isWarnEnabled()) {
 			_log.warn("Device recognition provider is not available");
@@ -47,9 +49,11 @@ public class DefaultDeviceRecognitionProvider
 		return NoKnownDevices.getInstance();
 	}
 
+	@Override
 	public void reload() {
 	}
 
+	@Override
 	public void setDeviceCapabilityFilter(
 		DeviceCapabilityFilter deviceCapabilityFilter) {
 	}

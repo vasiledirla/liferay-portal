@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,13 +16,16 @@ package com.liferay.portal.freemarker;
 
 import com.liferay.portal.kernel.cache.PortalCache;
 import com.liferay.portal.kernel.cache.SingleVMPoolUtil;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateException;
-import com.liferay.portal.kernel.template.TemplateManager;
 import com.liferay.portal.kernel.template.TemplateResource;
 import com.liferay.portal.kernel.template.TemplateResourceLoaderUtil;
+import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.ReflectionUtil;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.template.TemplateResourceThreadLocal;
+import com.liferay.portal.util.PropsUtil;
+import com.liferay.portal.util.PropsValues;
 
 import freemarker.cache.TemplateCache;
 
@@ -32,6 +35,10 @@ import freemarker.template.Template;
 import java.io.IOException;
 
 import java.lang.reflect.Method;
+
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 
 import java.util.Locale;
 
@@ -56,7 +63,7 @@ public class LiferayTemplateCache extends TemplateCache {
 		String cacheName = TemplateResource.class.getName();
 
 		cacheName = cacheName.concat(StringPool.POUND).concat(
-			TemplateManager.FREEMARKER);
+			TemplateConstants.LANG_TYPE_FTL);
 
 		_portalCache = SingleVMPoolUtil.getCache(cacheName);
 	}
@@ -66,28 +73,58 @@ public class LiferayTemplateCache extends TemplateCache {
 			String templateId, Locale locale, String encoding, boolean parse)
 		throws IOException {
 
+		String[] macroTemplateIds = PropsUtil.getArray(
+			PropsKeys.FREEMARKER_ENGINE_MACRO_LIBRARY);
+
+		for (String macroTemplateId : macroTemplateIds) {
+			int pos = macroTemplateId.indexOf(" as ");
+
+			if (pos != -1) {
+				macroTemplateId = macroTemplateId.substring(0, pos);
+			}
+
+			if (templateId.equals(macroTemplateId)) {
+
+				// This template is provided by the portal, so invoke it from an
+				// access controller
+
+				try {
+					return AccessController.doPrivileged(
+						new TemplatePrivilegedExceptionAction(
+							macroTemplateId, locale, encoding, parse));
+				}
+				catch (PrivilegedActionException pae) {
+					throw (IOException)pae.getException();
+				}
+			}
+		}
+
+		return doGetTemplate(templateId, locale, encoding, parse);
+	}
+
+	private Template doGetTemplate(
+			String templateId, Locale locale, String encoding, boolean parse)
+		throws IOException {
+
 		if (templateId == null) {
-			throw new IllegalArgumentException(
-				"Argument \"name\" cannot be null");
+			throw new IllegalArgumentException("Argument \"name\" is null");
 		}
 
 		if (locale == null) {
-			throw new IllegalArgumentException(
-				"Argument \"locale\" cannot be null");
+			throw new IllegalArgumentException("Argument \"locale\" is null");
 		}
 
 		if (encoding == null) {
-			throw new IllegalArgumentException(
-				"Argument \"encoding\" cannot be null");
+			throw new IllegalArgumentException("Argument \"encoding\" is null");
 		}
 
 		TemplateResource templateResource = null;
 
 		if (templateId.startsWith(
-			TemplateResource.TEMPLATE_RESOURCE_UUID_PREFIX)) {
+				TemplateConstants.TEMPLATE_RESOURCE_UUID_PREFIX)) {
 
 			templateResource = TemplateResourceThreadLocal.getTemplateResource(
-				TemplateManager.FREEMARKER);
+				TemplateConstants.LANG_TYPE_FTL);
 		}
 		else {
 			try {
@@ -96,7 +133,7 @@ public class LiferayTemplateCache extends TemplateCache {
 
 				templateResource =
 					TemplateResourceLoaderUtil.getTemplateResource(
-						TemplateManager.FREEMARKER, templateId);
+						TemplateConstants.LANG_TYPE_FTL, templateId);
 			}
 			catch (Exception e) {
 				templateResource = null;
@@ -116,15 +153,43 @@ public class LiferayTemplateCache extends TemplateCache {
 
 		Template template = new Template(
 			templateResource.getTemplateId(), templateResource.getReader(),
-			_configuration, TemplateResource.DEFAUT_ENCODING);
+			_configuration, TemplateConstants.DEFAUT_ENCODING);
 
-		_portalCache.put(templateResource, template);
+		if (PropsValues.
+				FREEMARKER_ENGINE_RESOURCE_MODIFICATION_CHECK_INTERVAL != 0) {
+
+			_portalCache.put(templateResource, template);
+		}
 
 		return template;
 	}
 
 	private Configuration _configuration;
 	private Method _normalizeNameMethod;
-	private PortalCache _portalCache;
+	private PortalCache<TemplateResource, Object> _portalCache;
+
+	private class TemplatePrivilegedExceptionAction
+		implements PrivilegedExceptionAction<Template> {
+
+		public TemplatePrivilegedExceptionAction(
+			String templateId, Locale locale, String encoding, boolean parse) {
+
+			_templateId = templateId;
+			_locale = locale;
+			_encoding = encoding;
+			_parse = parse;
+		}
+
+		@Override
+		public Template run() throws Exception {
+			return doGetTemplate(_templateId, _locale, _encoding, _parse);
+		}
+
+		private String _encoding;
+		private Locale _locale;
+		private boolean _parse;
+		private String _templateId;
+
+	}
 
 }

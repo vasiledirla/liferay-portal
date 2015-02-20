@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -18,8 +18,11 @@ import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.util.LocaleUtil;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
+import com.liferay.portal.util.ClassLoaderUtil;
 import com.liferay.portlet.wiki.PageContentException;
 import com.liferay.portlet.wiki.engines.WikiEngine;
+import com.liferay.portlet.wiki.engines.mediawiki.matchers.DirectTagMatcher;
+import com.liferay.portlet.wiki.engines.mediawiki.matchers.DirectURLMatcher;
 import com.liferay.portlet.wiki.engines.mediawiki.matchers.EditURLMatcher;
 import com.liferay.portlet.wiki.engines.mediawiki.matchers.ImageTagMatcher;
 import com.liferay.portlet.wiki.engines.mediawiki.matchers.ImageURLMatcher;
@@ -44,19 +47,18 @@ import org.jamwiki.parser.TableOfContents;
  */
 public class MediaWikiEngine implements WikiEngine {
 
+	@Override
 	public String convert(
 			WikiPage page, PortletURL viewPageURL, PortletURL editPageURL,
 			String attachmentURLPrefix)
 		throws PageContentException {
 
-		String html = parsePage(page, new ParserOutput());
-
-		html = postParsePage(
-			html, viewPageURL, editPageURL, attachmentURLPrefix);
-
-		return html;
+		return parsePage(
+			page, new ParserOutput(), viewPageURL, editPageURL,
+			attachmentURLPrefix);
 	}
 
+	@Override
 	public Map<String, Boolean> getOutgoingLinks(WikiPage page)
 		throws PageContentException {
 
@@ -79,6 +81,8 @@ public class MediaWikiEngine implements WikiEngine {
 				}
 
 				if (pagesCount > 0) {
+					title = StringUtil.toLowerCase(title);
+
 					existsObj = Boolean.TRUE;
 				}
 				else {
@@ -101,12 +105,15 @@ public class MediaWikiEngine implements WikiEngine {
 		return outgoingLinks;
 	}
 
+	@Override
 	public void setInterWikiConfiguration(String interWikiConfiguration) {
 	}
 
+	@Override
 	public void setMainConfiguration(String mainConfiguration) {
 	}
 
+	@Override
 	public boolean validate(long nodeId, String content) {
 		return true;
 	}
@@ -145,6 +152,13 @@ public class MediaWikiEngine implements WikiEngine {
 
 		ParserOutput parserOutput = null;
 
+		Thread currentThread = Thread.currentThread();
+
+		ClassLoader contextClassLoader = currentThread.getContextClassLoader();
+
+		currentThread.setContextClassLoader(
+			ClassLoaderUtil.getPortalClassLoader());
+
 		try {
 			parserOutput = ParserUtil.parseMetadata(
 				parserInput, page.getContent());
@@ -152,11 +166,16 @@ public class MediaWikiEngine implements WikiEngine {
 		catch (ParserException pe) {
 			throw new PageContentException(pe);
 		}
+		finally {
+			currentThread.setContextClassLoader(contextClassLoader);
+		}
 
 		return parserOutput;
 	}
 
-	protected String parsePage(WikiPage page, ParserOutput parserOutput)
+	protected String parsePage(
+			WikiPage page, ParserOutput parserOutput, PortletURL viewPageURL,
+			PortletURL editPageURL, String attachmentURLPrefix)
 		throws PageContentException {
 
 		ParserInput parserInput = getParserInput(
@@ -164,8 +183,19 @@ public class MediaWikiEngine implements WikiEngine {
 
 		String content = StringPool.BLANK;
 
+		Thread currentThread = Thread.currentThread();
+
+		ClassLoader contextClassLoader = currentThread.getContextClassLoader();
+
+		currentThread.setContextClassLoader(
+			ClassLoaderUtil.getPortalClassLoader());
+
 		try {
 			content = page.getContent();
+
+			DirectTagMatcher directTagMatcher = new DirectTagMatcher(page);
+
+			content = directTagMatcher.replaceMatches(content);
 
 			ImageTagMatcher imageTagMatcher = new ImageTagMatcher();
 
@@ -176,25 +206,28 @@ public class MediaWikiEngine implements WikiEngine {
 		catch (ParserException pe) {
 			throw new PageContentException(pe);
 		}
+		finally {
+			currentThread.setContextClassLoader(contextClassLoader);
+		}
 
-		return content;
-	}
+		// Post parse
 
-	protected String postParsePage(
-		String content, PortletURL viewPageURL, PortletURL editPageURL,
-		String attachmentURLPrefix) {
+		if (attachmentURLPrefix != null) {
+			DirectURLMatcher attachmentURLMatcher = new DirectURLMatcher(
+				page, attachmentURLPrefix);
+
+			content = attachmentURLMatcher.replaceMatches(content);
+
+			ImageURLMatcher imageURLMatcher = new ImageURLMatcher(
+				attachmentURLPrefix);
+
+			content = imageURLMatcher.replaceMatches(content);
+		}
 
 		if (editPageURL != null) {
 			EditURLMatcher editURLMatcher = new EditURLMatcher(editPageURL);
 
 			content = editURLMatcher.replaceMatches(content);
-		}
-
-		if (attachmentURLPrefix != null) {
-			ImageURLMatcher imageURLMatcher = new ImageURLMatcher(
-				attachmentURLPrefix);
-
-			content = imageURLMatcher.replaceMatches(content);
 		}
 
 		if (viewPageURL != null) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -13,6 +13,10 @@
  */
 
 package com.liferay.portal.kernel.image;
+
+import aQute.bnd.annotation.ProviderType;
+
+import com.liferay.portal.model.Image;
 
 import java.awt.image.BufferedImage;
 import java.awt.image.RenderedImage;
@@ -28,6 +32,7 @@ import java.util.concurrent.Future;
  * @author Brian Wing Shun Chan
  * @author Alexander Chow
  */
+@ProviderType
 public interface ImageTool {
 
 	public static final String TYPE_BMP = "bmp";
@@ -46,6 +51,9 @@ public interface ImageTool {
 
 	public BufferedImage convertImageType(BufferedImage sourceImage, int type);
 
+	public RenderedImage crop(
+		RenderedImage renderedImage, int height, int width, int x, int y);
+
 	public void encodeGIF(RenderedImage renderedImage, OutputStream os)
 		throws IOException;
 
@@ -56,6 +64,27 @@ public interface ImageTool {
 
 	public byte[] getBytes(RenderedImage renderedImage, String contentType)
 		throws IOException;
+
+	public Image getDefaultCompanyLogo();
+
+	public Image getDefaultOrganizationLogo();
+
+	public Image getDefaultSpacer();
+
+	public Image getDefaultUserFemalePortrait();
+
+	public Image getDefaultUserMalePortrait();
+
+	public Image getImage(byte[] bytes) throws IOException;
+
+	public Image getImage(File file) throws IOException;
+
+	public Image getImage(InputStream is) throws IOException;
+
+	public Image getImage(InputStream is, boolean cleanUpStream)
+		throws IOException;
+
+	public boolean isNullOrDefaultSpacer(byte[] bytes);
 
 	public ImageBag read(byte[] bytes) throws IOException;
 

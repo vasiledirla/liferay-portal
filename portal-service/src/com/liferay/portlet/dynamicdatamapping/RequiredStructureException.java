@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,9 +21,11 @@ import com.liferay.portal.kernel.exception.PortalException;
  */
 public class RequiredStructureException extends PortalException {
 
-	public static final int REFERENCED_STRUCTURE_LINK = 1;
+	public static final int REFERENCED_STRUCTURE = 1;
 
-	public static final int REFERENCED_TEMPLATE = 2;
+	public static final int REFERENCED_STRUCTURE_LINK = 2;
+
+	public static final int REFERENCED_TEMPLATE = 3;
 
 	public RequiredStructureException(int type) {
 		_type = type;

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,19 +15,21 @@
 package com.liferay.portal.kernel.servlet;
 
 import com.liferay.portal.kernel.configuration.Filter;
+import com.liferay.portal.kernel.io.DummyOutputStream;
+import com.liferay.portal.kernel.io.DummyWriter;
 import com.liferay.portal.kernel.io.unsync.UnsyncByteArrayOutputStream;
-import com.liferay.portal.kernel.test.TestCase;
+import com.liferay.portal.kernel.io.unsync.UnsyncPrintWriter;
+import com.liferay.portal.kernel.io.unsync.UnsyncStringWriter;
+import com.liferay.portal.kernel.test.CodeCoverageAssertor;
+import com.liferay.portal.kernel.test.ReflectionTestUtil;
 import com.liferay.portal.kernel.util.Props;
 import com.liferay.portal.kernel.util.PropsUtil;
-import com.liferay.portal.kernel.util.ReflectionUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintWriter;
-
-import java.lang.reflect.Field;
 
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
@@ -36,11 +38,20 @@ import java.util.Properties;
 
 import javax.servlet.ServletOutputStream;
 
+import org.junit.Assert;
+import org.junit.ClassRule;
+import org.junit.Test;
+
 /**
  * @author Shuyang Zhou
  */
-public class BufferCacheServletResponseTest extends TestCase {
+public class BufferCacheServletResponseTest {
 
+	@ClassRule
+	public static CodeCoverageAssertor codeCoverageAssertor =
+		new CodeCoverageAssertor();
+
+	@Test
 	public void testConstructor() {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse();
@@ -48,10 +59,11 @@ public class BufferCacheServletResponseTest extends TestCase {
 		BufferCacheServletResponse bufferCacheServletResponse =
 			new BufferCacheServletResponse(stubHttpServletResponse);
 
-		assertSame(
+		Assert.assertSame(
 			stubHttpServletResponse, bufferCacheServletResponse.getResponse());
 	}
 
+	@Test
 	public void testGetBufferSize() throws Exception {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -72,7 +84,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 		BufferCacheServletResponse bufferCacheServletResponse =
 			new BufferCacheServletResponse(stubHttpServletResponse);
 
-		assertEquals(0, bufferCacheServletResponse.getBufferSize());
+		Assert.assertEquals(0, bufferCacheServletResponse.getBufferSize());
 
 		// Byte buffer
 
@@ -81,7 +93,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setByteBuffer(ByteBuffer.wrap(_TEST_BYTES));
 
-		assertEquals(
+		Assert.assertEquals(
 			_TEST_BYTES.length, bufferCacheServletResponse.getBufferSize());
 
 		// Character buffer
@@ -95,11 +107,11 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setCharBuffer(CharBuffer.wrap(_TEST_STRING));
 
-		assertEquals(
+		Assert.assertEquals(
 			_TEST_STRING.length(), bufferCacheServletResponse.getBufferSize());
-		assertEquals(0, charBuffer.position());
-		assertEquals(_TEST_STRING.length(), charBuffer.limit());
-		assertEquals(_TEST_STRING.length(), charBuffer.capacity());
+		Assert.assertEquals(0, charBuffer.position());
+		Assert.assertEquals(_TEST_STRING.length(), charBuffer.limit());
+		Assert.assertEquals(_TEST_STRING.length(), charBuffer.capacity());
 
 		// Servlet output stream
 
@@ -111,7 +123,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		servletOutputStream.write(_TEST_BYTES);
 
-		assertEquals(
+		Assert.assertEquals(
 			_TEST_BYTES.length, bufferCacheServletResponse.getBufferSize());
 
 		// Print writer
@@ -125,7 +137,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		printWriter.print(_TEST_STRING);
 
-		assertEquals(
+		Assert.assertEquals(
 			_TEST_STRING.length(), bufferCacheServletResponse.getBufferSize());
 
 		// Exception handling
@@ -134,7 +146,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 			@Override
 			public void flush() throws IOException {
-				throw new IOException("Failed to flush");
+				throw new IOException("Forced IOException");
 			}
 
 		};
@@ -144,25 +156,24 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		servletOutputStream = bufferCacheServletResponse.getOutputStream();
 
-		Field outputStreamField = ReflectionUtil.getDeclaredField(
-			ServletOutputStreamAdapter.class, "outputStream");
-
-		outputStreamField.set(servletOutputStream, failFlushOutputStream);
+		ReflectionTestUtil.setFieldValue(
+			servletOutputStream, "outputStream", failFlushOutputStream);
 
 		try {
 			bufferCacheServletResponse.getBufferSize();
 
-			fail();
+			Assert.fail();
 		}
 		catch (RuntimeException re) {
 			Throwable throwable = re.getCause();
 
-			assertTrue(throwable instanceof IOException);
-			assertEquals("Failed to flush", throwable.getMessage());
+			Assert.assertTrue(throwable instanceof IOException);
+			Assert.assertEquals("Forced IOException", throwable.getMessage());
 		}
 	}
 
-	public void testGetByteBuffer() throws IOException {
+	@Test
+	public void testGetByteBuffer() throws Exception {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
 
@@ -184,7 +195,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		ByteBuffer byteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertEquals(0, byteBuffer.limit());
+		Assert.assertEquals(0, byteBuffer.limit());
 
 		// Byte buffer
 
@@ -195,7 +206,30 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setByteBuffer(byteBuffer);
 
-		assertSame(byteBuffer, bufferCacheServletResponse.getByteBuffer());
+		Assert.assertSame(
+			byteBuffer, bufferCacheServletResponse.getByteBuffer());
+
+		ServletOutputStreamAdapter servletOutputStreamAdapter =
+			(ServletOutputStreamAdapter)
+				bufferCacheServletResponse.getOutputStream();
+
+		Assert.assertTrue(
+			servletOutputStreamAdapter.outputStream instanceof
+				DummyOutputStream);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetOutputStream);
+
+		bufferCacheServletResponse.setByteBuffer(null);
+
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+
+		servletOutputStreamAdapter =
+			(ServletOutputStreamAdapter)
+				bufferCacheServletResponse.getOutputStream();
+
+		Assert.assertTrue(
+			servletOutputStreamAdapter.outputStream instanceof
+				UnsyncByteArrayOutputStream);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetOutputStream);
 
 		// Char buffer
 
@@ -208,10 +242,31 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		byteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
-		assertEquals(0, charBuffer.position());
-		assertEquals(_TEST_STRING.length(), charBuffer.limit());
-		assertEquals(_TEST_STRING.length(), charBuffer.capacity());
+		Assert.assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
+		Assert.assertEquals(0, charBuffer.position());
+		Assert.assertEquals(_TEST_STRING.length(), charBuffer.limit());
+		Assert.assertEquals(_TEST_STRING.length(), charBuffer.capacity());
+
+		UnsyncPrintWriter unsyncPrintWriter =
+			(UnsyncPrintWriter)bufferCacheServletResponse.getWriter();
+
+		Object writer = ReflectionTestUtil.getFieldValue(
+			unsyncPrintWriter, "_writer");
+
+		Assert.assertTrue(writer instanceof DummyWriter);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetWriter);
+
+		bufferCacheServletResponse.setCharBuffer(null);
+
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
+
+		unsyncPrintWriter =
+			(UnsyncPrintWriter)bufferCacheServletResponse.getWriter();
+
+		writer = ReflectionTestUtil.getFieldValue(unsyncPrintWriter, "_writer");
+
+		Assert.assertTrue(writer instanceof UnsyncStringWriter);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetWriter);
 
 		// Servlet output stream
 
@@ -225,7 +280,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		byteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
+		Assert.assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
 
 		// Print writer
 
@@ -240,9 +295,10 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		byteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
+		Assert.assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
 	}
 
+	@Test
 	public void testGetCharBuffer() throws IOException {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -265,7 +321,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		CharBuffer charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(0, charBuffer.limit());
+		Assert.assertEquals(0, charBuffer.limit());
 
 		// Character buffer
 
@@ -276,7 +332,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(_TEST_STRING, charBuffer.toString());
+		Assert.assertEquals(_TEST_STRING, charBuffer.toString());
 
 		// Byte buffer
 
@@ -291,10 +347,10 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(_TEST_STRING, charBuffer.toString());
-		assertEquals(0, byteBuffer.position());
-		assertEquals(_TEST_BYTES.length, byteBuffer.limit());
-		assertEquals(_TEST_BYTES.length, byteBuffer.capacity());
+		Assert.assertEquals(_TEST_STRING, charBuffer.toString());
+		Assert.assertEquals(0, byteBuffer.position());
+		Assert.assertEquals(_TEST_BYTES.length, byteBuffer.limit());
+		Assert.assertEquals(_TEST_BYTES.length, byteBuffer.capacity());
 
 		// Print writer
 
@@ -307,7 +363,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(_TEST_STRING, charBuffer.toString());
+		Assert.assertEquals(_TEST_STRING, charBuffer.toString());
 
 		// Servlet output stream
 
@@ -323,9 +379,10 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(_TEST_STRING, charBuffer.toString());
+		Assert.assertEquals(_TEST_STRING, charBuffer.toString());
 	}
 
+	@Test
 	public void testGetOutputStream() {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse();
@@ -340,7 +397,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 		ServletOutputStream servletOutputStream2 =
 			bufferCacheServletResponse.getOutputStream();
 
-		assertSame(servletOutputStream1, servletOutputStream2);
+		Assert.assertSame(servletOutputStream1, servletOutputStream2);
 
 		// Get servlet output stream after getting print writer
 
@@ -356,6 +413,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 		}
 	}
 
+	@Test
 	public void testGetString() throws IOException {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -376,7 +434,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 		BufferCacheServletResponse bufferCacheServletResponse =
 			new BufferCacheServletResponse(stubHttpServletResponse);
 
-		assertEquals(StringPool.BLANK, bufferCacheServletResponse.getString());
+		Assert.assertEquals(
+			StringPool.BLANK, bufferCacheServletResponse.getString());
 
 		// Character buffer
 
@@ -385,7 +444,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setCharBuffer(CharBuffer.wrap(_TEST_STRING));
 
-		assertEquals(_TEST_STRING, bufferCacheServletResponse.getString());
+		Assert.assertEquals(
+			_TEST_STRING, bufferCacheServletResponse.getString());
 
 		// Byte buffer
 
@@ -398,10 +458,11 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setByteBuffer(byteBuffer);
 
-		assertEquals(_TEST_STRING, bufferCacheServletResponse.getString());
-		assertEquals(0, byteBuffer.position());
-		assertEquals(_TEST_BYTES.length, byteBuffer.limit());
-		assertEquals(_TEST_BYTES.length, byteBuffer.capacity());
+		Assert.assertEquals(
+			_TEST_STRING, bufferCacheServletResponse.getString());
+		Assert.assertEquals(0, byteBuffer.position());
+		Assert.assertEquals(_TEST_BYTES.length, byteBuffer.limit());
+		Assert.assertEquals(_TEST_BYTES.length, byteBuffer.capacity());
 
 		// Print writer
 
@@ -412,7 +473,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		printWriter.print(_TEST_STRING);
 
-		assertEquals(_TEST_STRING, bufferCacheServletResponse.getString());
+		Assert.assertEquals(
+			_TEST_STRING, bufferCacheServletResponse.getString());
 
 		// Servlet output stream
 
@@ -426,9 +488,11 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		servletOutputStream.write(_TEST_BYTES);
 
-		assertEquals(_TEST_STRING, bufferCacheServletResponse.getString());
+		Assert.assertEquals(
+			_TEST_STRING, bufferCacheServletResponse.getString());
 	}
 
+	@Test
 	public void testGetStringBundler() throws IOException {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -451,8 +515,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		StringBundler sb = bufferCacheServletResponse.getStringBundler();
 
-		assertEquals(1, sb.capacity());
-		assertEquals(0, sb.index());
+		Assert.assertEquals(1, sb.capacity());
+		Assert.assertEquals(0, sb.index());
 
 		// Character buffer
 
@@ -463,9 +527,9 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		sb = bufferCacheServletResponse.getStringBundler();
 
-		assertEquals(1, sb.capacity());
-		assertEquals(1, sb.index());
-		assertEquals(_TEST_STRING, sb.toString());
+		Assert.assertEquals(1, sb.capacity());
+		Assert.assertEquals(1, sb.index());
+		Assert.assertEquals(_TEST_STRING, sb.toString());
 
 		// Byte buffer
 
@@ -480,12 +544,12 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		sb = bufferCacheServletResponse.getStringBundler();
 
-		assertEquals(1, sb.capacity());
-		assertEquals(1, sb.index());
-		assertEquals(_TEST_STRING, sb.toString());
-		assertEquals(0, byteBuffer.position());
-		assertEquals(_TEST_BYTES.length, byteBuffer.limit());
-		assertEquals(_TEST_BYTES.length, byteBuffer.capacity());
+		Assert.assertEquals(1, sb.capacity());
+		Assert.assertEquals(1, sb.index());
+		Assert.assertEquals(_TEST_STRING, sb.toString());
+		Assert.assertEquals(0, byteBuffer.position());
+		Assert.assertEquals(_TEST_BYTES.length, byteBuffer.limit());
+		Assert.assertEquals(_TEST_BYTES.length, byteBuffer.capacity());
 
 		// Print writer
 
@@ -498,9 +562,9 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		sb = bufferCacheServletResponse.getStringBundler();
 
-		assertEquals(16, sb.capacity());
-		assertEquals(1, sb.index());
-		assertEquals(_TEST_STRING, sb.toString());
+		Assert.assertEquals(16, sb.capacity());
+		Assert.assertEquals(1, sb.index());
+		Assert.assertEquals(_TEST_STRING, sb.toString());
 
 		// Servlet output stream
 
@@ -516,11 +580,12 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		sb = bufferCacheServletResponse.getStringBundler();
 
-		assertEquals(1, sb.capacity());
-		assertEquals(1, sb.index());
-		assertEquals(_TEST_STRING, sb.toString());
+		Assert.assertEquals(1, sb.capacity());
+		Assert.assertEquals(1, sb.index());
+		Assert.assertEquals(_TEST_STRING, sb.toString());
 	}
 
+	@Test
 	public void testGetWriter() {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse();
@@ -533,7 +598,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 		PrintWriter printWriter1 = bufferCacheServletResponse.getWriter();
 		PrintWriter printWriter2 = bufferCacheServletResponse.getWriter();
 
-		assertSame(printWriter1, printWriter2);
+		Assert.assertSame(printWriter1, printWriter2);
 
 		// Get printWriter after getting servlet output stream
 
@@ -549,6 +614,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 		}
 	}
 
+	@Test
 	public void testIsByteCharMode() throws Exception {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -569,8 +635,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 		BufferCacheServletResponse bufferCacheServletResponse =
 			new BufferCacheServletResponse(stubHttpServletResponse);
 
-		assertFalse(bufferCacheServletResponse.isByteMode());
-		assertFalse(bufferCacheServletResponse.isCharMode());
+		Assert.assertFalse(bufferCacheServletResponse.isByteMode());
+		Assert.assertFalse(bufferCacheServletResponse.isCharMode());
 
 		// Byte buffer
 
@@ -579,8 +645,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setByteBuffer(ByteBuffer.wrap(_TEST_BYTES));
 
-		assertTrue(bufferCacheServletResponse.isByteMode());
-		assertFalse(bufferCacheServletResponse.isCharMode());
+		Assert.assertTrue(bufferCacheServletResponse.isByteMode());
+		Assert.assertFalse(bufferCacheServletResponse.isCharMode());
 
 		// Character buffer
 
@@ -589,8 +655,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setCharBuffer(CharBuffer.wrap(_TEST_STRING));
 
-		assertFalse(bufferCacheServletResponse.isByteMode());
-		assertTrue(bufferCacheServletResponse.isCharMode());
+		Assert.assertFalse(bufferCacheServletResponse.isByteMode());
+		Assert.assertTrue(bufferCacheServletResponse.isCharMode());
 
 		// Servlet output stream
 
@@ -599,8 +665,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.getOutputStream();
 
-		assertTrue(bufferCacheServletResponse.isByteMode());
-		assertFalse(bufferCacheServletResponse.isCharMode());
+		Assert.assertTrue(bufferCacheServletResponse.isByteMode());
+		Assert.assertFalse(bufferCacheServletResponse.isCharMode());
 
 		// Print writer
 
@@ -609,10 +675,11 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.getWriter();
 
-		assertFalse(bufferCacheServletResponse.isByteMode());
-		assertTrue(bufferCacheServletResponse.isCharMode());
+		Assert.assertFalse(bufferCacheServletResponse.isByteMode());
+		Assert.assertTrue(bufferCacheServletResponse.isCharMode());
 	}
 
+	@Test
 	public void testOutputBuffer() throws Exception {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -627,30 +694,37 @@ public class BufferCacheServletResponseTest extends TestCase {
 		PropsUtil.setProps(
 			new Props() {
 
+				@Override
 				public boolean contains(String key) {
 					return false;
 				}
 
+				@Override
 				public String get(String key) {
 					return null;
 				}
 
+				@Override
 				public String get(String key, Filter filter) {
 					return null;
 				}
 
+				@Override
 				public String[] getArray(String key) {
 					return null;
 				}
 
+				@Override
 				public String[] getArray(String key, Filter filter) {
 					return null;
 				}
 
+				@Override
 				public Properties getProperties() {
 					return null;
 				}
 
+				@Override
 				public Properties getProperties(
 					String prefix, boolean removePrefix) {
 
@@ -672,7 +746,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		ByteBuffer newByteBuffer = toResponse.getByteBuffer();
 
-		assertEquals(0, newByteBuffer.limit());
+		Assert.assertEquals(0, newByteBuffer.limit());
 
 		// Byte buffer
 
@@ -688,7 +762,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		newByteBuffer = toResponse.getByteBuffer();
 
-		assertSame(byteBuffer, newByteBuffer);
+		Assert.assertSame(byteBuffer, newByteBuffer);
 
 		// Character buffer
 
@@ -704,7 +778,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		CharBuffer newCharBuffer = toResponse.getCharBuffer();
 
-		assertSame(charBuffer, newCharBuffer);
+		Assert.assertSame(charBuffer, newCharBuffer);
 
 		// Servlet output stream
 
@@ -721,7 +795,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		newByteBuffer = toResponse.getByteBuffer();
 
-		assertEquals(ByteBuffer.wrap(_TEST_BYTES), newByteBuffer);
+		Assert.assertEquals(ByteBuffer.wrap(_TEST_BYTES), newByteBuffer);
 
 		// Print writer
 
@@ -737,9 +811,10 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		newCharBuffer = toResponse.getCharBuffer();
 
-		assertEquals(_TEST_STRING, newCharBuffer.toString());
+		Assert.assertEquals(_TEST_STRING, newCharBuffer.toString());
 	}
 
+	@Test
 	public void testResetBuffer() throws Exception {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse();
@@ -753,14 +828,15 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setByteBuffer(byteBuffer);
 
-		assertSame(byteBuffer, bufferCacheServletResponse.getByteBuffer());
+		Assert.assertSame(
+			byteBuffer, bufferCacheServletResponse.getByteBuffer());
 
 		bufferCacheServletResponse.resetBuffer(true);
 
 		ByteBuffer newByteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertNotSame(byteBuffer, newByteBuffer);
-		assertEquals(0, newByteBuffer.capacity());
+		Assert.assertNotSame(byteBuffer, newByteBuffer);
+		Assert.assertEquals(0, newByteBuffer.capacity());
 
 		// Null out character buffer
 
@@ -771,14 +847,15 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setCharBuffer(charBuffer);
 
-		assertSame(charBuffer, bufferCacheServletResponse.getCharBuffer());
+		Assert.assertSame(
+			charBuffer, bufferCacheServletResponse.getCharBuffer());
 
 		bufferCacheServletResponse.resetBuffer(true);
 
 		CharBuffer newCharBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertNotSame(charBuffer, newCharBuffer);
-		assertEquals(0, newCharBuffer.capacity());
+		Assert.assertNotSame(charBuffer, newCharBuffer);
+		Assert.assertEquals(0, newCharBuffer.capacity());
 
 		// Null out servlet output stream
 
@@ -788,19 +865,19 @@ public class BufferCacheServletResponseTest extends TestCase {
 		ServletOutputStream servletOutputStream =
 			bufferCacheServletResponse.getOutputStream();
 
-		assertSame(
+		Assert.assertSame(
 			servletOutputStream, bufferCacheServletResponse.getOutputStream());
-		assertTrue(bufferCacheServletResponse.calledGetOutputStream);
-		assertFalse(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
 
 		bufferCacheServletResponse.resetBuffer(true);
 
-		assertFalse(bufferCacheServletResponse.calledGetOutputStream);
-		assertFalse(bufferCacheServletResponse.calledGetWriter);
-		assertNotSame(
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertNotSame(
 			servletOutputStream, bufferCacheServletResponse.getOutputStream());
-		assertTrue(bufferCacheServletResponse.calledGetOutputStream);
-		assertFalse(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
 
 		// Null out print writer
 
@@ -809,17 +886,18 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		PrintWriter printWriter = bufferCacheServletResponse.getWriter();
 
-		assertSame(printWriter, bufferCacheServletResponse.getWriter());
-		assertFalse(bufferCacheServletResponse.calledGetOutputStream);
-		assertTrue(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertSame(printWriter, bufferCacheServletResponse.getWriter());
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetWriter);
 
 		bufferCacheServletResponse.resetBuffer(true);
 
-		assertFalse(bufferCacheServletResponse.calledGetOutputStream);
-		assertFalse(bufferCacheServletResponse.calledGetWriter);
-		assertNotSame(printWriter, bufferCacheServletResponse.getWriter());
-		assertFalse(bufferCacheServletResponse.calledGetOutputStream);
-		assertTrue(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertNotSame(
+			printWriter, bufferCacheServletResponse.getWriter());
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetWriter);
 
 		// Reset byte buffer
 
@@ -830,14 +908,15 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setByteBuffer(byteBuffer);
 
-		assertSame(byteBuffer, bufferCacheServletResponse.getByteBuffer());
+		Assert.assertSame(
+			byteBuffer, bufferCacheServletResponse.getByteBuffer());
 
 		bufferCacheServletResponse.resetBuffer(false);
 
 		newByteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertNotSame(byteBuffer, newByteBuffer);
-		assertEquals(0, newByteBuffer.capacity());
+		Assert.assertNotSame(byteBuffer, newByteBuffer);
+		Assert.assertEquals(0, newByteBuffer.capacity());
 
 		// Reset character buffer
 
@@ -848,14 +927,15 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setCharBuffer(charBuffer);
 
-		assertSame(charBuffer, bufferCacheServletResponse.getCharBuffer());
+		Assert.assertSame(
+			charBuffer, bufferCacheServletResponse.getCharBuffer());
 
 		bufferCacheServletResponse.resetBuffer(false);
 
 		newCharBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertNotSame(charBuffer, newCharBuffer);
-		assertEquals(0, newCharBuffer.capacity());
+		Assert.assertNotSame(charBuffer, newCharBuffer);
+		Assert.assertEquals(0, newCharBuffer.capacity());
 
 		// Reset servlet output stream
 
@@ -864,27 +944,27 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		servletOutputStream = bufferCacheServletResponse.getOutputStream();
 
-		assertSame(
+		Assert.assertSame(
 			servletOutputStream, bufferCacheServletResponse.getOutputStream());
-		assertTrue(bufferCacheServletResponse.calledGetOutputStream);
-		assertFalse(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
 
 		servletOutputStream.write(_TEST_BYTES);
 
 		byteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
+		Assert.assertEquals(ByteBuffer.wrap(_TEST_BYTES), byteBuffer);
 
 		bufferCacheServletResponse.resetBuffer(false);
 
-		assertSame(
+		Assert.assertSame(
 			servletOutputStream, bufferCacheServletResponse.getOutputStream());
-		assertTrue(bufferCacheServletResponse.calledGetOutputStream);
-		assertFalse(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertFalse(bufferCacheServletResponse.calledGetWriter);
 
 		byteBuffer = bufferCacheServletResponse.getByteBuffer();
 
-		assertEquals(0, byteBuffer.limit());
+		Assert.assertEquals(0, byteBuffer.limit());
 
 		// Reset print writer
 
@@ -893,27 +973,28 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		printWriter = bufferCacheServletResponse.getWriter();
 
-		assertSame(printWriter, bufferCacheServletResponse.getWriter());
-		assertFalse(bufferCacheServletResponse.calledGetOutputStream);
-		assertTrue(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertSame(printWriter, bufferCacheServletResponse.getWriter());
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetWriter);
 
 		printWriter.write(_TEST_STRING);
 
 		charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(_TEST_STRING, charBuffer.toString());
+		Assert.assertEquals(_TEST_STRING, charBuffer.toString());
 
 		bufferCacheServletResponse.resetBuffer(false);
 
-		assertSame(printWriter, bufferCacheServletResponse.getWriter());
-		assertFalse(bufferCacheServletResponse.calledGetOutputStream);
-		assertTrue(bufferCacheServletResponse.calledGetWriter);
+		Assert.assertSame(printWriter, bufferCacheServletResponse.getWriter());
+		Assert.assertFalse(bufferCacheServletResponse.calledGetOutputStream);
+		Assert.assertTrue(bufferCacheServletResponse.calledGetWriter);
 
 		charBuffer = bufferCacheServletResponse.getCharBuffer();
 
-		assertEquals(0, charBuffer.limit());
+		Assert.assertEquals(0, charBuffer.limit());
 	}
 
+	@Test
 	public void testSetBufferSize() throws IOException {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse() {
@@ -939,12 +1020,13 @@ public class BufferCacheServletResponseTest extends TestCase {
 		try {
 			bufferCacheServletResponse.setBufferSize(2048);
 
-			fail();
+			Assert.fail();
 		}
 		catch (IllegalStateException ise) {
 		}
 	}
 
+	@Test
 	public void testSetContentLength() {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse();
@@ -955,6 +1037,7 @@ public class BufferCacheServletResponseTest extends TestCase {
 		bufferCacheServletResponse.setContentLength(1024);
 	}
 
+	@Test
 	public void testSetString() throws IOException {
 		StubHttpServletResponse stubHttpServletResponse =
 			new StubHttpServletResponse();
@@ -964,7 +1047,8 @@ public class BufferCacheServletResponseTest extends TestCase {
 
 		bufferCacheServletResponse.setString(_TEST_STRING);
 
-		assertEquals(_TEST_STRING, bufferCacheServletResponse.getString());
+		Assert.assertEquals(
+			_TEST_STRING, bufferCacheServletResponse.getString());
 	}
 
 	private static final byte[] _TEST_BYTES = {'a', 'b', 'c'};

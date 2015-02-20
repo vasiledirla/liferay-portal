@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,8 @@
 
 package com.liferay.portal.kernel.servlet;
 
+import com.liferay.portal.kernel.io.DummyOutputStream;
+import com.liferay.portal.kernel.io.DummyWriter;
 import com.liferay.portal.kernel.io.unsync.UnsyncByteArrayOutputStream;
 import com.liferay.portal.kernel.io.unsync.UnsyncStringWriter;
 import com.liferay.portal.kernel.nio.charset.CharsetDecoderUtil;
@@ -154,7 +156,8 @@ public class BufferCacheServletResponse extends MetaInfoCacheServletResponse {
 	public ServletOutputStream getOutputStream() {
 		if (calledGetWriter) {
 			throw new IllegalStateException(
-				"Cannot obtain OutputStream because Writer is already in use");
+				"Unable to obtain OutputStream because Writer is already in " +
+					"use");
 		}
 
 		if (_servletOutputStream != null) {
@@ -319,12 +322,25 @@ public class BufferCacheServletResponse extends MetaInfoCacheServletResponse {
 		resetBuffer(true);
 
 		_byteBuffer = byteBuffer;
+
+		if (byteBuffer != null) {
+			_servletOutputStream = new ServletOutputStreamAdapter(
+				new DummyOutputStream());
+
+			calledGetOutputStream = true;
+		}
 	}
 
 	public void setCharBuffer(CharBuffer charBuffer) {
 		resetBuffer(true);
 
 		_charBuffer = charBuffer;
+
+		if (charBuffer != null) {
+			_printWriter = UnsyncPrintWriterPool.borrow(new DummyWriter());
+
+			calledGetWriter = true;
+		}
 	}
 
 	@Override
@@ -341,9 +357,6 @@ public class BufferCacheServletResponse extends MetaInfoCacheServletResponse {
 
 	@Override
 	protected void resetBuffer(boolean nullOutReferences) {
-		_byteBuffer = null;
-		_charBuffer = null;
-
 		if (nullOutReferences) {
 			calledGetOutputStream = false;
 			calledGetWriter = false;
@@ -361,7 +374,22 @@ public class BufferCacheServletResponse extends MetaInfoCacheServletResponse {
 			if (_unsyncStringWriter != null) {
 				_unsyncStringWriter.reset();
 			}
+
+			if (_byteBuffer != null) {
+				_servletOutputStream = null;
+
+				calledGetOutputStream = false;
+			}
+
+			if (_charBuffer != null) {
+				_printWriter = null;
+
+				calledGetWriter = false;
+			}
 		}
+
+		_byteBuffer = null;
+		_charBuffer = null;
 	}
 
 	private void _flushInternalBuffer() throws IOException {

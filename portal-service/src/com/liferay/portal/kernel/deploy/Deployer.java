@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,8 @@
 
 package com.liferay.portal.kernel.deploy;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.plugin.PluginPackage;
 
 import java.io.File;
@@ -24,10 +26,10 @@ import java.util.Map;
 /**
  * @author Brian Wing Shun Chan
  */
+@ProviderType
 public interface Deployer {
 
-	public void addExtJar(List<String> jars, String resource)
-		throws Exception;
+	public void addExtJar(List<String> jars, String resource) throws Exception;
 
 	public void addRequiredJar(List<String> jars, String resource)
 		throws Exception;
@@ -101,5 +103,7 @@ public interface Deployer {
 			File webXml, File srcFile, String displayName,
 			PluginPackage pluginPackage)
 		throws Exception;
+
+	public String wrapCDATA(String string);
 
 }

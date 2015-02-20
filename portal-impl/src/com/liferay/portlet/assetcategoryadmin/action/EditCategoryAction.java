@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,24 +14,32 @@
 
 package com.liferay.portlet.assetcategoryadmin.action;
 
-import com.liferay.portal.kernel.json.JSONFactoryUtil;
-import com.liferay.portal.kernel.json.JSONObject;
+import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.servlet.SessionErrors;
 import com.liferay.portal.kernel.util.Constants;
 import com.liferay.portal.kernel.util.LocalizationUtil;
 import com.liferay.portal.kernel.util.ParamUtil;
-import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.security.auth.PrincipalException;
 import com.liferay.portal.service.ServiceContext;
 import com.liferay.portal.service.ServiceContextFactory;
 import com.liferay.portal.struts.PortletAction;
+import com.liferay.portlet.asset.AssetCategoryNameException;
+import com.liferay.portlet.asset.DuplicateCategoryException;
+import com.liferay.portlet.asset.NoSuchCategoryException;
 import com.liferay.portlet.asset.model.AssetCategory;
+import com.liferay.portlet.asset.model.AssetCategoryConstants;
 import com.liferay.portlet.asset.service.AssetCategoryServiceUtil;
 
 import java.util.Locale;
 import java.util.Map;
 
-import javax.portlet.*;
+import javax.portlet.ActionRequest;
+import javax.portlet.ActionResponse;
+import javax.portlet.PortletConfig;
+import javax.portlet.RenderRequest;
+import javax.portlet.RenderResponse;
 
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
@@ -45,41 +53,78 @@ public class EditCategoryAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
-
-		JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
 
 		try {
 			if (cmd.equals(Constants.ADD) || cmd.equals(Constants.UPDATE)) {
-				jsonObject = updateCategory(actionRequest);
+				updateCategory(actionRequest);
+			}
+			else if (cmd.equals(Constants.DELETE)) {
+				deleteCategory(actionRequest);
 			}
 			else if (cmd.equals(Constants.MOVE)) {
-				jsonObject = moveCategory(actionRequest);
+				moveCategory(actionRequest);
 			}
+
+			sendRedirect(actionRequest, actionResponse);
 		}
 		catch (Exception e) {
-			jsonObject.putException(e);
-		}
+			if (e instanceof NoSuchCategoryException ||
+				e instanceof PrincipalException) {
 
-		writeJSON(actionRequest, actionResponse, jsonObject);
+				SessionErrors.add(actionRequest, e.getClass());
+
+				setForward(actionRequest, "portlet.asset_category_admin.error");
+			}
+			else if (e instanceof AssetCategoryNameException ||
+					 e instanceof DuplicateCategoryException) {
+
+				SessionErrors.add(actionRequest, e.getClass());
+			}
+			else {
+				throw e;
+			}
+		}
 	}
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		ActionUtil.getCategory(renderRequest);
 		ActionUtil.getVocabularies(renderRequest);
 
-		return mapping.findForward(
+		return actionMapping.findForward(
 			getForward(
 				renderRequest, "portlet.asset_category_admin.edit_category"));
+	}
+
+	protected void deleteCategory(ActionRequest actionRequest)
+		throws PortalException {
+
+		long[] deleteCategoryIds = null;
+
+		long categoryId = ParamUtil.getLong(actionRequest, "categoryId");
+
+		if (categoryId > 0) {
+			deleteCategoryIds = new long[] {categoryId};
+		}
+		else {
+			deleteCategoryIds = StringUtil.split(
+				ParamUtil.getString(actionRequest, "deleteCategoryIds"), 0L);
+		}
+
+		for (long deleteCategoryId : deleteCategoryIds) {
+			AssetCategoryServiceUtil.deleteCategory(deleteCategoryId);
+		}
 	}
 
 	protected String[] getCategoryProperties(ActionRequest actionRequest) {
@@ -102,15 +147,15 @@ public class EditCategoryAction extends PortletAction {
 			String value = ParamUtil.getString(
 				actionRequest, "value" + categoryPropertiesIndex);
 
-			categoryProperties[i] = key + StringPool.COLON + value;
+			categoryProperties[i] =
+				key + AssetCategoryConstants.PROPERTY_KEY_VALUE_SEPARATOR +
+					value;
 		}
 
 		return categoryProperties;
 	}
 
-	protected JSONObject moveCategory(ActionRequest actionRequest)
-		throws Exception {
-
+	protected void moveCategory(ActionRequest actionRequest) throws Exception {
 		long categoryId = ParamUtil.getLong(actionRequest, "categoryId");
 
 		long parentCategoryId = ParamUtil.getLong(
@@ -120,17 +165,11 @@ public class EditCategoryAction extends PortletAction {
 		ServiceContext serviceContext = ServiceContextFactory.getInstance(
 			AssetCategory.class.getName(), actionRequest);
 
-		AssetCategory category = AssetCategoryServiceUtil.moveCategory(
+		AssetCategoryServiceUtil.moveCategory(
 			categoryId, parentCategoryId, vocabularyId, serviceContext);
-
-		JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
-
-		jsonObject.put("categoryId", category.getCategoryId());
-
-		return jsonObject;
 	}
 
-	protected JSONObject updateCategory(ActionRequest actionRequest)
+	protected void updateCategory(ActionRequest actionRequest)
 		throws Exception {
 
 		long categoryId = ParamUtil.getLong(actionRequest, "categoryId");
@@ -147,13 +186,11 @@ public class EditCategoryAction extends PortletAction {
 		ServiceContext serviceContext = ServiceContextFactory.getInstance(
 			AssetCategory.class.getName(), actionRequest);
 
-		AssetCategory category = null;
-
 		if (categoryId <= 0) {
 
 			// Add category
 
-			category = AssetCategoryServiceUtil.addCategory(
+			AssetCategoryServiceUtil.addCategory(
 				parentCategoryId, titleMap, descriptionMap, vocabularyId,
 				categoryProperties, serviceContext);
 		}
@@ -161,16 +198,10 @@ public class EditCategoryAction extends PortletAction {
 
 			// Update category
 
-			category = AssetCategoryServiceUtil.updateCategory(
+			AssetCategoryServiceUtil.updateCategory(
 				categoryId, parentCategoryId, titleMap, descriptionMap,
 				vocabularyId, categoryProperties, serviceContext);
 		}
-
-		JSONObject jsonObject = JSONFactoryUtil.createJSONObject();
-
-		jsonObject.put("categoryId", category.getCategoryId());
-
-		return jsonObject;
 	}
 
 }

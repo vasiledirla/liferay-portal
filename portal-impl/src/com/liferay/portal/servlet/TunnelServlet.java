@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,8 +19,7 @@ import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.MethodHandler;
-import com.liferay.portal.kernel.util.MethodInvoker;
-import com.liferay.portal.kernel.util.MethodWrapper;
+import com.liferay.portal.kernel.util.MethodKey;
 import com.liferay.portal.kernel.util.ObjectValuePair;
 import com.liferay.portal.security.ac.AccessControlThreadLocal;
 import com.liferay.portal.security.auth.HttpPrincipal;
@@ -39,7 +38,6 @@ import javax.servlet.http.HttpServletResponse;
  * @author Michael Weisser
  * @author Brian Wing Shun Chan
  */
-@SuppressWarnings("deprecation")
 public class TunnelServlet extends HttpServlet {
 
 	@Override
@@ -66,48 +64,35 @@ public class TunnelServlet extends HttpServlet {
 		try {
 			AccessControlThreadLocal.setRemoteAccess(true);
 
-			ObjectValuePair<HttpPrincipal, Object> ovp =
-				(ObjectValuePair<HttpPrincipal, Object>)ois.readObject();
+			ObjectValuePair<HttpPrincipal, MethodHandler> ovp =
+				(ObjectValuePair<HttpPrincipal, MethodHandler>)ois.readObject();
 
-			Object ovpValue = ovp.getValue();
-
-			MethodHandler methodHandler = null;
-			MethodWrapper methodWrapper = null;
-
-			if (ovpValue instanceof MethodHandler) {
-				methodHandler = (MethodHandler)ovpValue;
-			}
-			else {
-				methodWrapper = (MethodWrapper)ovpValue;
-			}
+			MethodHandler methodHandler = ovp.getValue();
 
 			if (methodHandler != null) {
-				if (!isValidRequest(methodHandler.getClassName())) {
-					return;
-				}
-			}
-			else {
-				if (!isValidRequest(methodWrapper.getClassName())) {
-					return;
-				}
-			}
+				MethodKey methodKey = methodHandler.getMethodKey();
 
-			if (returnObj == null) {
-				if (methodHandler != null) {
-					returnObj = methodHandler.invoke(true);
+				if (!isValidRequest(methodKey.getDeclaringClass())) {
+					return;
 				}
-				else {
-					returnObj = MethodInvoker.invoke(methodWrapper);
-				}
+
+				returnObj = methodHandler.invoke();
 			}
 		}
 		catch (InvocationTargetException ite) {
 			returnObj = ite.getCause();
 
 			if (!(returnObj instanceof PortalException)) {
-				ite.printStackTrace();
+				_log.error(ite, ite);
 
-				returnObj = new SystemException();
+				if (returnObj != null) {
+					Throwable throwable = (Throwable)returnObj;
+
+					returnObj = new SystemException(throwable.getMessage());
+				}
+				else {
+					returnObj = new SystemException();
+				}
 			}
 		}
 		catch (Exception e) {
@@ -135,7 +120,9 @@ public class TunnelServlet extends HttpServlet {
 		}
 	}
 
-	protected boolean isValidRequest(String className) {
+	protected boolean isValidRequest(Class<?> clazz) {
+		String className = clazz.getName();
+
 		if (className.contains(".service.") &&
 			className.endsWith("ServiceUtil") &&
 			!className.endsWith("LocalServiceUtil")) {

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -54,11 +54,12 @@ public abstract class AnnotationChainableMethodAdvice<T extends Annotation>
 			return (T)annotation;
 		}
 
-		Object thisObject = methodInvocation.getThis();
-
-		Class<?> targetClass = thisObject.getClass();
-
 		Method method = methodInvocation.getMethod();
+
+		ServiceBeanMethodInvocation serviceBeanMethodInvocation =
+			(ServiceBeanMethodInvocation)methodInvocation;
+
+		Class<?> targetClass = serviceBeanMethodInvocation.getTargetClass();
 
 		List<Annotation> annotations = AnnotationLocator.locate(
 			method, targetClass);
@@ -95,21 +96,28 @@ public abstract class AnnotationChainableMethodAdvice<T extends Annotation>
 			annotationClasses.add(annotationClass);
 		}
 
-		Map<Class<? extends Annotation>, AnnotationChainableMethodAdvice<?>>
+		Map<Class<? extends Annotation>, AnnotationChainableMethodAdvice<?>[]>
 			annotationChainableMethodAdvices =
 				serviceBeanAopCacheManager.
 					getRegisteredAnnotationChainableMethodAdvices();
 
 		for (Map.Entry<Class<? extends Annotation>,
-				AnnotationChainableMethodAdvice<?>> entry :
+				AnnotationChainableMethodAdvice<?>[]> entry :
 					annotationChainableMethodAdvices.entrySet()) {
 
 			Class<? extends Annotation> annotationClass = entry.getKey();
-			AnnotationChainableMethodAdvice<?> annotationChainableMethodAdvice =
-				entry.getValue();
+			AnnotationChainableMethodAdvice<?>[]
+				annotationChainableMethodAdvicesArray = entry.getValue();
 
-			if (!annotationClasses.contains(annotationClass) &&
-				(annotationChainableMethodAdvice != null)) {
+			if (annotationClasses.contains(annotationClass) ||
+				(annotationChainableMethodAdvicesArray == null)) {
+
+				continue;
+			}
+
+			for (AnnotationChainableMethodAdvice<?>
+					annotationChainableMethodAdvice :
+						annotationChainableMethodAdvicesArray) {
 
 				serviceBeanAopCacheManager.removeMethodInterceptor(
 					methodInvocation, annotationChainableMethodAdvice);

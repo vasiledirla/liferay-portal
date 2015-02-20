@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,44 +14,80 @@
 
 package com.liferay.portlet.journalcontent.action;
 
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.portlet.DefaultConfigurationAction;
+import com.liferay.portal.kernel.portlet.PortletLayoutListener;
 import com.liferay.portal.kernel.servlet.SessionErrors;
+import com.liferay.portal.kernel.transaction.Isolation;
+import com.liferay.portal.kernel.transaction.Propagation;
+import com.liferay.portal.kernel.transaction.Transactional;
 import com.liferay.portal.kernel.util.ParamUtil;
-import com.liferay.portal.kernel.util.StringBundler;
-import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.util.ServiceBeanMethodInvocationFactoryUtil;
 import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.kernel.xml.Document;
-import com.liferay.portal.kernel.xml.Element;
-import com.liferay.portal.kernel.xml.SAXReaderUtil;
-import com.liferay.portal.model.Group;
 import com.liferay.portal.model.Layout;
-import com.liferay.portal.model.PortletConstants;
-import com.liferay.portal.service.GroupLocalServiceUtil;
+import com.liferay.portal.model.Portlet;
+import com.liferay.portal.service.PortletLocalServiceUtil;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.WebKeys;
-import com.liferay.portlet.journal.NoSuchArticleException;
-import com.liferay.portlet.journal.NoSuchTemplateException;
-import com.liferay.portlet.journal.model.JournalArticle;
-import com.liferay.portlet.journal.model.JournalTemplate;
-import com.liferay.portlet.journal.service.JournalArticleLocalServiceUtil;
-import com.liferay.portlet.journal.service.JournalContentSearchLocalServiceUtil;
-import com.liferay.portlet.journal.service.JournalTemplateLocalServiceUtil;
-import com.liferay.portlet.layoutconfiguration.util.xml.PortletLogic;
+
+import java.lang.reflect.Method;
 
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
 import javax.portlet.PortletConfig;
+import javax.portlet.PortletPreferences;
 import javax.portlet.PortletRequest;
 
 /**
  * @author Brian Wing Shun Chan
  * @author Douglas Wong
+ * @author Raymond Augé
  */
 public class ConfigurationActionImpl extends DefaultConfigurationAction {
 
+	public ConfigurationActionImpl() {
+		try {
+			Class<?> clazz = getClass();
+
+			_doProcessActionMethod = clazz.getDeclaredMethod(
+				"doProcessAction",
+				new Class<?>[] {
+					PortletConfig.class, ActionRequest.class,
+					ActionResponse.class
+				});
+		}
+		catch (Exception e) {
+			_log.error(e, e);
+		}
+	}
+
 	@Override
 	public void processAction(
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
+		throws Exception {
+
+		// This logic has to run in a transaction which we will invoke directly
+		// since this is not a Spring bean
+
+		ServiceBeanMethodInvocationFactoryUtil.proceed(
+			this, ConfigurationActionImpl.class, _doProcessActionMethod,
+			new Object[] {portletConfig, actionRequest, actionResponse},
+			new String[] {"transactionAdvice"});
+	}
+
+	/**
+	 * This method is invoked in a transaction because we may result in a
+	 * persistence call before and/or after the call to super.processAction()
+	 * which itself results in a persistence call.
+	 */
+	@Transactional(
+		isolation = Isolation.PORTAL, propagation = Propagation.REQUIRES_NEW,
+		rollbackFor = {Exception.class}
+	)
+	protected void doProcessAction(
 			PortletConfig portletConfig, ActionRequest actionRequest,
 			ActionResponse actionResponse)
 		throws Exception {
@@ -60,143 +96,59 @@ public class ConfigurationActionImpl extends DefaultConfigurationAction {
 
 		setPreference(actionRequest, "extensions", extensions);
 
+		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
+
+		Layout layout = themeDisplay.getLayout();
+
+		String portletResource = ParamUtil.getString(
+			actionRequest, "portletResource");
+
+		PortletPreferences preferences = actionRequest.getPreferences();
+
+		String articleId = getArticleId(actionRequest);
+
+		String originalArticleId = preferences.getValue("articleId", null);
+
+		Portlet portlet = PortletLocalServiceUtil.getPortletById(
+			themeDisplay.getCompanyId(), portletResource);
+
+		PortletLayoutListener portletLayoutListener =
+			portlet.getPortletLayoutListenerInstance();
+
+		if ((portletLayoutListener != null) &&
+			Validator.isNotNull(originalArticleId) &&
+			!originalArticleId.equals(articleId)) {
+
+			// Results in a persistence call
+
+			portletLayoutListener.onRemoveFromLayout(
+				portletResource, layout.getPlid());
+		}
+
+		// Results in a persistence call
+
 		super.processAction(portletConfig, actionRequest, actionResponse);
 
-		if (SessionErrors.isEmpty(actionRequest)) {
-			updateContentSearch(actionRequest);
+		if (SessionErrors.isEmpty(actionRequest) &&
+			(portletLayoutListener != null)) {
+
+			// Results in a persistence call
+
+			portletLayoutListener.onAddToLayout(
+				portletResource, layout.getPlid());
 		}
 	}
 
 	protected String getArticleId(PortletRequest portletRequest) {
 		String articleId = getParameter(portletRequest, "articleId");
 
-		return articleId.toUpperCase();
+		return StringUtil.toUpperCase(articleId);
 	}
 
-	protected String getRuntimePortletId(String xml) throws Exception {
-		Document document = SAXReaderUtil.read(xml);
+	private static Log _log = LogFactoryUtil.getLog(
+		ConfigurationActionImpl.class);
 
-		Element rootElement = document.getRootElement();
-
-		String instanceId = rootElement.attributeValue("instance");
-		String portletId = rootElement.attributeValue("name");
-
-		if (Validator.isNotNull(instanceId)) {
-			portletId = PortletConstants.assemblePortletId(
-				portletId, instanceId);
-		}
-
-		return portletId;
-	}
-
-	protected String getRuntimePortletIds(String content) throws Exception {
-		StringBundler sb = new StringBundler();
-
-		for (int index = 0;;) {
-			index = content.indexOf(PortletLogic.OPEN_TAG, index);
-
-			if (index == -1) {
-				break;
-			}
-
-			int close1 = content.indexOf(PortletLogic.CLOSE_1_TAG, index);
-			int close2 = content.indexOf(PortletLogic.CLOSE_2_TAG, index);
-
-			int closeIndex = -1;
-
-			if ((close2 == -1) || ((close1 != -1) && (close1 < close2))) {
-				closeIndex = close1 + PortletLogic.CLOSE_1_TAG.length();
-			}
-			else {
-				closeIndex = close2 + PortletLogic.CLOSE_2_TAG.length();
-			}
-
-			if (closeIndex == -1) {
-				break;
-			}
-
-			if (sb.length() > 0) {
-				sb.append(StringPool.COMMA);
-			}
-
-			sb.append(
-				getRuntimePortletId(content.substring(index, closeIndex)));
-
-			index = closeIndex;
-		}
-
-		if (sb.length() == 0) {
-			return null;
-		}
-
-		return sb.toString();
-	}
-
-	protected String getRuntimePortletIds(
-			ThemeDisplay themeDisplay, String articleId)
-		throws Exception {
-
-		JournalArticle journalArticle = null;
-
-		Group companyGroup = GroupLocalServiceUtil.getCompanyGroup(
-			themeDisplay.getCompanyId());
-
-		try {
-			journalArticle = JournalArticleLocalServiceUtil.getDisplayArticle(
-				themeDisplay.getScopeGroupId(), articleId);
-		}
-		catch (NoSuchArticleException nsae) {
-		}
-
-		if (journalArticle == null) {
-			try {
-				journalArticle =
-					JournalArticleLocalServiceUtil.getDisplayArticle(
-						companyGroup.getGroupId(), articleId);
-			}
-			catch (NoSuchArticleException nsae) {
-				return null;
-			}
-		}
-
-		String portletIds = getRuntimePortletIds(journalArticle.getContent());
-
-		if (Validator.isNotNull(journalArticle.getTemplateId())) {
-			JournalTemplate journalTemplate = null;
-
-			try {
-				journalTemplate = JournalTemplateLocalServiceUtil.getTemplate(
-					themeDisplay.getScopeGroupId(),
-					journalArticle.getTemplateId());
-			}
-			catch (NoSuchTemplateException nste) {
-				journalTemplate = JournalTemplateLocalServiceUtil.getTemplate(
-					companyGroup.getGroupId(), journalArticle.getTemplateId());
-			}
-
-			portletIds = StringUtil.add(
-				portletIds, getRuntimePortletIds(journalTemplate.getXsl()));
-		}
-
-		return portletIds;
-	}
-
-	protected void updateContentSearch(PortletRequest portletRequest)
-		throws Exception {
-
-		String articleId = getArticleId(portletRequest);
-
-		ThemeDisplay themeDisplay = (ThemeDisplay)portletRequest.getAttribute(
-			WebKeys.THEME_DISPLAY);
-
-		Layout layout = themeDisplay.getLayout();
-
-		String portletResource = ParamUtil.getString(
-			portletRequest, "portletResource");
-
-		JournalContentSearchLocalServiceUtil.updateContentSearch(
-			layout.getGroupId(), layout.isPrivateLayout(), layout.getLayoutId(),
-			portletResource, articleId, true);
-	}
+	private Method _doProcessActionMethod;
 
 }

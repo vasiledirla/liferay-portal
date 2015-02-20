@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -34,16 +34,8 @@ public class AppViewNavigationEntryTag extends IncludeTag {
 		_actionJsp = actionJsp;
 	}
 
-	public void setBrowseUp(boolean browseUp) {
-		_browseUp = browseUp;
-	}
-
-	public void setCssClassName(String cssClassName) {
-		_cssClassName = cssClassName;
-	}
-
-	public void setDataExpand(Map<String, Object> dataExpand) {
-		_dataExpand = dataExpand;
+	public void setCssClass(String cssClass) {
+		_cssClass = cssClass;
 	}
 
 	public void setDataView(Map<String, Object> dataView) {
@@ -52,10 +44,6 @@ public class AppViewNavigationEntryTag extends IncludeTag {
 
 	public void setEntryTitle(String entryTitle) {
 		_entryTitle = entryTitle;
-	}
-
-	public void setExpandURL(String expandURL) {
-		_expandURL = expandURL;
 	}
 
 	public void setIconImage(String iconImage) {
@@ -70,29 +58,19 @@ public class AppViewNavigationEntryTag extends IncludeTag {
 		_selected = selected;
 	}
 
-	public void setShowExpand(boolean showExpand) {
-		_showExpand = showExpand;
-	}
-
 	public void setViewURL(String viewURL) {
 		_viewURL = viewURL;
 	}
 
 	@Override
 	protected void cleanUp() {
-		super.cleanUp();
-
 		_actionJsp = null;
-		_browseUp = false;
-		_cssClassName = "folder";
-		_dataExpand = null;
+		_cssClass = "folder";
 		_dataView = null;
 		_entryTitle = null;
-		_expandURL = null;
 		_iconImage = null;
 		_iconSrc = null;
 		_selected = false;
-		_showExpand = false;
 		_viewURL = null;
 	}
 
@@ -111,25 +89,17 @@ public class AppViewNavigationEntryTag extends IncludeTag {
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:actionJsp", _actionJsp);
 		request.setAttribute(
-			"liferay-ui:app-view-navigation-entry:browseUp", _browseUp);
-		request.setAttribute(
-			"liferay-ui:app-view-navigation-entry:cssClassName", _cssClassName);
-		request.setAttribute(
-			"liferay-ui:app-view-navigation-entry:dataExpand", _dataExpand);
+			"liferay-ui:app-view-navigation-entry:cssClass", _cssClass);
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:dataView", _dataView);
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:entryTitle", _entryTitle);
-		request.setAttribute(
-			"liferay-ui:app-view-navigation-entry:expandURL", _expandURL);
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:iconImage", _iconImage);
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:iconSrc", _iconSrc);
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:selected", _selected);
-		request.setAttribute(
-			"liferay-ui:app-view-navigation-entry:showExpand", _showExpand);
 		request.setAttribute(
 			"liferay-ui:app-view-navigation-entry:viewURL", _viewURL);
 	}
@@ -140,17 +110,12 @@ public class AppViewNavigationEntryTag extends IncludeTag {
 		"/html/taglib/ui/app_view_navigation_entry/page.jsp";
 
 	private String _actionJsp;
-
-	private boolean _browseUp;
-	private String _cssClassName = "folder";
-	private Map<String, Object> _dataExpand;
+	private String _cssClass = "folder";
 	private Map<String, Object> _dataView;
 	private String _entryTitle;
-	private String _expandURL;
 	private String _iconImage;
 	private String _iconSrc;
 	private boolean _selected;
-	private boolean _showExpand;
 	private String _viewURL;
 
 }

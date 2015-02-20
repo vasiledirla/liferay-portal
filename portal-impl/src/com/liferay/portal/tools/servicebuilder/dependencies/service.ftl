@@ -1,5 +1,7 @@
 package ${packagePath}.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.jsonwebservice.JSONWebService;
@@ -12,34 +14,49 @@ import com.liferay.portal.service.Invokable${sessionTypeName}Service;
 import com.liferay.portal.service.PermissionedModelLocalService;
 import com.liferay.portal.service.PersistedModelLocalService;
 
+<#list imports as import>
+import ${import};
+</#list>
+
 <#if sessionTypeName == "Local">
 /**
- * The interface for the ${entity.humanName} local service.
- *
- * <p>
- * This is a local service. Methods of this service will not have security checks based on the propagated JAAS credentials because this service can only be accessed from within the same VM.
- * </p>
+ * Provides the local service interface for ${entity.name}. Methods of this
+ * service will not have security checks based on the propagated JAAS
+ * credentials because this service can only be accessed from within the same
+ * VM.
  *
  * @author ${author}
  * @see ${entity.name}LocalServiceUtil
  * @see ${packagePath}.service.base.${entity.name}LocalServiceBaseImpl
  * @see ${packagePath}.service.impl.${entity.name}LocalServiceImpl
+<#if classDeprecated>
+ * @deprecated ${classDeprecatedComment}
+</#if>
  * @generated
  */
 <#else>
 /**
- * The interface for the ${entity.humanName} remote service.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service interface for ${entity.name}. Methods of this
+ * service are expected to have security checks based on the propagated JAAS
+ * credentials because this service can be accessed remotely.
  *
  * @author ${author}
  * @see ${entity.name}ServiceUtil
  * @see ${packagePath}.service.base.${entity.name}ServiceBaseImpl
  * @see ${packagePath}.service.impl.${entity.name}ServiceImpl
+<#if classDeprecated>
+ * @deprecated ${classDeprecatedComment}
+</#if>
  * @generated
  */
+</#if>
+
+<#if classDeprecated>
+	@Deprecated
+</#if>
+
+<#if pluginName == "">
+	@ProviderType
 </#if>
 
 <#if entity.hasRemoteService() && sessionTypeName != "Local">
@@ -51,8 +68,12 @@ import com.liferay.portal.service.PersistedModelLocalService;
 public interface ${entity.name}${sessionTypeName}Service
 	extends Base${sessionTypeName}Service
 
+	<#assign overrideMethodNames = []>
+
 	<#if pluginName != "">
 		, Invokable${sessionTypeName}Service
+
+		<#assign overrideMethodNames = overrideMethodNames + ["invokeMethod"]>
 	</#if>
 
 	<#if (sessionTypeName == "Local") && entity.hasColumns()>
@@ -61,6 +82,8 @@ public interface ${entity.name}${sessionTypeName}Service
 		<#else>
 			, PersistedModelLocalService
 		</#if>
+
+		<#assign overrideMethodNames = overrideMethodNames + ["deletePersistedModel", "getPersistedModel"]>
 	</#if>
 
 	{
@@ -76,17 +99,29 @@ public interface ${entity.name}${sessionTypeName}Service
 	 */
 
 	<#list methods as method>
-		<#if !method.isConstructor() && !method.isStatic() && method.isPublic() && serviceBuilder.isCustomMethod(method) && !serviceBuilder.isDuplicateMethod(method, tempMap)>
+		<#if !method.isConstructor() && !method.isStatic() && method.isPublic() && serviceBuilder.isCustomMethod(method)>
 			${serviceBuilder.getJavadocComment(method)}
 
-			<#if method.name = "dynamicQuery" && (method.parameters?size != 0)>
-				@SuppressWarnings("rawtypes")
+			<#list method.annotations as annotation>
+				<#if (annotation.type != "java.lang.Override") && (annotation.type != "java.lang.SuppressWarnings")>
+					${serviceBuilder.annotationToString(annotation)}
+				</#if>
+			</#list>
+
+			<#if overrideMethodNames?seq_index_of(method.name) != -1>
+				@Override
 			</#if>
 
 			<#if serviceBuilder.isServiceReadOnlyMethod(method, entity.txRequiredList) && (method.name != "getBeanIdentifier")>
 				@Transactional(propagation = Propagation.SUPPORTS, readOnly = true)
 			</#if>
-			public ${serviceBuilder.getTypeGenericsName(method.returns)} ${method.name}(
+			public
+
+			<#if method.name = "dynamicQuery" && (serviceBuilder.getTypeGenericsName(method.returns) == "java.util.List<T>")>
+				<T>
+			</#if>
+
+			${serviceBuilder.getTypeGenericsName(method.returns)} ${method.name}(
 
 			<#list method.parameters as parameter>
 				${serviceBuilder.getTypeGenericsName(parameter.type)} ${parameter.name}

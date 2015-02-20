@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,10 +17,14 @@ package com.liferay.portlet.messageboards.action;
 import com.liferay.portal.kernel.captcha.CaptchaMaxChallengesException;
 import com.liferay.portal.kernel.captcha.CaptchaTextException;
 import com.liferay.portal.kernel.captcha.CaptchaUtil;
+import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.portlet.LiferayWindowState;
+import com.liferay.portal.kernel.sanitizer.SanitizerException;
 import com.liferay.portal.kernel.servlet.SessionErrors;
+import com.liferay.portal.kernel.upload.LiferayFileItemException;
+import com.liferay.portal.kernel.upload.UploadException;
 import com.liferay.portal.kernel.upload.UploadPortletRequest;
 import com.liferay.portal.kernel.util.Constants;
-import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ObjectValuePair;
 import com.liferay.portal.kernel.util.ParamUtil;
 import com.liferay.portal.kernel.util.StreamUtil;
@@ -40,16 +44,18 @@ import com.liferay.portal.util.WebKeys;
 import com.liferay.portlet.ActionResponseImpl;
 import com.liferay.portlet.asset.AssetCategoryException;
 import com.liferay.portlet.asset.AssetTagException;
+import com.liferay.portlet.documentlibrary.DuplicateFileException;
 import com.liferay.portlet.documentlibrary.FileExtensionException;
 import com.liferay.portlet.documentlibrary.FileNameException;
 import com.liferay.portlet.documentlibrary.FileSizeException;
+import com.liferay.portlet.documentlibrary.antivirus.AntivirusScannerException;
 import com.liferay.portlet.messageboards.LockedThreadException;
+import com.liferay.portlet.messageboards.MBSettings;
 import com.liferay.portlet.messageboards.MessageBodyException;
 import com.liferay.portlet.messageboards.MessageSubjectException;
 import com.liferay.portlet.messageboards.NoSuchMessageException;
 import com.liferay.portlet.messageboards.RequiredMessageException;
 import com.liferay.portlet.messageboards.model.MBMessage;
-import com.liferay.portlet.messageboards.model.MBMessageConstants;
 import com.liferay.portlet.messageboards.service.MBMessageServiceUtil;
 import com.liferay.portlet.messageboards.service.MBThreadLocalServiceUtil;
 import com.liferay.portlet.messageboards.service.MBThreadServiceUtil;
@@ -63,10 +69,10 @@ import java.util.List;
 import javax.portlet.ActionRequest;
 import javax.portlet.ActionResponse;
 import javax.portlet.PortletConfig;
-import javax.portlet.PortletPreferences;
 import javax.portlet.PortletURL;
 import javax.portlet.RenderRequest;
 import javax.portlet.RenderResponse;
+import javax.portlet.WindowState;
 
 import org.apache.struts.action.ActionForm;
 import org.apache.struts.action.ActionForward;
@@ -81,16 +87,33 @@ public class EditMessageAction extends PortletAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
 
-		try {
-			MBMessage message = null;
+		MBMessage message = null;
 
-			if (cmd.equals(Constants.ADD) || cmd.equals(Constants.UPDATE)) {
+		try {
+			UploadException uploadException =
+				(UploadException)actionRequest.getAttribute(
+					WebKeys.UPLOAD_EXCEPTION);
+
+			if (uploadException != null) {
+				if (uploadException.isExceededLiferayFileItemSizeLimit()) {
+					throw new LiferayFileItemException();
+				}
+				else if (uploadException.isExceededSizeLimit()) {
+					throw new FileSizeException(uploadException.getCause());
+				}
+
+				throw new PortalException(uploadException.getCause());
+			}
+			else if (cmd.equals(Constants.ADD) ||
+					 cmd.equals(Constants.UPDATE)) {
+
 				message = updateMessage(actionRequest, actionResponse);
 			}
 			else if (cmd.equals(Constants.DELETE)) {
@@ -110,10 +133,22 @@ public class EditMessageAction extends PortletAction {
 			}
 
 			if (Validator.isNotNull(cmd)) {
-				String redirect = getRedirect(
-					actionRequest, actionResponse, message);
+				WindowState windowState = actionRequest.getWindowState();
 
-				sendRedirect(actionRequest, actionResponse, redirect);
+				if (!windowState.equals(LiferayWindowState.POP_UP)) {
+					String redirect = getRedirect(
+						actionRequest, actionResponse, message);
+
+					sendRedirect(actionRequest, actionResponse, redirect);
+				}
+				else {
+					String redirect = PortalUtil.escapeRedirect(
+						ParamUtil.getString(actionRequest, "redirect"));
+
+					if (Validator.isNotNull(redirect)) {
+						actionResponse.sendRedirect(redirect);
+					}
+				}
 			}
 		}
 		catch (Exception e) {
@@ -125,16 +160,36 @@ public class EditMessageAction extends PortletAction {
 
 				setForward(actionRequest, "portlet.message_boards.error");
 			}
-			else if (e instanceof CaptchaMaxChallengesException ||
+			else if (e instanceof AntivirusScannerException ||
+					 e instanceof CaptchaMaxChallengesException ||
 					 e instanceof CaptchaTextException ||
+					 e instanceof DuplicateFileException ||
 					 e instanceof FileExtensionException ||
 					 e instanceof FileNameException ||
 					 e instanceof FileSizeException ||
+					 e instanceof LiferayFileItemException ||
 					 e instanceof LockedThreadException ||
 					 e instanceof MessageBodyException ||
-					 e instanceof MessageSubjectException) {
+					 e instanceof MessageSubjectException ||
+					 e instanceof SanitizerException) {
 
-				SessionErrors.add(actionRequest, e.getClass());
+				UploadException uploadException =
+					(UploadException)actionRequest.getAttribute(
+						WebKeys.UPLOAD_EXCEPTION);
+
+				if (uploadException != null) {
+					String uploadExceptionRedirect = ParamUtil.getString(
+						actionRequest, "uploadExceptionRedirect");
+
+					actionResponse.sendRedirect(uploadExceptionRedirect);
+				}
+
+				if (e instanceof AntivirusScannerException) {
+					SessionErrors.add(actionRequest, e.getClass(), e);
+				}
+				else {
+					SessionErrors.add(actionRequest, e.getClass());
+				}
 			}
 			else if (e instanceof AssetCategoryException ||
 					 e instanceof AssetTagException) {
@@ -142,15 +197,23 @@ public class EditMessageAction extends PortletAction {
 				SessionErrors.add(actionRequest, e.getClass(), e);
 			}
 			else {
-				throw e;
+				Throwable cause = e.getCause();
+
+				if (cause instanceof SanitizerException) {
+					SessionErrors.add(actionRequest, SanitizerException.class);
+				}
+				else {
+					throw e;
+				}
 			}
 		}
 	}
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		try {
@@ -162,14 +225,15 @@ public class EditMessageAction extends PortletAction {
 
 				SessionErrors.add(renderRequest, e.getClass());
 
-				return mapping.findForward("portlet.message_boards.error");
+				return actionMapping.findForward(
+					"portlet.message_boards.error");
 			}
 			else {
 				throw e;
 			}
 		}
 
-		return mapping.findForward(
+		return actionMapping.findForward(
 			getForward(renderRequest, "portlet.message_boards.edit_message"));
 	}
 
@@ -286,8 +350,6 @@ public class EditMessageAction extends PortletAction {
 			ActionRequest actionRequest, ActionResponse actionResponse)
 		throws Exception {
 
-		PortletPreferences preferences = actionRequest.getPreferences();
-
 		ThemeDisplay themeDisplay = (ThemeDisplay)actionRequest.getAttribute(
 			WebKeys.THEME_DISPLAY);
 
@@ -301,37 +363,30 @@ public class EditMessageAction extends PortletAction {
 		String subject = ParamUtil.getString(actionRequest, "subject");
 		String body = ParamUtil.getString(actionRequest, "body");
 
-		String format = GetterUtil.getString(
-			preferences.getValue("messageFormat", null),
-			MBMessageConstants.DEFAULT_FORMAT);
-
-		boolean attachments = ParamUtil.getBoolean(
-			actionRequest, "attachments");
+		MBSettings mbSettings = MBSettings.getInstance(groupId);
 
 		List<ObjectValuePair<String, InputStream>> inputStreamOVPs =
 			new ArrayList<ObjectValuePair<String, InputStream>>(5);
 
 		try {
-			if (attachments) {
-				UploadPortletRequest uploadPortletRequest =
-					PortalUtil.getUploadPortletRequest(actionRequest);
+			UploadPortletRequest uploadPortletRequest =
+				PortalUtil.getUploadPortletRequest(actionRequest);
 
-				for (int i = 1; i <= 5; i++) {
-					String fileName = uploadPortletRequest.getFileName(
-						"msgFile" + i);
-					InputStream inputStream =
-						uploadPortletRequest.getFileAsStream("msgFile" + i);
+			for (int i = 1; i <= 5; i++) {
+				String fileName = uploadPortletRequest.getFileName(
+					"msgFile" + i);
+				InputStream inputStream = uploadPortletRequest.getFileAsStream(
+					"msgFile" + i);
 
-					if (inputStream == null) {
-						continue;
-					}
-
-					ObjectValuePair<String, InputStream> inputStreamOVP =
-						new ObjectValuePair<String, InputStream>(
-							fileName, inputStream);
-
-					inputStreamOVPs.add(inputStreamOVP);
+				if ((inputStream == null) || Validator.isNull(fileName)) {
+					continue;
 				}
+
+				ObjectValuePair<String, InputStream> inputStreamOVP =
+					new ObjectValuePair<String, InputStream>(
+						fileName, inputStream);
+
+				inputStreamOVPs.add(inputStreamOVP);
 			}
 
 			boolean question = ParamUtil.getBoolean(actionRequest, "question");
@@ -362,9 +417,9 @@ public class EditMessageAction extends PortletAction {
 					// Post new thread
 
 					message = MBMessageServiceUtil.addMessage(
-						groupId, categoryId, subject, body, format,
-						inputStreamOVPs, anonymous, priority, allowPingbacks,
-						serviceContext);
+						groupId, categoryId, subject, body,
+						mbSettings.getMessageFormat(), inputStreamOVPs,
+						anonymous, priority, allowPingbacks, serviceContext);
 
 					if (question) {
 						MBThreadLocalServiceUtil.updateQuestion(
@@ -376,7 +431,8 @@ public class EditMessageAction extends PortletAction {
 					// Post reply
 
 					message = MBMessageServiceUtil.addMessage(
-						parentMessageId, subject, body, format, inputStreamOVPs,
+						parentMessageId, subject, body,
+						mbSettings.getMessageFormat(), inputStreamOVPs,
 						anonymous, priority, allowPingbacks, serviceContext);
 				}
 			}
@@ -410,7 +466,7 @@ public class EditMessageAction extends PortletAction {
 			boolean subscribe = ParamUtil.getBoolean(
 				actionRequest, "subscribe");
 
-			if (subscribe &&
+			if (!preview && subscribe &&
 				MBMessagePermission.contains(
 					permissionChecker, message, ActionKeys.SUBSCRIBE)) {
 
@@ -420,14 +476,12 @@ public class EditMessageAction extends PortletAction {
 			return message;
 		}
 		finally {
-			if (attachments) {
-				for (ObjectValuePair<String, InputStream> inputStreamOVP :
-						inputStreamOVPs) {
+			for (ObjectValuePair<String, InputStream> inputStreamOVP :
+					inputStreamOVPs) {
 
-					InputStream inputStream = inputStreamOVP.getValue();
+				InputStream inputStream = inputStreamOVP.getValue();
 
-					StreamUtil.cleanUp(inputStream);
-				}
+				StreamUtil.cleanUp(inputStream);
 			}
 		}
 	}

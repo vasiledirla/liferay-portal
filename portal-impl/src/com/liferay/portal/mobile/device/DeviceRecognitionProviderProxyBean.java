@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -28,18 +28,22 @@ import javax.servlet.http.HttpServletRequest;
 public class DeviceRecognitionProviderProxyBean
 	extends BaseProxyBean implements DeviceRecognitionProvider {
 
+	@Override
 	public Device detectDevice(HttpServletRequest request) {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
 	public KnownDevices getKnownDevices() {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
 	public void reload() {
 		throw new UnsupportedOperationException();
 	}
 
+	@Override
 	public void setDeviceCapabilityFilter(
 		DeviceCapabilityFilter deviceCapabilityFilter) {
 

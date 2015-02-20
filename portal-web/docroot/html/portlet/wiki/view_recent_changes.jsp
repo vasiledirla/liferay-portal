@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -32,30 +32,11 @@ WikiNode node = (WikiNode)request.getAttribute(WebKeys.WIKI_NODE);
 
 <br />
 
-<c:if test="<%= PortalUtil.isRSSFeedsEnabled() %>">
-	<liferay-ui:icon-list>
-		<liferay-ui:icon
-			image="rss"
-			label="<%= true %>"
-			message="Atom 1.0"
-			target="_blank"
-			url='<%= themeDisplay.getPathMain() + "/wiki/rss?p_l_id=" + plid + "&nodeId=" + node.getNodeId() + rssURLAtomParams %>'
-		/>
-
-		<liferay-ui:icon
-			image="rss"
-			label="<%= true %>"
-			message="RSS 1.0"
-			target="_blank"
-			url='<%= themeDisplay.getPathMain() + "/wiki/rss?p_l_id=" + plid + "&nodeId=" + node.getNodeId() + rssURLRSS10Params %>'
-		/>
-
-		<liferay-ui:icon
-			image="rss"
-			label="<%= true %>"
-			message="RSS 2.0"
-			target="_blank"
-			url='<%= themeDisplay.getPathMain() + "/wiki/rss?p_l_id=" + plid + "&nodeId=" + node.getNodeId() + rssURLRSS20Params %>'
-		/>
-	</liferay-ui:icon-list>
+<c:if test="<%= wikiPortletInstanceSettings.isEnableRSS() %>">
+	<liferay-ui:rss
+		delta="<%= wikiPortletInstanceSettings.getRssDelta() %>"
+		displayStyle="<%= wikiPortletInstanceSettings.getRssDisplayStyle() %>"
+		feedType="<%= wikiPortletInstanceSettings.getRssFeedType() %>"
+		url='<%= themeDisplay.getPathMain() + "/wiki/rss?p_l_id=" + plid + "&nodeId=" + node.getNodeId() %>'
+	/>
 </c:if>

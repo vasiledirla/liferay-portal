@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -75,8 +75,9 @@ public class PortletConstants {
 	 * the portlet ID contains a user ID it will be replaced by the user ID
 	 * parameter.
 	 *
-	 * @param portletId the portlet ID
-	 * @param userId a user ID
+	 * @param  portletId the portlet ID
+	 * @param  userId a user ID
+	 * @return the properly assembled portlet ID
 	 */
 	public static String assemblePortletId(String portletId, long userId) {
 		return assemblePortletId(portletId, userId, null);
@@ -88,9 +89,10 @@ public class PortletConstants {
 	 * parameter. If the portlet ID contains an instance ID it will be replaced
 	 * by the instance ID parameter.
 	 *
-	 * @param portletId the portlet ID
-	 * @param userId the user ID
-	 * @param instanceId an instance ID
+	 * @param  portletId the portlet ID
+	 * @param  userId the user ID
+	 * @param  instanceId an instance ID
+	 * @return the properly assembled portlet ID
 	 */
 	public static String assemblePortletId(
 		String portletId, long userId, String instanceId) {
@@ -128,8 +130,9 @@ public class PortletConstants {
 	 * portlet ID contains an instance ID it will be replaced by the instance ID
 	 * parameter.
 	 *
-	 * @param portletId the portlet ID
-	 * @param instanceId an instance ID
+	 * @param  portletId the portlet ID
+	 * @param  instanceId an instance ID
+	 * @return the properly assembled portlet ID
 	 */
 	public static String assemblePortletId(
 		String portletId, String instanceId) {

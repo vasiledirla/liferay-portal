@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,7 +15,7 @@
 package com.liferay.portlet.social.model.impl;
 
 import com.liferay.portal.kernel.bean.AutoEscapeBeanHandler;
-import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.json.JSON;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
@@ -23,8 +23,10 @@ import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.model.CacheModel;
+import com.liferay.portal.model.User;
 import com.liferay.portal.model.impl.BaseModelImpl;
 import com.liferay.portal.service.ServiceContext;
+import com.liferay.portal.service.UserLocalServiceUtil;
 import com.liferay.portal.util.PortalUtil;
 
 import com.liferay.portlet.expando.model.ExpandoBridge;
@@ -104,6 +106,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	public static long TYPE_COLUMN_BITMASK = 64L;
 	public static long USERID_COLUMN_BITMASK = 128L;
 	public static long UUID_COLUMN_BITMASK = 256L;
+	public static long REQUESTID_COLUMN_BITMASK = 512L;
 
 	/**
 	 * Converts the soap model instance into a normal model instance.
@@ -161,26 +164,32 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	public SocialRequestModelImpl() {
 	}
 
+	@Override
 	public long getPrimaryKey() {
 		return _requestId;
 	}
 
+	@Override
 	public void setPrimaryKey(long primaryKey) {
 		setRequestId(primaryKey);
 	}
 
+	@Override
 	public Serializable getPrimaryKeyObj() {
-		return new Long(_requestId);
+		return _requestId;
 	}
 
+	@Override
 	public void setPrimaryKeyObj(Serializable primaryKeyObj) {
 		setPrimaryKey(((Long)primaryKeyObj).longValue());
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return SocialRequest.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return SocialRequest.class.getName();
 	}
@@ -202,6 +211,9 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		attributes.put("extraData", getExtraData());
 		attributes.put("receiverUserId", getReceiverUserId());
 		attributes.put("status", getStatus());
+
+		attributes.put("entityCacheEnabled", isEntityCacheEnabled());
+		attributes.put("finderCacheEnabled", isFinderCacheEnabled());
 
 		return attributes;
 	}
@@ -288,6 +300,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public String getUuid() {
 		if (_uuid == null) {
 			return StringPool.BLANK;
@@ -297,6 +310,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		}
 	}
 
+	@Override
 	public void setUuid(String uuid) {
 		if (_originalUuid == null) {
 			_originalUuid = _uuid;
@@ -310,10 +324,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getRequestId() {
 		return _requestId;
 	}
 
+	@Override
 	public void setRequestId(long requestId) {
 		_columnBitmask = -1L;
 
@@ -321,10 +337,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getGroupId() {
 		return _groupId;
 	}
 
+	@Override
 	public void setGroupId(long groupId) {
 		_columnBitmask |= GROUPID_COLUMN_BITMASK;
 
@@ -342,10 +360,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getCompanyId() {
 		return _companyId;
 	}
 
+	@Override
 	public void setCompanyId(long companyId) {
 		_columnBitmask |= COMPANYID_COLUMN_BITMASK;
 
@@ -363,10 +383,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getUserId() {
 		return _userId;
 	}
 
+	@Override
 	public void setUserId(long userId) {
 		_columnBitmask |= USERID_COLUMN_BITMASK;
 
@@ -379,12 +401,20 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		_userId = userId;
 	}
 
-	public String getUserUuid() throws SystemException {
-		return PortalUtil.getUserValue(getUserId(), "uuid", _userUuid);
+	@Override
+	public String getUserUuid() {
+		try {
+			User user = UserLocalServiceUtil.getUserById(getUserId());
+
+			return user.getUuid();
+		}
+		catch (PortalException pe) {
+			return StringPool.BLANK;
+		}
 	}
 
+	@Override
 	public void setUserUuid(String userUuid) {
-		_userUuid = userUuid;
 	}
 
 	public long getOriginalUserId() {
@@ -392,23 +422,28 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getCreateDate() {
 		return _createDate;
 	}
 
+	@Override
 	public void setCreateDate(long createDate) {
 		_createDate = createDate;
 	}
 
 	@JSON
+	@Override
 	public long getModifiedDate() {
 		return _modifiedDate;
 	}
 
+	@Override
 	public void setModifiedDate(long modifiedDate) {
 		_modifiedDate = modifiedDate;
 	}
 
+	@Override
 	public String getClassName() {
 		if (getClassNameId() <= 0) {
 			return StringPool.BLANK;
@@ -417,6 +452,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		return PortalUtil.getClassName(getClassNameId());
 	}
 
+	@Override
 	public void setClassName(String className) {
 		long classNameId = 0;
 
@@ -428,10 +464,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getClassNameId() {
 		return _classNameId;
 	}
 
+	@Override
 	public void setClassNameId(long classNameId) {
 		_columnBitmask |= CLASSNAMEID_COLUMN_BITMASK;
 
@@ -449,10 +487,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public long getClassPK() {
 		return _classPK;
 	}
 
+	@Override
 	public void setClassPK(long classPK) {
 		_columnBitmask |= CLASSPK_COLUMN_BITMASK;
 
@@ -470,10 +510,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public int getType() {
 		return _type;
 	}
 
+	@Override
 	public void setType(int type) {
 		_columnBitmask |= TYPE_COLUMN_BITMASK;
 
@@ -491,6 +533,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public String getExtraData() {
 		if (_extraData == null) {
 			return StringPool.BLANK;
@@ -500,15 +543,18 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		}
 	}
 
+	@Override
 	public void setExtraData(String extraData) {
 		_extraData = extraData;
 	}
 
 	@JSON
+	@Override
 	public long getReceiverUserId() {
 		return _receiverUserId;
 	}
 
+	@Override
 	public void setReceiverUserId(long receiverUserId) {
 		_columnBitmask |= RECEIVERUSERID_COLUMN_BITMASK;
 
@@ -521,13 +567,20 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		_receiverUserId = receiverUserId;
 	}
 
-	public String getReceiverUserUuid() throws SystemException {
-		return PortalUtil.getUserValue(getReceiverUserId(), "uuid",
-			_receiverUserUuid);
+	@Override
+	public String getReceiverUserUuid() {
+		try {
+			User user = UserLocalServiceUtil.getUserById(getReceiverUserId());
+
+			return user.getUuid();
+		}
+		catch (PortalException pe) {
+			return StringPool.BLANK;
+		}
 	}
 
+	@Override
 	public void setReceiverUserUuid(String receiverUserUuid) {
-		_receiverUserUuid = receiverUserUuid;
 	}
 
 	public long getOriginalReceiverUserId() {
@@ -535,10 +588,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	@JSON
+	@Override
 	public int getStatus() {
 		return _status;
 	}
 
+	@Override
 	public void setStatus(int status) {
 		_columnBitmask |= STATUS_COLUMN_BITMASK;
 
@@ -574,13 +629,12 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 
 	@Override
 	public SocialRequest toEscapedModel() {
-		if (_escapedModelProxy == null) {
-			_escapedModelProxy = (SocialRequest)ProxyUtil.newProxyInstance(_classLoader,
-					_escapedModelProxyInterfaces,
-					new AutoEscapeBeanHandler(this));
+		if (_escapedModel == null) {
+			_escapedModel = (SocialRequest)ProxyUtil.newProxyInstance(_classLoader,
+					_escapedModelInterfaces, new AutoEscapeBeanHandler(this));
 		}
 
-		return _escapedModelProxy;
+		return _escapedModel;
 	}
 
 	@Override
@@ -606,6 +660,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		return socialRequestImpl;
 	}
 
+	@Override
 	public int compareTo(SocialRequest socialRequest) {
 		int value = 0;
 
@@ -630,18 +685,15 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 
 	@Override
 	public boolean equals(Object obj) {
-		if (obj == null) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof SocialRequest)) {
 			return false;
 		}
 
-		SocialRequest socialRequest = null;
-
-		try {
-			socialRequest = (SocialRequest)obj;
-		}
-		catch (ClassCastException cce) {
-			return false;
-		}
+		SocialRequest socialRequest = (SocialRequest)obj;
 
 		long primaryKey = socialRequest.getPrimaryKey();
 
@@ -656,6 +708,16 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	@Override
 	public int hashCode() {
 		return (int)getPrimaryKey();
+	}
+
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return ENTITY_CACHE_ENABLED;
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return FINDER_CACHE_ENABLED;
 	}
 
 	@Override
@@ -779,6 +841,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 		return sb.toString();
 	}
 
+	@Override
 	public String toXmlString() {
 		StringBundler sb = new StringBundler(43);
 
@@ -845,7 +908,7 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	}
 
 	private static ClassLoader _classLoader = SocialRequest.class.getClassLoader();
-	private static Class<?>[] _escapedModelProxyInterfaces = new Class[] {
+	private static Class<?>[] _escapedModelInterfaces = new Class[] {
 			SocialRequest.class
 		};
 	private String _uuid;
@@ -858,7 +921,6 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	private long _originalCompanyId;
 	private boolean _setOriginalCompanyId;
 	private long _userId;
-	private String _userUuid;
 	private long _originalUserId;
 	private boolean _setOriginalUserId;
 	private long _createDate;
@@ -874,12 +936,11 @@ public class SocialRequestModelImpl extends BaseModelImpl<SocialRequest>
 	private boolean _setOriginalType;
 	private String _extraData;
 	private long _receiverUserId;
-	private String _receiverUserUuid;
 	private long _originalReceiverUserId;
 	private boolean _setOriginalReceiverUserId;
 	private int _status;
 	private int _originalStatus;
 	private boolean _setOriginalStatus;
 	private long _columnBitmask;
-	private SocialRequest _escapedModelProxy;
+	private SocialRequest _escapedModel;
 }

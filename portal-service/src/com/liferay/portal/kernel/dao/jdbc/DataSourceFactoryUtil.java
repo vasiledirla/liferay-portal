@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,6 +15,7 @@
 package com.liferay.portal.kernel.dao.jdbc;
 
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
+import com.liferay.portal.kernel.util.StringPool;
 
 import java.util.Properties;
 
@@ -44,13 +45,27 @@ public class DataSourceFactoryUtil {
 		return getDataSourceFactory().initDataSource(properties);
 	}
 
+	/**
+	 * @deprecated As of 6.2.0, replaced by {@link #initDataSource(String,
+	 *             String, String, String, String)}
+	 */
+	@Deprecated
 	public static DataSource initDataSource(
 			String driverClassName, String url, String userName,
 			String password)
 		throws Exception {
 
+		return initDataSource(
+			driverClassName, url, userName, password, StringPool.BLANK);
+	}
+
+	public static DataSource initDataSource(
+			String driverClassName, String url, String userName,
+			String password, String jndiName)
+		throws Exception {
+
 		return getDataSourceFactory().initDataSource(
-			driverClassName, url, userName, password);
+			driverClassName, url, userName, password, jndiName);
 	}
 
 	public static void setDataSourceFactory(

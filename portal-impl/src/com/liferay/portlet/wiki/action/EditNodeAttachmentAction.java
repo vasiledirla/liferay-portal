@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -45,8 +45,9 @@ public class EditNodeAttachmentAction extends EditFileEntryAction {
 
 	@Override
 	public void processAction(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			ActionRequest actionRequest, ActionResponse actionResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, ActionRequest actionRequest,
+			ActionResponse actionResponse)
 		throws Exception {
 
 		String cmd = ParamUtil.getString(actionRequest, Constants.CMD);
@@ -75,8 +76,9 @@ public class EditNodeAttachmentAction extends EditFileEntryAction {
 
 	@Override
 	public ActionForward render(
-			ActionMapping mapping, ActionForm form, PortletConfig portletConfig,
-			RenderRequest renderRequest, RenderResponse renderResponse)
+			ActionMapping actionMapping, ActionForm actionForm,
+			PortletConfig portletConfig, RenderRequest renderRequest,
+			RenderResponse renderResponse)
 		throws Exception {
 
 		try {
@@ -88,14 +90,14 @@ public class EditNodeAttachmentAction extends EditFileEntryAction {
 
 				SessionErrors.add(renderRequest, e.getClass());
 
-				return mapping.findForward("portlet.wiki.error");
+				return actionMapping.findForward("portlet.wiki.error");
 			}
 			else {
 				throw e;
 			}
 		}
 
-		return mapping.findForward(
+		return actionMapping.findForward(
 			getForward(
 				renderRequest, "portlet.wiki.view_node_deleted_attachments"));
 	}
@@ -107,11 +109,8 @@ public class EditNodeAttachmentAction extends EditFileEntryAction {
 			nodeId, QueryUtil.ALL_POS, QueryUtil.ALL_POS);
 
 		for (WikiPage wikiPage : wikiPages) {
-			String[] deletedAttachmentsFiles =
-				wikiPage.getDeletedAttachmentsFiles();
-
-			if (deletedAttachmentsFiles.length > 0) {
-				WikiPageServiceUtil.deletePageAttachments(
+			if (wikiPage.getDeletedAttachmentsFileEntriesCount() > 0) {
+				WikiPageServiceUtil.deleteTrashPageAttachments(
 					nodeId, wikiPage.getTitle());
 			}
 		}

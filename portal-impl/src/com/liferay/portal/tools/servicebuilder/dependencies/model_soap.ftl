@@ -11,13 +11,14 @@ import java.sql.Blob;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * This class is used by SOAP remote services<#if entity.hasRemoteService()>, specifically {@link ${packagePath}.service.http.${entity.name}ServiceSoap}</#if>.
  *
- * @author    ${author}
+ * @author ${author}
 <#if entity.hasRemoteService()>
- * @see       ${packagePath}.service.http.${entity.name}ServiceSoap
+ * @see ${packagePath}.service.http.${entity.name}ServiceSoap
 </#if>
  * @generated
  */

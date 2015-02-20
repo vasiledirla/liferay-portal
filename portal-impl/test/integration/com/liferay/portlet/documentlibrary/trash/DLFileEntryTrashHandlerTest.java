@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,217 +15,329 @@
 package com.liferay.portlet.documentlibrary.trash;
 
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.repository.model.Folder;
+import com.liferay.portal.kernel.test.ExecutionTestListeners;
+import com.liferay.portal.kernel.trash.TrashHandler;
+import com.liferay.portal.kernel.trash.TrashHandlerRegistryUtil;
+import com.liferay.portal.kernel.util.ContentTypes;
+import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
+import com.liferay.portal.model.BaseModel;
+import com.liferay.portal.model.ClassedModel;
+import com.liferay.portal.model.Group;
+import com.liferay.portal.model.WorkflowedModel;
+import com.liferay.portal.repository.liferayrepository.model.LiferayFileEntry;
 import com.liferay.portal.service.ServiceContext;
-import com.liferay.portal.test.EnvironmentExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayIntegrationJUnitTestRunner;
-import com.liferay.portlet.documentlibrary.model.DLFileEntryConstants;
+import com.liferay.portal.test.Sync;
+import com.liferay.portal.test.SynchronousDestinationExecutionTestListener;
+import com.liferay.portal.test.listeners.MainServletExecutionTestListener;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.util.test.GroupTestUtil;
+import com.liferay.portal.util.test.RandomTestUtil;
+import com.liferay.portal.util.test.ServiceContextTestUtil;
+import com.liferay.portal.util.test.TestPropsValues;
+import com.liferay.portlet.documentlibrary.model.DLFileEntry;
+import com.liferay.portlet.documentlibrary.model.DLFileRank;
+import com.liferay.portlet.documentlibrary.model.DLFolder;
+import com.liferay.portlet.documentlibrary.model.DLFolderConstants;
+import com.liferay.portlet.documentlibrary.service.DLAppLocalServiceUtil;
 import com.liferay.portlet.documentlibrary.service.DLAppServiceUtil;
-import com.liferay.portlet.trash.service.TrashEntryServiceUtil;
+import com.liferay.portlet.documentlibrary.service.DLFileEntryLocalServiceUtil;
+import com.liferay.portlet.documentlibrary.service.DLFileEntryServiceUtil;
+import com.liferay.portlet.documentlibrary.service.DLFileRankLocalServiceUtil;
+import com.liferay.portlet.documentlibrary.service.DLFolderLocalServiceUtil;
+import com.liferay.portlet.documentlibrary.util.test.DLAppTestUtil;
+import com.liferay.portlet.trash.BaseTrashHandlerTestCase;
+import com.liferay.portlet.trash.util.TrashUtil;
+
+import java.util.List;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
  * @author Alexander Chow
  * @author Julio Camarero
+ * @author Eudaldo Alonso
  */
-@ExecutionTestListeners(listeners = {EnvironmentExecutionTestListener.class})
+@ExecutionTestListeners(
+	listeners = {
+		MainServletExecutionTestListener.class,
+		SynchronousDestinationExecutionTestListener.class
+	})
 @RunWith(LiferayIntegrationJUnitTestRunner.class)
-public class DLFileEntryTrashHandlerTest extends BaseDLTrashHandlerTestCase {
+@Sync
+public class DLFileEntryTrashHandlerTest extends BaseTrashHandlerTestCase {
 
 	@Test
-	public void testTrashAndDelete() throws Exception {
-		trashDLFileEntry(false, true, false, false, false);
+	public void testTrashDLFileRank() throws Exception {
+		trashDLFileRank();
 	}
 
+	@Ignore()
+	@Override
 	@Test
-	public void testTrashAndDeleteVersioned() throws Exception {
-		trashDLFileEntry(false, true, true, false, false);
-	}
-
-	@Test
-	public void testTrashAndDeleteVersionedAndCheckedOut() throws Exception {
-		trashDLFileEntry(false, true, true, true, false);
-	}
-
-	@Test
-	public void testTrashAndRestore() throws Exception {
-		trashDLFileEntry(false, false, false, false, false);
-	}
-
-	@Test
-	public void testTrashAndRestoreVersioned() throws Exception {
-		trashDLFileEntry(false, false, true, false, false);
-	}
-
-	@Test
-	public void testTrashAndRestoreVersionedAndCheckedOut() throws Exception {
-		trashDLFileEntry(false, false, true, true, false);
-	}
-
-	@Test
-	public void testTrashAndRestoreWithFileRank() throws Exception {
-		trashDLFileEntry(false, false, false, false, true);
-	}
-
-	@Test
-	public void testTrashDraftAndCheckedOutAndRestore() throws Exception {
-		trashDLFileEntry(true, false, false, true, false);
-	}
-
-	@Test
-	public void testTrashDraftAndRestore() throws Exception {
-		trashDLFileEntry(true, false, false, false, false);
+	public void testTrashVersionParentBaseModelAndRestore() throws Exception {
 	}
 
 	@Override
-	protected long addSubentry(long folderId1, long folderId2)
+	protected BaseModel<?> addBaseModelWithWorkflow(
+			BaseModel<?> parentBaseModel, boolean approved,
+			ServiceContext serviceContext)
 		throws Exception {
 
-		FileEntry fileEntry = addFileEntry(folderId1, "Subentry.txt");
+		DLFolder dlFolder = (DLFolder)parentBaseModel;
 
-		return fileEntry.getFileEntryId();
+		return addBaseModelWithWorkflow(
+			dlFolder.getGroupId(), dlFolder.getFolderId(), approved);
 	}
 
 	@Override
-	protected void moveSubentryFromTrash(long subentryId) throws Exception {
+	protected BaseModel<?> addBaseModelWithWorkflow(
+			boolean approved, ServiceContext serviceContext)
+		throws Exception {
+
+		return addBaseModelWithWorkflow(
+			serviceContext.getScopeGroupId(),
+			DLFolderConstants.DEFAULT_PARENT_FOLDER_ID, approved);
+	}
+
+	protected BaseModel<?> addBaseModelWithWorkflow(
+			long groupId, long folderId, boolean approved)
+		throws Exception {
+
+		String title = getSearchKeywords();
+
+		title += RandomTestUtil.randomString(
+			_FILE_ENTRY_TITLE_MAX_LENGTH - title.length());
+
+		FileEntry fileEntry = DLAppTestUtil.addFileEntry(
+			groupId, folderId, RandomTestUtil.randomString() + ".txt", title,
+			approved);
+
+		return (DLFileEntry)fileEntry.getModel();
+	}
+
+	@Override
+	protected void deleteParentBaseModel(
+			BaseModel<?> parentBaseModel, boolean includeTrashedEntries)
+		throws Exception {
+
+		DLFolder dlFolder = (DLFolder)parentBaseModel;
+
+		DLFolderLocalServiceUtil.deleteFolder(dlFolder.getFolderId(), false);
+	}
+
+	protected int getActiveDLFileRanksCount(long groupId, long fileEntryId)
+		throws Exception {
+
+		List<DLFileRank> dlFileRanks = DLFileRankLocalServiceUtil.getFileRanks(
+			groupId, TestPropsValues.getUserId());
+
+		int count = 0;
+
+		for (DLFileRank dlFileRank : dlFileRanks) {
+			if (dlFileRank.getFileEntryId() == fileEntryId) {
+				count++;
+			}
+		}
+
+		return count;
+	}
+
+	@Override
+	protected BaseModel<?> getBaseModel(long primaryKey) throws Exception {
+		return DLFileEntryLocalServiceUtil.getDLFileEntry(primaryKey);
+	}
+
+	@Override
+	protected Class<?> getBaseModelClass() {
+		return DLFileEntry.class;
+	}
+
+	@Override
+	protected String getBaseModelName(ClassedModel classedModel) {
+		DLFileEntry dlFileEntry = (DLFileEntry)classedModel;
+
+		return dlFileEntry.getTitle();
+	}
+
+	@Override
+	protected int getMineBaseModelsCount(long groupId, long userId)
+		throws Exception {
+
+		return DLAppServiceUtil.getGroupFileEntriesCount(
+			groupId, userId, DLFolderConstants.DEFAULT_PARENT_FOLDER_ID, null,
+			WorkflowConstants.STATUS_APPROVED);
+	}
+
+	@Override
+	protected int getNotInTrashBaseModelsCount(BaseModel<?> parentBaseModel)
+		throws Exception {
+
+		DLFolder dlFolder = (DLFolder)parentBaseModel;
+
+		return DLFileEntryServiceUtil.getFileEntriesCount(
+			dlFolder.getGroupId(), dlFolder.getFolderId(),
+			WorkflowConstants.STATUS_ANY);
+	}
+
+	@Override
+	protected BaseModel<?> getParentBaseModel(
+			Group group, long parentBaseModelId, ServiceContext serviceContext)
+		throws Exception {
+
+		Folder folder = DLAppTestUtil.addFolder(
+			group.getGroupId(), parentBaseModelId,
+			RandomTestUtil.randomString(_FOLDER_NAME_MAX_LENGTH));
+
+		return (DLFolder)folder.getModel();
+	}
+
+	@Override
+	protected BaseModel<?> getParentBaseModel(
+			Group group, ServiceContext serviceContext)
+		throws Exception {
+
+		return getParentBaseModel(
+			group, DLFolderConstants.DEFAULT_PARENT_FOLDER_ID, serviceContext);
+	}
+
+	@Override
+	protected Class<?> getParentBaseModelClass() {
+		return DLFolder.class;
+	}
+
+	@Override
+	protected int getRecentBaseModelsCount(long groupId) throws Exception {
+		return DLAppServiceUtil.getGroupFileEntriesCount(
+			groupId, 0, DLFolderConstants.DEFAULT_PARENT_FOLDER_ID, null,
+			WorkflowConstants.STATUS_APPROVED);
+	}
+
+	@Override
+	protected String getSearchKeywords() {
+		return "Title";
+	}
+
+	@Override
+	protected String getUniqueTitle(BaseModel<?> baseModel) {
+		DLFileEntry dlFileEntry = (DLFileEntry)baseModel;
+
+		String title = dlFileEntry.getTitle();
+
+		return TrashUtil.getOriginalTitle(title);
+	}
+
+	@Override
+	protected WorkflowedModel getWorkflowedModel(ClassedModel baseModel)
+		throws Exception {
+
+		DLFileEntry dlFileEntry = (DLFileEntry)baseModel;
+
+		return dlFileEntry.getFileVersion();
+	}
+
+	@Override
+	protected BaseModel<?> moveBaseModelFromTrash(
+			ClassedModel classedModel, Group group,
+			ServiceContext serviceContext)
+		throws Exception {
+
+		BaseModel<?> parentBaseModel = getParentBaseModel(
+			group, serviceContext);
+
 		DLAppServiceUtil.moveFileEntryFromTrash(
-			subentryId, parentFolder.getFolderId(), new ServiceContext());
+			(Long)classedModel.getPrimaryKeyObj(),
+			(Long)parentBaseModel.getPrimaryKeyObj(), serviceContext);
+
+		return parentBaseModel;
 	}
 
 	@Override
-	protected void moveSubentryToTrash(long subentryId) throws Exception {
-		DLAppServiceUtil.moveFileEntryToTrash(subentryId);
+	protected void moveBaseModelToTrash(long primaryKey) throws Exception {
+		DLAppServiceUtil.moveFileEntryToTrash(primaryKey);
 	}
 
-	protected void trashDLFileEntry(
-			boolean draft, boolean delete, boolean versioned,
-			boolean leaveCheckedOut, boolean fileRank)
+	@Override
+	protected void moveParentBaseModelToTrash(long primaryKey)
 		throws Exception {
 
-		int initialNotInTrashCount = getNotInTrashCount();
-		int initialTrashEntriesCount = getTrashEntriesCount();
-		int initialSearchFileEntriesCount = searchFileEntriesCount();
-		int initialSearchTrashFileEntriesCount = searchTrashEntriesCount(
-			"Basic");
-
-		FileEntry fileEntry = null;
-
-		if (draft) {
-			fileEntry = addFileEntry(
-				parentFolder.getFolderId(), "Test Basic.txt", "Test Basic.txt",
-				null, WorkflowConstants.ACTION_SAVE_DRAFT);
-		}
-		else {
-			fileEntry = addFileEntry(false, "Test Basic.txt");
-		}
-
-		long fileEntryId = fileEntry.getFileEntryId();
-
-		if (versioned) {
-			updateFileEntry(fileEntryId, null, "Test Basic 2.txt");
-		}
-
-		if (fileRank) {
-			addDLFileRank(fileEntryId);
-		}
-
-		if (leaveCheckedOut) {
-			DLAppServiceUtil.checkOutFileEntry(
-				fileEntryId, new ServiceContext());
-		}
-
-		Assert.assertEquals(initialNotInTrashCount + 1, getNotInTrashCount());
-		Assert.assertEquals(initialTrashEntriesCount, getTrashEntriesCount());
-
-		if (draft) {
-			Assert.assertFalse(
-				isAssetEntryVisible(
-					DLFileEntryConstants.getClassName(), fileEntryId));
-			Assert.assertEquals(
-				initialSearchFileEntriesCount, searchFileEntriesCount());
-		}
-		else {
-			Assert.assertTrue(
-				isAssetEntryVisible(
-					DLFileEntryConstants.getClassName(), fileEntryId));
-			Assert.assertEquals(
-				initialSearchFileEntriesCount + 1, searchFileEntriesCount());
-		}
-
-		Assert.assertEquals(
-			initialSearchTrashFileEntriesCount,
-			searchTrashEntriesCount("Basic"));
-
-		DLAppServiceUtil.moveFileEntryToTrash(fileEntryId);
-
-		Assert.assertEquals(initialNotInTrashCount, getNotInTrashCount());
-		Assert.assertEquals(
-			initialTrashEntriesCount + 1, getTrashEntriesCount());
-		Assert.assertFalse(
-			isAssetEntryVisible(
-				DLFileEntryConstants.getClassName(), fileEntryId));
-		Assert.assertEquals(
-			initialSearchFileEntriesCount, searchFileEntriesCount());
-		Assert.assertEquals(
-			initialSearchTrashFileEntriesCount + 1,
-			searchTrashEntriesCount("Basic"));
-
-		if (fileRank) {
-			Assert.assertEquals(0, getActiveDLFileRanksCount(fileEntryId));
-		}
-
-		if (delete) {
-			TrashEntryServiceUtil.deleteEntries(parentFolder.getGroupId());
-
-			Assert.assertEquals(initialNotInTrashCount, getNotInTrashCount());
-			Assert.assertNull(
-				fetchAssetEntry(
-					DLFileEntryConstants.getClassName(), fileEntryId));
-			Assert.assertEquals(
-				initialSearchFileEntriesCount, searchFileEntriesCount());
-		}
-		else {
-			DLAppServiceUtil.restoreFileEntryFromTrash(fileEntryId);
-
-			Assert.assertEquals(
-				initialNotInTrashCount + 1, getNotInTrashCount());
-
-			if (draft) {
-				Assert.assertFalse(
-					isAssetEntryVisible(
-						DLFileEntryConstants.getClassName(), fileEntryId));
-				Assert.assertEquals(
-					initialSearchFileEntriesCount, searchFileEntriesCount());
-			}
-			else {
-				Assert.assertTrue(
-					isAssetEntryVisible(
-						DLFileEntryConstants.getClassName(), fileEntryId));
-				Assert.assertEquals(
-					initialSearchFileEntriesCount + 1,
-					searchFileEntriesCount());
-			}
-
-			if (fileRank) {
-				Assert.assertEquals(1, getActiveDLFileRanksCount(fileEntryId));
-			}
-		}
-
-		if (delete) {
-			Assert.assertEquals(0, getTrashEntriesCount());
-			Assert.assertEquals(0, searchTrashEntriesCount("Basic"));
-		}
-		else {
-			Assert.assertEquals(
-				initialTrashEntriesCount, getTrashEntriesCount());
-			Assert.assertEquals(
-				initialSearchTrashFileEntriesCount,
-				searchTrashEntriesCount("Basic"));
-		}
+		DLAppServiceUtil.moveFolderToTrash(primaryKey);
 	}
+
+	@Override
+	protected void restoreParentBaseModelFromTrash(long primaryKey)
+		throws Exception {
+
+		DLAppServiceUtil.restoreFolderFromTrash(primaryKey);
+	}
+
+	protected void trashDLFileRank() throws Exception {
+		Group group = GroupTestUtil.addGroup();
+
+		ServiceContext serviceContext =
+			ServiceContextTestUtil.getServiceContext(group.getGroupId());
+
+		BaseModel<?> parentBaseModel = getParentBaseModel(
+			group, serviceContext);
+
+		BaseModel<?> baseModel = addBaseModel(
+			parentBaseModel, true, serviceContext);
+
+		DLAppLocalServiceUtil.addFileRank(
+			group.getGroupId(), TestPropsValues.getCompanyId(),
+			TestPropsValues.getUserId(), (Long)baseModel.getPrimaryKeyObj(),
+			serviceContext);
+
+		Assert.assertEquals(
+			1,
+			getActiveDLFileRanksCount(
+				group.getGroupId(), (Long)baseModel.getPrimaryKeyObj()));
+
+		moveBaseModelToTrash((Long)baseModel.getPrimaryKeyObj());
+
+		Assert.assertEquals(
+			0,
+			getActiveDLFileRanksCount(
+				group.getGroupId(), (Long)baseModel.getPrimaryKeyObj()));
+
+		TrashHandler trashHandler = TrashHandlerRegistryUtil.getTrashHandler(
+			getBaseModelClassName());
+
+		trashHandler.restoreTrashEntry(
+			TestPropsValues.getUserId(), getTrashEntryClassPK(baseModel));
+
+		Assert.assertEquals(
+			1,
+			getActiveDLFileRanksCount(
+				group.getGroupId(), (Long)baseModel.getPrimaryKeyObj()));
+	}
+
+	@Override
+	protected BaseModel<?> updateBaseModel(
+			long primaryKey, ServiceContext serviceContext)
+		throws Exception {
+
+		DLFileEntry dlFileEntry = DLFileEntryLocalServiceUtil.getDLFileEntry(
+			primaryKey);
+
+		String content = "Content: Enterprise. Open Source. For Life.";
+
+		FileEntry fileEntry = DLAppServiceUtil.updateFileEntry(
+			primaryKey, RandomTestUtil.randomString() + ".txt",
+			ContentTypes.TEXT_PLAIN, dlFileEntry.getTitle(), StringPool.BLANK,
+			StringPool.BLANK, false, content.getBytes(), serviceContext);
+
+		LiferayFileEntry liferayFileEntry = (LiferayFileEntry)fileEntry;
+
+		return liferayFileEntry.getDLFileEntry();
+	}
+
+	private static final int _FILE_ENTRY_TITLE_MAX_LENGTH = 255;
+
+	private static final int _FOLDER_NAME_MAX_LENGTH = 100;
 
 }

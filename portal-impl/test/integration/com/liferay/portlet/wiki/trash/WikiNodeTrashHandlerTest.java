@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,20 +14,24 @@
 
 package com.liferay.portlet.wiki.trash;
 
+import com.liferay.portal.kernel.test.ExecutionTestListeners;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.model.BaseModel;
+import com.liferay.portal.model.ClassedModel;
 import com.liferay.portal.service.ServiceContext;
-import com.liferay.portal.service.ServiceTestUtil;
-import com.liferay.portal.test.EnvironmentExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayIntegrationJUnitTestRunner;
-import com.liferay.portal.test.TransactionalExecutionTestListener;
-import com.liferay.portal.util.TestPropsValues;
+import com.liferay.portal.test.Sync;
+import com.liferay.portal.test.SynchronousDestinationExecutionTestListener;
+import com.liferay.portal.test.listeners.MainServletExecutionTestListener;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.util.test.RandomTestUtil;
+import com.liferay.portal.util.test.TestPropsValues;
 import com.liferay.portlet.trash.BaseTrashHandlerTestCase;
+import com.liferay.portlet.trash.util.TrashUtil;
 import com.liferay.portlet.wiki.model.WikiNode;
 import com.liferay.portlet.wiki.service.WikiNodeLocalServiceUtil;
 
-import org.junit.Assert;
+import org.junit.Ignore;
+import org.junit.Test;
 import org.junit.runner.RunWith;
 
 /**
@@ -35,24 +39,143 @@ import org.junit.runner.RunWith;
  */
 @ExecutionTestListeners(
 	listeners = {
-		EnvironmentExecutionTestListener.class,
-		TransactionalExecutionTestListener.class
+		MainServletExecutionTestListener.class,
+		SynchronousDestinationExecutionTestListener.class
 	})
 @RunWith(LiferayIntegrationJUnitTestRunner.class)
+@Sync
 public class WikiNodeTrashHandlerTest extends BaseTrashHandlerTestCase {
 
+	@Ignore()
 	@Override
-	public void testTrashAndDelete() throws Exception {
-		Assert.assertTrue("This test does not apply", true);
+	@Test
+	public void testDeleteTrashVersions() throws Exception {
 	}
 
+	@Ignore()
 	@Override
+	@Test
+	public void testTrashAndDeleteDraft() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
 	public void testTrashAndRestoreDraft() throws Exception {
-		Assert.assertTrue("This test does not apply", true);
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashBaseModelAndParentAndDeleteGroupTrashEntries()
+		throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashBaseModelAndParentAndDeleteParent() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashBaseModelAndParentAndRestoreModel() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashGrandparentBaseModelAndRestoreParentModel()
+		throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashIsRestorableBaseModel() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashIsRestorableBaseModelWithParent1() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashIsRestorableBaseModelWithParent2() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashIsRestorableBaseModelWithParent3() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashIsRestorableBaseModelWithParent4() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashMoveBaseModel() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashMyBaseModel() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashParentAndDeleteGroupTrashEntries() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashParentAndDeleteParent() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashRecentBaseModel() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashVersionBaseModelAndDelete() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashVersionBaseModelAndRestore() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashVersionParentBaseModel() throws Exception {
+	}
+
+	@Ignore()
+	@Override
+	@Test
+	public void testTrashVersionParentBaseModelAndRestore() throws Exception {
 	}
 
 	@Override
-	protected BaseModel<?> addBaseModel(
+	protected BaseModel<?> addBaseModelWithWorkflow(
 			BaseModel<?> parentBaseModel, boolean approved,
 			ServiceContext serviceContext)
 		throws Exception {
@@ -61,9 +184,14 @@ public class WikiNodeTrashHandlerTest extends BaseTrashHandlerTestCase {
 
 		serviceContext.setWorkflowAction(WorkflowConstants.ACTION_PUBLISH);
 
+		String title = getSearchKeywords();
+
+		title += RandomTestUtil.randomString(
+			_NODE_NAME_MAX_LENGTH - title.length());
+
 		return WikiNodeLocalServiceUtil.addNode(
-			TestPropsValues.getUserId(), getSearchKeywords(),
-			ServiceTestUtil.randomString(), serviceContext);
+			TestPropsValues.getUserId(), title, RandomTestUtil.randomString(),
+			serviceContext);
 	}
 
 	@Override
@@ -77,7 +205,14 @@ public class WikiNodeTrashHandlerTest extends BaseTrashHandlerTestCase {
 	}
 
 	@Override
-	protected int getBaseModelsNotInTrashCount(BaseModel<?> parentBaseModel)
+	protected String getBaseModelName(ClassedModel classedModel) {
+		WikiNode node = (WikiNode)classedModel;
+
+		return node.getName();
+	}
+
+	@Override
+	protected int getNotInTrashBaseModelsCount(BaseModel<?> parentBaseModel)
 		throws Exception {
 
 		return WikiNodeLocalServiceUtil.getNodesCount(
@@ -91,12 +226,19 @@ public class WikiNodeTrashHandlerTest extends BaseTrashHandlerTestCase {
 	}
 
 	@Override
+	protected String getUniqueTitle(BaseModel<?> baseModel) {
+		WikiNode node = (WikiNode)baseModel;
+
+		return TrashUtil.getOriginalTitle(node.getName());
+	}
+
+	@Override
 	protected boolean isAssetableModel() {
 		return false;
 	}
 
 	@Override
-	protected boolean isIndexableModel() {
+	protected boolean isIndexableBaseModel() {
 		return false;
 	}
 
@@ -105,5 +247,7 @@ public class WikiNodeTrashHandlerTest extends BaseTrashHandlerTestCase {
 		WikiNodeLocalServiceUtil.moveNodeToTrash(
 			TestPropsValues.getUserId(), primaryKey);
 	}
+
+	private static final int _NODE_NAME_MAX_LENGTH = 75;
 
 }

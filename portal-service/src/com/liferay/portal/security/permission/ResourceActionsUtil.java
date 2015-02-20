@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,23 +15,17 @@
 package com.liferay.portal.security.permission;
 
 import com.liferay.portal.NoSuchResourceActionException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermission;
 import com.liferay.portal.model.Group;
-import com.liferay.portal.model.Organization;
-import com.liferay.portal.model.PasswordPolicy;
 import com.liferay.portal.model.Portlet;
 import com.liferay.portal.model.Role;
-import com.liferay.portal.model.User;
-import com.liferay.portal.model.UserGroup;
-import com.liferay.portlet.expando.model.ExpandoColumn;
 
 import java.io.InputStream;
 
 import java.util.List;
 import java.util.Locale;
 
-import javax.servlet.jsp.PageContext;
+import javax.servlet.http.HttpServletRequest;
 
 /**
  * @author Brian Wing Shun Chan
@@ -40,31 +34,33 @@ import javax.servlet.jsp.PageContext;
 public class ResourceActionsUtil {
 
 	/**
-	 * @deprecated {@link #getActionNamePrefix}
+	 * @deprecated As of 6.1.0, replaced by {@link #getActionNamePrefix}
 	 */
-	public static final String ACTION_NAME_PREFIX = "action.";
+	@Deprecated
+	public static final String ACTION_NAME_PREFIX =
+		ResourceActions.ACTION_NAME_PREFIX;
 
 	/**
-	 * @deprecated {@link #getModelResourceNamePrefix}
+	 * @deprecated As of 6.1.0, replaced by {@link #getModelResourceNamePrefix}
 	 */
-	public static final String MODEL_RESOURCE_NAME_PREFIX = "model.resource.";
+	@Deprecated
+	public static final String MODEL_RESOURCE_NAME_PREFIX =
+		ResourceActions.MODEL_RESOURCE_NAME_PREFIX;
 
 	/**
-	 * @deprecated {@link #getOrganizationModelResources}
+	 * @deprecated As of 6.1.0, replaced by {@link
+	 *             #getOrganizationModelResources}
 	 */
-	public static final String[] ORGANIZATION_MODEL_RESOURCES = {
-		Organization.class.getName(), PasswordPolicy.class.getName(),
-		User.class.getName()
-	};
+	@Deprecated
+	public static final String[] ORGANIZATION_MODEL_RESOURCES =
+		ResourceActions.ORGANIZATION_MODEL_RESOURCES;
 
 	/**
-	 * @deprecated {@link #getPortalModelResources}
+	 * @deprecated As of 6.1.0, replaced by {@link #getPortalModelResources}
 	 */
-	public static final String[] PORTAL_MODEL_RESOURCES = {
-		ExpandoColumn.class.getName(), Organization.class.getName(),
-		PasswordPolicy.class.getName(), Role.class.getName(),
-		User.class.getName(), UserGroup.class.getName()
-	};
+	@Deprecated
+	public static final String[] PORTAL_MODEL_RESOURCES =
+		ResourceActions.PORTAL_MODEL_RESOURCES;
 
 	public static void checkAction(String name, String actionId)
 		throws NoSuchResourceActionException {
@@ -72,12 +68,12 @@ public class ResourceActionsUtil {
 		getResourceActions().checkAction(name, actionId);
 	}
 
-	public static String getAction(Locale locale, String action) {
-		return getResourceActions().getAction(locale, action);
+	public static String getAction(HttpServletRequest request, String action) {
+		return getResourceActions().getAction(request, action);
 	}
 
-	public static String getAction(PageContext pageContext, String action) {
-		return getResourceActions().getAction(pageContext, action);
+	public static String getAction(Locale locale, String action) {
+		return getResourceActions().getAction(locale, action);
 	}
 
 	public static String getActionNamePrefix() {
@@ -85,16 +81,15 @@ public class ResourceActionsUtil {
 	}
 
 	public static List<String> getActionsNames(
-		PageContext pageContext, List<String> actions) {
+		HttpServletRequest request, List<String> actions) {
 
-		return getResourceActions().getActionsNames(pageContext, actions);
+		return getResourceActions().getActionsNames(request, actions);
 	}
 
 	public static List<String> getActionsNames(
-		PageContext pageContext, String name, long actionIds) {
+		HttpServletRequest request, String name, long actionIds) {
 
-		return getResourceActions().getActionsNames(
-			pageContext, name, actionIds);
+		return getResourceActions().getActionsNames(request, name, actionIds);
 	}
 
 	public static List<String> getModelNames() {
@@ -105,14 +100,14 @@ public class ResourceActionsUtil {
 		return getResourceActions().getModelPortletResources(name);
 	}
 
-	public static String getModelResource(Locale locale, String name) {
-		return getResourceActions().getModelResource(locale, name);
+	public static String getModelResource(
+		HttpServletRequest request, String name) {
+
+		return getResourceActions().getModelResource(request, name);
 	}
 
-	public static String getModelResource(
-		PageContext pageContext, String name) {
-
-		return getResourceActions().getModelResource(pageContext, name);
+	public static String getModelResource(Locale locale, String name) {
+		return getResourceActions().getModelResource(locale, name);
 	}
 
 	public static List<String> getModelResourceActions(String name) {
@@ -146,6 +141,10 @@ public class ResourceActionsUtil {
 		String name) {
 
 		return getResourceActions().getModelResourceOwnerDefaultActions(name);
+	}
+
+	public static Double getModelResourceWeight(String name) {
+		return getResourceActions().getModelResourceWeight(name);
 	}
 
 	public static String[] getOrganizationModelResources() {
@@ -202,6 +201,10 @@ public class ResourceActionsUtil {
 			name);
 	}
 
+	public static String getPortletRootModelResource(String portletName) {
+		return getResourceActions().getPortletRootModelResource(portletName);
+	}
+
 	public static ResourceActions getResourceActions() {
 		PortalRuntimePermission.checkGetBeanProperty(ResourceActionsUtil.class);
 
@@ -231,18 +234,18 @@ public class ResourceActionsUtil {
 	}
 
 	/**
-	 * @deprecated {@link #getRoles(long, Group, String, int[])}
+	 * @deprecated As of 6.1.0, replaced by {@link #getRoles(long, Group,
+	 *             String, int[])}
 	 */
+	@Deprecated
 	public static List<Role> getRoles(
-			long companyId, Group group, String modelResource)
-		throws SystemException {
+		long companyId, Group group, String modelResource) {
 
 		return getResourceActions().getRoles(companyId, group, modelResource);
 	}
 
 	public static List<Role> getRoles(
-			long companyId, Group group, String modelResource, int[] roleTypes)
-		throws SystemException {
+		long companyId, Group group, String modelResource, int[] roleTypes) {
 
 		return getResourceActions().getRoles(
 			companyId, group, modelResource, roleTypes);
@@ -253,8 +256,9 @@ public class ResourceActionsUtil {
 	}
 
 	/**
-	 * @deprecated
+	 * @deprecated As of 6.1.0
 	 */
+	@Deprecated
 	public static void init() {
 	}
 

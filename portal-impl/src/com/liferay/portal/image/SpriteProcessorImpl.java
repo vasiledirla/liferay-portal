@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,13 +19,14 @@ import com.liferay.portal.kernel.image.ImageToolUtil;
 import com.liferay.portal.kernel.image.SpriteProcessor;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.security.pacl.DoPrivileged;
+import com.liferay.portal.kernel.servlet.ServletContextUtil;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.ContextPathUtil;
 import com.liferay.portal.kernel.util.FileUtil;
 import com.liferay.portal.kernel.util.JavaConstants;
 import com.liferay.portal.kernel.util.PropertiesUtil;
 import com.liferay.portal.kernel.util.SortedProperties;
-import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.util.PropertyComparator;
 
@@ -40,7 +41,6 @@ import java.awt.image.RenderedImage;
 import java.awt.image.SampleModel;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 import java.net.URL;
@@ -63,13 +63,13 @@ import javax.media.jai.operator.TranslateDescriptor;
 
 import javax.servlet.ServletContext;
 
-import org.geotools.image.ImageWorker;
-
 /**
  * @author Brian Wing Shun Chan
  */
+@DoPrivileged
 public class SpriteProcessorImpl implements SpriteProcessor {
 
+	@Override
 	public Properties generate(
 			ServletContext servletContext, List<URL> imageURLs,
 			String spriteRootDirName, String spriteFileName,
@@ -175,7 +175,7 @@ public class SpriteProcessorImpl implements SpriteProcessor {
 
 					renderedImages.add(renderedImage);
 
-					String key = imageURL.getPath();
+					String key = ServletContextUtil.getResourcePath(imageURL);
 
 					int pos = key.indexOf(rootPath);
 
@@ -222,34 +222,11 @@ public class SpriteProcessorImpl implements SpriteProcessor {
 
 			File spriteFile = new File(spriteRootDir, spriteFileName);
 
-			spriteFile.mkdirs();
+			File spriteDir = spriteFile.getParentFile();
+
+			spriteDir.mkdirs();
 
 			ImageIO.write(renderedImage, "png", spriteFile);
-
-			if (lastModified > 0) {
-				spriteFile.setLastModified(lastModified);
-			}
-
-			ImageWorker imageWorker = new ImageWorker(renderedImage);
-
-			imageWorker.forceIndexColorModelForGIF(true);
-
-			// GIF
-
-			renderedImage = imageWorker.getPlanarImage();
-
-			spriteFile = new File(
-				spriteRootDir,
-				StringUtil.replace(spriteFileName, ".png", ".gif"));
-
-			FileOutputStream fos = new FileOutputStream(spriteFile);
-
-			try {
-				ImageToolUtil.encodeGIF(renderedImage, fos);
-			}
-			finally {
-				fos.close();
-			}
 
 			if (lastModified > 0) {
 				spriteFile.setLastModified(lastModified);
@@ -388,7 +365,7 @@ public class SpriteProcessorImpl implements SpriteProcessor {
 			"filestore", tiledImage, "test.png", "PNG");
 
 		printImage(renderedImage);
-		printImage(tiledImage);}*/
+		printImage(tiledImage);*/
 
 		return tiledImage;
 	}

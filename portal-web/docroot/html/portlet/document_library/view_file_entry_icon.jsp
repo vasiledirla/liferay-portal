@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,7 +21,7 @@ FileEntry fileEntry = (FileEntry)request.getAttribute("view_entries.jsp-fileEntr
 
 FileVersion latestFileVersion = fileEntry.getFileVersion();
 
-if ((user.getUserId() == fileEntry.getUserId()) || permissionChecker.isCompanyAdmin() || permissionChecker.isGroupAdmin(scopeGroupId) || DLFileEntryPermission.contains(permissionChecker, fileEntry, ActionKeys.UPDATE)) {
+if ((user.getUserId() == fileEntry.getUserId()) || permissionChecker.isContentReviewer(user.getCompanyId(), scopeGroupId) || DLFileEntryPermission.contains(permissionChecker, fileEntry, ActionKeys.UPDATE)) {
 	latestFileVersion = fileEntry.getLatestFileVersion();
 }
 
@@ -40,7 +40,7 @@ if (fileShortcut != null) {
 
 <liferay-ui:app-view-entry
 	actionJsp="/html/portlet/document_library/file_entry_action.jsp"
-	description="<%= fileEntry.getDescription() %>"
+	description="<%= latestFileVersion.getDescription() %>"
 	displayStyle="icon"
 	locked="<%= fileEntry.isCheckedOut() %>"
 	rowCheckerId="<%= String.valueOf(rowCheckerId) %>"
@@ -48,9 +48,9 @@ if (fileShortcut != null) {
 	shortcut="<%= fileShortcut != null %>"
 	showCheckbox="<%= DLFileEntryPermission.contains(permissionChecker, fileEntry, ActionKeys.DELETE) || DLFileEntryPermission.contains(permissionChecker, fileEntry, ActionKeys.UPDATE) %>"
 	status="<%= latestFileVersion.getStatus() %>"
-	thumbnailDivStyle="<%= DLUtil.getThumbnailStyle(false, 4) %>"
-	thumbnailSrc="<%= DLUtil.getThumbnailSrc(fileEntry, fileShortcut, themeDisplay) %>"
+	thumbnailDivStyle="<%= DLUtil.getThumbnailStyle(false, 9) %>"
+	thumbnailSrc="<%= DLUtil.getThumbnailSrc(fileEntry, latestFileVersion, fileShortcut, themeDisplay) %>"
 	thumbnailStyle="<%= DLUtil.getThumbnailStyle() %>"
-	title="<%= fileEntry.getTitle() %>"
+	title="<%= latestFileVersion.getTitle() %>"
 	url="<%= tempRowURL.toString() %>"
 />

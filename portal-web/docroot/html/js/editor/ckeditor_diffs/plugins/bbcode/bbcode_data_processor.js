@@ -39,6 +39,19 @@
 		strong: '_handleStrong'
 	};
 
+	var MAP_IMAGE_ATTRIBUTES = [
+		'alt',
+		'class',
+		'dir',
+		'height',
+		'id',
+		'lang',
+		'longdesc',
+		'style',
+		'title',
+		'width'
+	];
+
 	var MAP_LINK_HANDLERS = {
 		0: 'email'
 	};
@@ -57,13 +70,15 @@
 
 	var REGEX_NEWLINE = /\r?\n/g;
 
-	var REGEX_NOT_WHITESPACE = /[^\t\n\r ]/;
-
 	var REGEX_PERCENT = /%$/i;
 
 	var REGEX_PRE = /<pre>/ig;
 
 	var REGEX_PX = /px$/i;
+
+	var REGEX_SINGLE_QUOTE = /'/g;
+
+	var STR_EMPTY = '';
 
 	var STR_MAILTO = 'mailto:';
 
@@ -89,36 +104,18 @@
 
 	var TAG_TD = 'td';
 
-	var TEMPLATE_IMAGE = '<img src="{image}">';
+	var tplImage = new CKEDITOR.template('<img src="{image}" />');
 
-	CKEDITOR.plugins.add(
-		'bbcode_data_processor',
-		{
-			requires: ['htmlwriter'],
+	var emoticonImages;
+	var emoticonPath;
+	var emoticonSymbols;
+	var newThreadURL;
 
-			init: function(editor) {
-				editor.dataProcessor = new CKEDITOR.htmlDataProcessor(editor);
+	var BBCodeDataProcessor = function() {};
 
-				editor.on(
-					'paste',
-					function(event) {
-						var data = event.data;
+	BBCodeDataProcessor.prototype = {
+		constructor: BBCodeDataProcessor,
 
-						var htmlData = data.html;
-
-						htmlData = CKEDITOR.htmlDataProcessor.prototype.toDataFormat(htmlData);
-
-						data.html = htmlData;
-					},
-					editor.element.$
-				);
-
-				editor.fire('customDataProcessorLoaded');
-			}
-		}
-	);
-
-	CKEDITOR.htmlDataProcessor.prototype = {
 		toDataFormat: function(html, fixForBody ) {
 			var instance = this;
 
@@ -138,14 +135,14 @@
 
 			data = instance._bbcodeConverter.convert(data);
 
-			var emoticonImages = CKEDITOR.config.smiley_images;
-			var emoticonSymbols = CKEDITOR.config.smiley_symbols;
-			var imagePath = CKEDITOR.config.smiley_path;
-
 			var length = emoticonSymbols.length;
 
 			for (var i = 0; i < length; i++) {
-				var image = TEMPLATE_IMAGE.replace('{image}', imagePath + emoticonImages[i]);
+				var image = tplImage.output(
+					{
+						image: emoticonPath + emoticonImages[i]
+					}
+				);
 
 				var escapedSymbol = emoticonSymbols[i].replace(REGEX_ESCAPE_REGEX, '\\$&');
 
@@ -198,7 +195,7 @@
 
 			instance._handle(node);
 
-			var endResult = instance._endResult.join('');
+			var endResult = instance._endResult.join(STR_EMPTY);
 
 			instance._endResult = null;
 
@@ -247,10 +244,10 @@
 			if (imagePath) {
 				var image = imagePath.substring(imagePath.lastIndexOf('/') + 1);
 
-				var imageIndex = instance._getImageIndex(CKEDITOR.config.smiley_images, image);
+				var imageIndex = instance._getImageIndex(emoticonImages, image);
 
 				if (imageIndex >= 0) {
-					emoticonSymbol = CKEDITOR.config.smiley_symbols[imageIndex];
+					emoticonSymbol = emoticonSymbols[imageIndex];
 				}
 			}
 
@@ -335,27 +332,6 @@
 			return index;
 		},
 
-		_isAllWS: function(node) {
-			return node.isElementContentWhitespace || !(REGEX_NOT_WHITESPACE.test(node.data));
-		},
-
-		_isIgnorable: function(node) {
-			var instance = this;
-
-			var nodeType = node.nodeType;
-
-			return (node.isElementContentWhitespace || nodeType == 8) ||
-				((nodeType == 3) && instance._isAllWS(node));
-		},
-
-		_isLastItemNewLine: function() {
-			var instance = this;
-
-			var endResult = instance._endResult;
-
-			return (endResult && REGEX_LASTCHAR_NEWLINE_WHITESPACE.test(endResult.slice(-1)));
-		},
-
 		_handle: function(node) {
 			var instance = this;
 
@@ -378,20 +354,18 @@
 
 				var child = children[i];
 
-				if (instance._inPRE || !instance._isIgnorable(child)) {
-					instance._handleElementStart(child, listTagsIn, listTagsOut);
-					instance._handleStyles(child, stylesTagsIn, stylesTagsOut);
+				instance._handleElementStart(child, listTagsIn, listTagsOut);
+				instance._handleStyles(child, stylesTagsIn, stylesTagsOut);
 
-					pushTagList.call(instance, listTagsIn);
-					pushTagList.call(instance, stylesTagsIn);
+				pushTagList.call(instance, listTagsIn);
+				pushTagList.call(instance, stylesTagsIn);
 
-					instance._handle(child);
+				instance._handle(child);
 
-					instance._handleElementEnd(child, listTagsIn, listTagsOut);
+				instance._handleElementEnd(child, listTagsIn, listTagsOut);
 
-					pushTagList.call(instance, stylesTagsOut.reverse());
-					pushTagList.call(instance, listTagsOut);
-				}
+				pushTagList.call(instance, stylesTagsOut.reverse());
+				pushTagList.call(instance, listTagsOut);
 			}
 
 			instance._handleData(node.data, node);
@@ -437,7 +411,7 @@
 
 			if (data) {
 				if (!instance._allowNewLine(element)) {
-					data = data.replace(REGEX_NEWLINE, '');
+					data = data.replace(REGEX_NEWLINE, STR_EMPTY);
 				}
 				else if (instance._checkParentElement(element, TAG_LINK) &&
 					data.indexOf(STR_MAILTO) === 0) {
@@ -530,28 +504,55 @@
 			else {
 				var attrSrc = element.getAttribute('src');
 
-				listTagsIn.push('[img]');
+				var openTag = '[img' + instance._handleImageAttributes(element) + ']';
 
+				listTagsIn.push(openTag);
 				listTagsIn.push(attrSrc);
 
 				listTagsOut.push('[/img]');
 			}
 		},
 
+		_handleImageAttributes: function(element) {
+			var attrs = '';
+
+			var length = MAP_IMAGE_ATTRIBUTES.length;
+
+			for (var i = 0; i < length; i++) {
+				var attrName = MAP_IMAGE_ATTRIBUTES[i];
+
+				var attrValue = element.getAttribute(attrName);
+
+				if (attrValue) {
+					attrs += ' ' + attrName + '="' + attrValue + '"';
+				}
+			}
+
+			return attrs;
+		},
+
+		_handleLineThrough: function(element, listTagsIn, listTagsOut) {
+			listTagsIn.push('[s]');
+
+			listTagsOut.push('[/s]');
+		},
+
 		_handleLink: function(element, listTagsIn, listTagsOut) {
 			var hrefAttribute = element.getAttribute('href');
 
-			var decodedLink = decodeURIComponent(hrefAttribute);
+			if (hrefAttribute) {
+				var decodedLink = decodeURIComponent(hrefAttribute);
 
-			if (CKEDITOR.config.newThreadURL === decodedLink) {
-				hrefAttribute = decodedLink;
+				if (decodedLink.indexOf(newThreadURL) >= 0) {
+					hrefAttribute = newThreadURL;
+				}
+
+				var linkHandler = MAP_LINK_HANDLERS[hrefAttribute.indexOf(STR_MAILTO)] || 'url';
+
+				listTagsIn.push('[' + linkHandler + '=', hrefAttribute, ']');
+
+				listTagsOut.push('[/' + linkHandler + ']');
 			}
-
-			var linkHandler = MAP_LINK_HANDLERS[hrefAttribute.indexOf(STR_MAILTO)] || 'url';
-
-			listTagsIn.push('[' + linkHandler + '=', hrefAttribute, ']');
-
-			listTagsOut.push('[/' + linkHandler + ']');
 		},
 
 		_handleListItem: function(element, listTagsIn, listTagsOut) {
@@ -562,12 +563,6 @@
 			}
 
 			listTagsIn.push('[*]');
-		},
-
-		_handleLineThrough: function(element, listTagsIn, listTagsOut) {
-			listTagsIn.push('[s]');
-
-			listTagsOut.push('[/s]');
 		},
 
 		_handleOrderedList: function(element, listTagsIn, listTagsOut) {
@@ -699,7 +694,7 @@
 			var fontFamily = style.fontFamily;
 
 			if (fontFamily) {
-				stylesTagsIn.push('[font=', fontFamily, ']');
+				stylesTagsIn.push('[font=', fontFamily.replace(REGEX_SINGLE_QUOTE, STR_EMPTY), ']');
 
 				stylesTagsOut.push('[/font]');
 			}
@@ -733,23 +728,6 @@
 			}
 		},
 
-		_handleStyleTextDecoration: function(element, stylesTagsIn, stylesTagsOut) {
-			var style = element.style;
-
-			var textDecoration = style.textDecoration.toLowerCase();
-
-			if (textDecoration == 'line-through') {
-				stylesTagsIn.push('[s]');
-
-				stylesTagsOut.push('[/s]');
-			}
-			else if (textDecoration == 'underline') {
-				stylesTagsIn.push('[u]');
-
-				stylesTagsOut.push('[/u]');
-			}
-		},
-
 		_handleStyles: function(element, stylesTagsIn, stylesTagsOut) {
 			var instance = this;
 
@@ -766,6 +744,23 @@
 				instance._handleStyleFontSize(element, stylesTagsIn, stylesTagsOut);
 				instance._handleStyleItalic(element, stylesTagsIn, stylesTagsOut);
 				instance._handleStyleTextDecoration(element, stylesTagsIn, stylesTagsOut);
+			}
+		},
+
+		_handleStyleTextDecoration: function(element, stylesTagsIn, stylesTagsOut) {
+			var style = element.style;
+
+			var textDecoration = style.textDecoration.toLowerCase();
+
+			if (textDecoration == 'line-through') {
+				stylesTagsIn.push('[s]');
+
+				stylesTagsOut.push('[/s]');
+			}
+			else if (textDecoration == 'underline') {
+				stylesTagsIn.push('[u]');
+
+				stylesTagsOut.push('[/u]');
 			}
 		},
 
@@ -827,6 +822,14 @@
 			listTagsOut.push('[/list]');
 		},
 
+		_isLastItemNewLine: function() {
+			var instance = this;
+
+			var endResult = instance._endResult;
+
+			return (endResult && REGEX_LASTCHAR_NEWLINE_WHITESPACE.test(endResult.slice(-1)));
+		},
+
 		_pushTagList: function(tagsList) {
 			var instance = this;
 
@@ -845,4 +848,38 @@
 
 		_inPRE: false
 	};
+
+	CKEDITOR.plugins.add(
+		'bbcode_data_processor',
+		{
+			requires: ['htmlwriter'],
+
+			init: function(editor) {
+				var editorConfig = editor.config;
+
+				emoticonImages = editorConfig.smiley_images;
+				emoticonPath = editorConfig.smiley_path;
+				emoticonSymbols = editorConfig.smiley_symbols;
+				newThreadURL = editorConfig.newThreadURL;
+
+				editor.dataProcessor = new BBCodeDataProcessor(editor);
+
+				editor.on(
+					'paste',
+					function(event) {
+						var data = event.data;
+
+						var htmlData = data.dataValue;
+
+						htmlData = editor.dataProcessor.toDataFormat(htmlData);
+
+						data.dataValue = htmlData;
+					},
+					editor.element.$
+				);
+
+				editor.fire('customDataProcessorLoaded');
+			}
+		}
+	);
 })();

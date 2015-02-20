@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,7 +19,6 @@ import com.liferay.portal.kernel.upgrade.UpgradeProcess;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.uuid.PortalUUIDUtil;
 import com.liferay.portal.model.ResourceConstants;
-import com.liferay.portal.service.ResourceLocalServiceUtil;
 import com.liferay.portlet.asset.model.AssetCategory;
 import com.liferay.portlet.asset.model.AssetEntry;
 import com.liferay.portlet.asset.model.AssetTag;
@@ -331,11 +330,6 @@ public class UpgradeAsset extends UpgradeProcess {
 				copyProperties(
 					entryId, "AssetCategoryProperty", "categoryPropertyId",
 					"categoryId");
-
-				String resourceName = AssetCategory.class.getName();
-
-				ResourceLocalServiceUtil.addModelResources(
-					companyId, groupId, 0, resourceName, null, null, null);
 
 				updateCategoryResource(companyId, entryId);
 			}

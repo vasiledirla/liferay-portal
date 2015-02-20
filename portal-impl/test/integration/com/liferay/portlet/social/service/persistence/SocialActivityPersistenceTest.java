@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,70 +14,97 @@
 
 package com.liferay.portlet.social.service.persistence;
 
-import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
+import com.liferay.portal.kernel.dao.orm.QueryUtil;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.service.ServiceTestUtil;
-import com.liferay.portal.service.persistence.BasePersistence;
-import com.liferay.portal.service.persistence.PersistenceExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayPersistenceIntegrationJUnitTestRunner;
-import com.liferay.portal.test.persistence.TransactionalPersistenceAdvice;
+import com.liferay.portal.kernel.template.TemplateException;
+import com.liferay.portal.kernel.template.TemplateManagerUtil;
+import com.liferay.portal.kernel.transaction.Propagation;
+import com.liferay.portal.kernel.util.IntegerWrapper;
+import com.liferay.portal.kernel.util.OrderByComparator;
+import com.liferay.portal.kernel.util.OrderByComparatorFactoryUtil;
+import com.liferay.portal.model.ModelListener;
+import com.liferay.portal.test.TransactionalTestRule;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.tools.DBUpgrader;
 import com.liferay.portal.util.PropsValues;
+import com.liferay.portal.util.test.RandomTestUtil;
 
 import com.liferay.portlet.social.NoSuchActivityException;
 import com.liferay.portlet.social.model.SocialActivity;
 import com.liferay.portlet.social.model.impl.SocialActivityModelImpl;
+import com.liferay.portlet.social.service.SocialActivityLocalServiceUtil;
 
 import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
 import org.junit.Test;
 
 import org.junit.runner.RunWith;
 
 import java.io.Serializable;
 
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * @author Brian Wing Shun Chan
+ * @generated
  */
-@ExecutionTestListeners(listeners =  {
-	PersistenceExecutionTestListener.class})
-@RunWith(LiferayPersistenceIntegrationJUnitTestRunner.class)
+@RunWith(LiferayIntegrationJUnitTestRunner.class)
 public class SocialActivityPersistenceTest {
-	@After
-	public void tearDown() throws Exception {
-		Map<Serializable, BasePersistence<?>> basePersistences = _transactionalPersistenceAdvice.getBasePersistences();
+	@ClassRule
+	public static TransactionalTestRule transactionalTestRule = new TransactionalTestRule(Propagation.REQUIRED);
 
-		Set<Serializable> primaryKeys = basePersistences.keySet();
-
-		for (Serializable primaryKey : primaryKeys) {
-			BasePersistence<?> basePersistence = basePersistences.get(primaryKey);
-
-			try {
-				basePersistence.remove(primaryKey);
-			}
-			catch (Exception e) {
-				if (_log.isDebugEnabled()) {
-					_log.debug("The model with primary key " + primaryKey +
-						" was already deleted");
-				}
-			}
+	@BeforeClass
+	public static void setupClass() throws TemplateException {
+		try {
+			DBUpgrader.upgrade();
+		}
+		catch (Exception e) {
+			_log.error(e, e);
 		}
 
-		_transactionalPersistenceAdvice.reset();
+		TemplateManagerUtil.init();
+	}
+
+	@Before
+	public void setUp() {
+		_modelListeners = _persistence.getListeners();
+
+		for (ModelListener<SocialActivity> modelListener : _modelListeners) {
+			_persistence.unregisterListener(modelListener);
+		}
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		Iterator<SocialActivity> iterator = _socialActivities.iterator();
+
+		while (iterator.hasNext()) {
+			_persistence.remove(iterator.next());
+
+			iterator.remove();
+		}
+
+		for (ModelListener<SocialActivity> modelListener : _modelListeners) {
+			_persistence.registerListener(modelListener);
+		}
 	}
 
 	@Test
 	public void testCreate() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		SocialActivity socialActivity = _persistence.create(pk);
 
@@ -104,31 +131,37 @@ public class SocialActivityPersistenceTest {
 
 	@Test
 	public void testUpdateExisting() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		SocialActivity newSocialActivity = _persistence.create(pk);
 
-		newSocialActivity.setGroupId(ServiceTestUtil.nextLong());
+		newSocialActivity.setGroupId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setCompanyId(ServiceTestUtil.nextLong());
+		newSocialActivity.setCompanyId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setUserId(ServiceTestUtil.nextLong());
+		newSocialActivity.setUserId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setCreateDate(ServiceTestUtil.nextLong());
+		newSocialActivity.setCreateDate(RandomTestUtil.nextLong());
 
-		newSocialActivity.setMirrorActivityId(ServiceTestUtil.nextLong());
+		newSocialActivity.setActivitySetId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setClassNameId(ServiceTestUtil.nextLong());
+		newSocialActivity.setMirrorActivityId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setClassPK(ServiceTestUtil.nextLong());
+		newSocialActivity.setClassNameId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setType(ServiceTestUtil.nextInt());
+		newSocialActivity.setClassPK(RandomTestUtil.nextLong());
 
-		newSocialActivity.setExtraData(ServiceTestUtil.randomString());
+		newSocialActivity.setParentClassNameId(RandomTestUtil.nextLong());
 
-		newSocialActivity.setReceiverUserId(ServiceTestUtil.nextLong());
+		newSocialActivity.setParentClassPK(RandomTestUtil.nextLong());
 
-		_persistence.update(newSocialActivity, false);
+		newSocialActivity.setType(RandomTestUtil.nextInt());
+
+		newSocialActivity.setExtraData(RandomTestUtil.randomString());
+
+		newSocialActivity.setReceiverUserId(RandomTestUtil.nextLong());
+
+		_socialActivities.add(_persistence.update(newSocialActivity));
 
 		SocialActivity existingSocialActivity = _persistence.findByPrimaryKey(newSocialActivity.getPrimaryKey());
 
@@ -142,18 +175,177 @@ public class SocialActivityPersistenceTest {
 			newSocialActivity.getUserId());
 		Assert.assertEquals(existingSocialActivity.getCreateDate(),
 			newSocialActivity.getCreateDate());
+		Assert.assertEquals(existingSocialActivity.getActivitySetId(),
+			newSocialActivity.getActivitySetId());
 		Assert.assertEquals(existingSocialActivity.getMirrorActivityId(),
 			newSocialActivity.getMirrorActivityId());
 		Assert.assertEquals(existingSocialActivity.getClassNameId(),
 			newSocialActivity.getClassNameId());
 		Assert.assertEquals(existingSocialActivity.getClassPK(),
 			newSocialActivity.getClassPK());
+		Assert.assertEquals(existingSocialActivity.getParentClassNameId(),
+			newSocialActivity.getParentClassNameId());
+		Assert.assertEquals(existingSocialActivity.getParentClassPK(),
+			newSocialActivity.getParentClassPK());
 		Assert.assertEquals(existingSocialActivity.getType(),
 			newSocialActivity.getType());
 		Assert.assertEquals(existingSocialActivity.getExtraData(),
 			newSocialActivity.getExtraData());
 		Assert.assertEquals(existingSocialActivity.getReceiverUserId(),
 			newSocialActivity.getReceiverUserId());
+	}
+
+	@Test
+	public void testCountByGroupId() {
+		try {
+			_persistence.countByGroupId(RandomTestUtil.nextLong());
+
+			_persistence.countByGroupId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByCompanyId() {
+		try {
+			_persistence.countByCompanyId(RandomTestUtil.nextLong());
+
+			_persistence.countByCompanyId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByUserId() {
+		try {
+			_persistence.countByUserId(RandomTestUtil.nextLong());
+
+			_persistence.countByUserId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByActivitySetId() {
+		try {
+			_persistence.countByActivitySetId(RandomTestUtil.nextLong());
+
+			_persistence.countByActivitySetId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByMirrorActivityId() {
+		try {
+			_persistence.countByMirrorActivityId(RandomTestUtil.nextLong());
+
+			_persistence.countByMirrorActivityId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByClassNameId() {
+		try {
+			_persistence.countByClassNameId(RandomTestUtil.nextLong());
+
+			_persistence.countByClassNameId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByReceiverUserId() {
+		try {
+			_persistence.countByReceiverUserId(RandomTestUtil.nextLong());
+
+			_persistence.countByReceiverUserId(0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByC_C() {
+		try {
+			_persistence.countByC_C(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong());
+
+			_persistence.countByC_C(0L, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByM_C_C() {
+		try {
+			_persistence.countByM_C_C(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextLong());
+
+			_persistence.countByM_C_C(0L, 0L, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByC_C_T() {
+		try {
+			_persistence.countByC_C_T(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextInt());
+
+			_persistence.countByC_C_T(0L, 0L, 0);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByG_U_C_C_T_R() {
+		try {
+			_persistence.countByG_U_C_C_T_R(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextInt(),
+				RandomTestUtil.nextLong());
+
+			_persistence.countByG_U_C_C_T_R(0L, 0L, 0L, 0L, 0, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	@Test
+	public void testCountByG_U_CD_C_C_T_R() {
+		try {
+			_persistence.countByG_U_CD_C_C_T_R(RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextLong(),
+				RandomTestUtil.nextLong(), RandomTestUtil.nextLong(),
+				RandomTestUtil.nextInt(), RandomTestUtil.nextLong());
+
+			_persistence.countByG_U_CD_C_C_T_R(0L, 0L, 0L, 0L, 0L, 0, 0L);
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
 	}
 
 	@Test
@@ -167,7 +359,7 @@ public class SocialActivityPersistenceTest {
 
 	@Test
 	public void testFindByPrimaryKeyMissing() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		try {
 			_persistence.findByPrimaryKey(pk);
@@ -176,6 +368,26 @@ public class SocialActivityPersistenceTest {
 		}
 		catch (NoSuchActivityException nsee) {
 		}
+	}
+
+	@Test
+	public void testFindAll() throws Exception {
+		try {
+			_persistence.findAll(QueryUtil.ALL_POS, QueryUtil.ALL_POS,
+				getOrderByComparator());
+		}
+		catch (Exception e) {
+			Assert.fail(e.getMessage());
+		}
+	}
+
+	protected OrderByComparator<SocialActivity> getOrderByComparator() {
+		return OrderByComparatorFactoryUtil.create("SocialActivity",
+			"activityId", true, "groupId", true, "companyId", true, "userId",
+			true, "createDate", true, "activitySetId", true,
+			"mirrorActivityId", true, "classNameId", true, "classPK", true,
+			"parentClassNameId", true, "parentClassPK", true, "type", true,
+			"extraData", true, "receiverUserId", true);
 	}
 
 	@Test
@@ -189,11 +401,115 @@ public class SocialActivityPersistenceTest {
 
 	@Test
 	public void testFetchByPrimaryKeyMissing() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		SocialActivity missingSocialActivity = _persistence.fetchByPrimaryKey(pk);
 
 		Assert.assertNull(missingSocialActivity);
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithMultiplePrimaryKeysWhereAllPrimaryKeysExist()
+		throws Exception {
+		SocialActivity newSocialActivity1 = addSocialActivity();
+		SocialActivity newSocialActivity2 = addSocialActivity();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(newSocialActivity1.getPrimaryKey());
+		primaryKeys.add(newSocialActivity2.getPrimaryKey());
+
+		Map<Serializable, SocialActivity> socialActivities = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertEquals(2, socialActivities.size());
+		Assert.assertEquals(newSocialActivity1,
+			socialActivities.get(newSocialActivity1.getPrimaryKey()));
+		Assert.assertEquals(newSocialActivity2,
+			socialActivities.get(newSocialActivity2.getPrimaryKey()));
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithMultiplePrimaryKeysWhereNoPrimaryKeysExist()
+		throws Exception {
+		long pk1 = RandomTestUtil.nextLong();
+
+		long pk2 = RandomTestUtil.nextLong();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(pk1);
+		primaryKeys.add(pk2);
+
+		Map<Serializable, SocialActivity> socialActivities = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertTrue(socialActivities.isEmpty());
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithMultiplePrimaryKeysWhereSomePrimaryKeysExist()
+		throws Exception {
+		SocialActivity newSocialActivity = addSocialActivity();
+
+		long pk = RandomTestUtil.nextLong();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(newSocialActivity.getPrimaryKey());
+		primaryKeys.add(pk);
+
+		Map<Serializable, SocialActivity> socialActivities = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertEquals(1, socialActivities.size());
+		Assert.assertEquals(newSocialActivity,
+			socialActivities.get(newSocialActivity.getPrimaryKey()));
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithNoPrimaryKeys()
+		throws Exception {
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		Map<Serializable, SocialActivity> socialActivities = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertTrue(socialActivities.isEmpty());
+	}
+
+	@Test
+	public void testFetchByPrimaryKeysWithOnePrimaryKey()
+		throws Exception {
+		SocialActivity newSocialActivity = addSocialActivity();
+
+		Set<Serializable> primaryKeys = new HashSet<Serializable>();
+
+		primaryKeys.add(newSocialActivity.getPrimaryKey());
+
+		Map<Serializable, SocialActivity> socialActivities = _persistence.fetchByPrimaryKeys(primaryKeys);
+
+		Assert.assertEquals(1, socialActivities.size());
+		Assert.assertEquals(newSocialActivity,
+			socialActivities.get(newSocialActivity.getPrimaryKey()));
+	}
+
+	@Test
+	public void testActionableDynamicQuery() throws Exception {
+		final IntegerWrapper count = new IntegerWrapper();
+
+		ActionableDynamicQuery actionableDynamicQuery = SocialActivityLocalServiceUtil.getActionableDynamicQuery();
+
+		actionableDynamicQuery.setPerformActionMethod(new ActionableDynamicQuery.PerformActionMethod() {
+				@Override
+				public void performAction(Object object) {
+					SocialActivity socialActivity = (SocialActivity)object;
+
+					Assert.assertNotNull(socialActivity);
+
+					count.increment();
+				}
+			});
+
+		actionableDynamicQuery.performActions();
+
+		Assert.assertEquals(count.getValue(), _persistence.countAll());
 	}
 
 	@Test
@@ -222,7 +538,7 @@ public class SocialActivityPersistenceTest {
 				SocialActivity.class.getClassLoader());
 
 		dynamicQuery.add(RestrictionsFactoryUtil.eq("activityId",
-				ServiceTestUtil.nextLong()));
+				RandomTestUtil.nextLong()));
 
 		List<SocialActivity> result = _persistence.findWithDynamicQuery(dynamicQuery);
 
@@ -261,7 +577,7 @@ public class SocialActivityPersistenceTest {
 		dynamicQuery.setProjection(ProjectionFactoryUtil.property("activityId"));
 
 		dynamicQuery.add(RestrictionsFactoryUtil.in("activityId",
-				new Object[] { ServiceTestUtil.nextLong() }));
+				new Object[] { RandomTestUtil.nextLong() }));
 
 		List<Object> result = _persistence.findWithDynamicQuery(dynamicQuery);
 
@@ -300,36 +616,43 @@ public class SocialActivityPersistenceTest {
 	}
 
 	protected SocialActivity addSocialActivity() throws Exception {
-		long pk = ServiceTestUtil.nextLong();
+		long pk = RandomTestUtil.nextLong();
 
 		SocialActivity socialActivity = _persistence.create(pk);
 
-		socialActivity.setGroupId(ServiceTestUtil.nextLong());
+		socialActivity.setGroupId(RandomTestUtil.nextLong());
 
-		socialActivity.setCompanyId(ServiceTestUtil.nextLong());
+		socialActivity.setCompanyId(RandomTestUtil.nextLong());
 
-		socialActivity.setUserId(ServiceTestUtil.nextLong());
+		socialActivity.setUserId(RandomTestUtil.nextLong());
 
-		socialActivity.setCreateDate(ServiceTestUtil.nextLong());
+		socialActivity.setCreateDate(RandomTestUtil.nextLong());
 
-		socialActivity.setMirrorActivityId(ServiceTestUtil.nextLong());
+		socialActivity.setActivitySetId(RandomTestUtil.nextLong());
 
-		socialActivity.setClassNameId(ServiceTestUtil.nextLong());
+		socialActivity.setMirrorActivityId(RandomTestUtil.nextLong());
 
-		socialActivity.setClassPK(ServiceTestUtil.nextLong());
+		socialActivity.setClassNameId(RandomTestUtil.nextLong());
 
-		socialActivity.setType(ServiceTestUtil.nextInt());
+		socialActivity.setClassPK(RandomTestUtil.nextLong());
 
-		socialActivity.setExtraData(ServiceTestUtil.randomString());
+		socialActivity.setParentClassNameId(RandomTestUtil.nextLong());
 
-		socialActivity.setReceiverUserId(ServiceTestUtil.nextLong());
+		socialActivity.setParentClassPK(RandomTestUtil.nextLong());
 
-		_persistence.update(socialActivity, false);
+		socialActivity.setType(RandomTestUtil.nextInt());
+
+		socialActivity.setExtraData(RandomTestUtil.randomString());
+
+		socialActivity.setReceiverUserId(RandomTestUtil.nextLong());
+
+		_socialActivities.add(_persistence.update(socialActivity));
 
 		return socialActivity;
 	}
 
 	private static Log _log = LogFactoryUtil.getLog(SocialActivityPersistenceTest.class);
-	private SocialActivityPersistence _persistence = (SocialActivityPersistence)PortalBeanLocatorUtil.locate(SocialActivityPersistence.class.getName());
-	private TransactionalPersistenceAdvice _transactionalPersistenceAdvice = (TransactionalPersistenceAdvice)PortalBeanLocatorUtil.locate(TransactionalPersistenceAdvice.class.getName());
+	private List<SocialActivity> _socialActivities = new ArrayList<SocialActivity>();
+	private ModelListener<SocialActivity>[] _modelListeners;
+	private SocialActivityPersistence _persistence = SocialActivityUtil.getPersistence();
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,10 @@
 
 package com.liferay.portal.model;
 
+import aQute.bnd.annotation.ProviderType;
+
+import com.liferay.portal.kernel.util.Validator;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,27 +27,32 @@ import java.util.Map;
  * This class is a wrapper for {@link UserTrackerPath}.
  * </p>
  *
- * @author    Brian Wing Shun Chan
- * @see       UserTrackerPath
+ * @author Brian Wing Shun Chan
+ * @see UserTrackerPath
  * @generated
  */
+@ProviderType
 public class UserTrackerPathWrapper implements UserTrackerPath,
 	ModelWrapper<UserTrackerPath> {
 	public UserTrackerPathWrapper(UserTrackerPath userTrackerPath) {
 		_userTrackerPath = userTrackerPath;
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return UserTrackerPath.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return UserTrackerPath.class.getName();
 	}
 
+	@Override
 	public Map<String, Object> getModelAttributes() {
 		Map<String, Object> attributes = new HashMap<String, Object>();
 
+		attributes.put("mvccVersion", getMvccVersion());
 		attributes.put("userTrackerPathId", getUserTrackerPathId());
 		attributes.put("userTrackerId", getUserTrackerId());
 		attributes.put("path", getPath());
@@ -52,7 +61,14 @@ public class UserTrackerPathWrapper implements UserTrackerPath,
 		return attributes;
 	}
 
+	@Override
 	public void setModelAttributes(Map<String, Object> attributes) {
+		Long mvccVersion = (Long)attributes.get("mvccVersion");
+
+		if (mvccVersion != null) {
+			setMvccVersion(mvccVersion);
+		}
+
 		Long userTrackerPathId = (Long)attributes.get("userTrackerPathId");
 
 		if (userTrackerPathId != null) {
@@ -78,58 +94,30 @@ public class UserTrackerPathWrapper implements UserTrackerPath,
 		}
 	}
 
-	/**
-	* Returns the primary key of this user tracker path.
-	*
-	* @return the primary key of this user tracker path
-	*/
-	public long getPrimaryKey() {
-		return _userTrackerPath.getPrimaryKey();
+	@Override
+	public java.lang.Object clone() {
+		return new UserTrackerPathWrapper((UserTrackerPath)_userTrackerPath.clone());
+	}
+
+	@Override
+	public int compareTo(
+		com.liferay.portal.model.UserTrackerPath userTrackerPath) {
+		return _userTrackerPath.compareTo(userTrackerPath);
+	}
+
+	@Override
+	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
+		return _userTrackerPath.getExpandoBridge();
 	}
 
 	/**
-	* Sets the primary key of this user tracker path.
+	* Returns the mvcc version of this user tracker path.
 	*
-	* @param primaryKey the primary key of this user tracker path
+	* @return the mvcc version of this user tracker path
 	*/
-	public void setPrimaryKey(long primaryKey) {
-		_userTrackerPath.setPrimaryKey(primaryKey);
-	}
-
-	/**
-	* Returns the user tracker path ID of this user tracker path.
-	*
-	* @return the user tracker path ID of this user tracker path
-	*/
-	public long getUserTrackerPathId() {
-		return _userTrackerPath.getUserTrackerPathId();
-	}
-
-	/**
-	* Sets the user tracker path ID of this user tracker path.
-	*
-	* @param userTrackerPathId the user tracker path ID of this user tracker path
-	*/
-	public void setUserTrackerPathId(long userTrackerPathId) {
-		_userTrackerPath.setUserTrackerPathId(userTrackerPathId);
-	}
-
-	/**
-	* Returns the user tracker ID of this user tracker path.
-	*
-	* @return the user tracker ID of this user tracker path
-	*/
-	public long getUserTrackerId() {
-		return _userTrackerPath.getUserTrackerId();
-	}
-
-	/**
-	* Sets the user tracker ID of this user tracker path.
-	*
-	* @param userTrackerId the user tracker ID of this user tracker path
-	*/
-	public void setUserTrackerId(long userTrackerId) {
-		_userTrackerPath.setUserTrackerId(userTrackerId);
+	@Override
+	public long getMvccVersion() {
+		return _userTrackerPath.getMvccVersion();
 	}
 
 	/**
@@ -137,17 +125,9 @@ public class UserTrackerPathWrapper implements UserTrackerPath,
 	*
 	* @return the path of this user tracker path
 	*/
+	@Override
 	public java.lang.String getPath() {
 		return _userTrackerPath.getPath();
-	}
-
-	/**
-	* Sets the path of this user tracker path.
-	*
-	* @param path the path of this user tracker path
-	*/
-	public void setPath(java.lang.String path) {
-		_userTrackerPath.setPath(path);
 	}
 
 	/**
@@ -155,64 +135,44 @@ public class UserTrackerPathWrapper implements UserTrackerPath,
 	*
 	* @return the path date of this user tracker path
 	*/
+	@Override
 	public java.util.Date getPathDate() {
 		return _userTrackerPath.getPathDate();
 	}
 
 	/**
-	* Sets the path date of this user tracker path.
+	* Returns the primary key of this user tracker path.
 	*
-	* @param pathDate the path date of this user tracker path
+	* @return the primary key of this user tracker path
 	*/
-	public void setPathDate(java.util.Date pathDate) {
-		_userTrackerPath.setPathDate(pathDate);
+	@Override
+	public long getPrimaryKey() {
+		return _userTrackerPath.getPrimaryKey();
 	}
 
-	public boolean isNew() {
-		return _userTrackerPath.isNew();
-	}
-
-	public void setNew(boolean n) {
-		_userTrackerPath.setNew(n);
-	}
-
-	public boolean isCachedModel() {
-		return _userTrackerPath.isCachedModel();
-	}
-
-	public void setCachedModel(boolean cachedModel) {
-		_userTrackerPath.setCachedModel(cachedModel);
-	}
-
-	public boolean isEscapedModel() {
-		return _userTrackerPath.isEscapedModel();
-	}
-
+	@Override
 	public java.io.Serializable getPrimaryKeyObj() {
 		return _userTrackerPath.getPrimaryKeyObj();
 	}
 
-	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
-		_userTrackerPath.setPrimaryKeyObj(primaryKeyObj);
-	}
-
-	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
-		return _userTrackerPath.getExpandoBridge();
-	}
-
-	public void setExpandoBridgeAttributes(
-		com.liferay.portal.service.ServiceContext serviceContext) {
-		_userTrackerPath.setExpandoBridgeAttributes(serviceContext);
-	}
-
+	/**
+	* Returns the user tracker ID of this user tracker path.
+	*
+	* @return the user tracker ID of this user tracker path
+	*/
 	@Override
-	public java.lang.Object clone() {
-		return new UserTrackerPathWrapper((UserTrackerPath)_userTrackerPath.clone());
+	public long getUserTrackerId() {
+		return _userTrackerPath.getUserTrackerId();
 	}
 
-	public int compareTo(
-		com.liferay.portal.model.UserTrackerPath userTrackerPath) {
-		return _userTrackerPath.compareTo(userTrackerPath);
+	/**
+	* Returns the user tracker path ID of this user tracker path.
+	*
+	* @return the user tracker path ID of this user tracker path
+	*/
+	@Override
+	public long getUserTrackerPathId() {
+		return _userTrackerPath.getUserTrackerPathId();
 	}
 
 	@Override
@@ -220,10 +180,125 @@ public class UserTrackerPathWrapper implements UserTrackerPath,
 		return _userTrackerPath.hashCode();
 	}
 
+	@Override
+	public boolean isCachedModel() {
+		return _userTrackerPath.isCachedModel();
+	}
+
+	@Override
+	public boolean isEscapedModel() {
+		return _userTrackerPath.isEscapedModel();
+	}
+
+	@Override
+	public boolean isNew() {
+		return _userTrackerPath.isNew();
+	}
+
+	@Override
+	public void persist() {
+		_userTrackerPath.persist();
+	}
+
+	@Override
+	public void setCachedModel(boolean cachedModel) {
+		_userTrackerPath.setCachedModel(cachedModel);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.model.BaseModel<?> baseModel) {
+		_userTrackerPath.setExpandoBridgeAttributes(baseModel);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portlet.expando.model.ExpandoBridge expandoBridge) {
+		_userTrackerPath.setExpandoBridgeAttributes(expandoBridge);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.service.ServiceContext serviceContext) {
+		_userTrackerPath.setExpandoBridgeAttributes(serviceContext);
+	}
+
+	/**
+	* Sets the mvcc version of this user tracker path.
+	*
+	* @param mvccVersion the mvcc version of this user tracker path
+	*/
+	@Override
+	public void setMvccVersion(long mvccVersion) {
+		_userTrackerPath.setMvccVersion(mvccVersion);
+	}
+
+	@Override
+	public void setNew(boolean n) {
+		_userTrackerPath.setNew(n);
+	}
+
+	/**
+	* Sets the path of this user tracker path.
+	*
+	* @param path the path of this user tracker path
+	*/
+	@Override
+	public void setPath(java.lang.String path) {
+		_userTrackerPath.setPath(path);
+	}
+
+	/**
+	* Sets the path date of this user tracker path.
+	*
+	* @param pathDate the path date of this user tracker path
+	*/
+	@Override
+	public void setPathDate(java.util.Date pathDate) {
+		_userTrackerPath.setPathDate(pathDate);
+	}
+
+	/**
+	* Sets the primary key of this user tracker path.
+	*
+	* @param primaryKey the primary key of this user tracker path
+	*/
+	@Override
+	public void setPrimaryKey(long primaryKey) {
+		_userTrackerPath.setPrimaryKey(primaryKey);
+	}
+
+	@Override
+	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
+		_userTrackerPath.setPrimaryKeyObj(primaryKeyObj);
+	}
+
+	/**
+	* Sets the user tracker ID of this user tracker path.
+	*
+	* @param userTrackerId the user tracker ID of this user tracker path
+	*/
+	@Override
+	public void setUserTrackerId(long userTrackerId) {
+		_userTrackerPath.setUserTrackerId(userTrackerId);
+	}
+
+	/**
+	* Sets the user tracker path ID of this user tracker path.
+	*
+	* @param userTrackerPathId the user tracker path ID of this user tracker path
+	*/
+	@Override
+	public void setUserTrackerPathId(long userTrackerPathId) {
+		_userTrackerPath.setUserTrackerPathId(userTrackerPathId);
+	}
+
+	@Override
 	public com.liferay.portal.model.CacheModel<com.liferay.portal.model.UserTrackerPath> toCacheModel() {
 		return _userTrackerPath.toCacheModel();
 	}
 
+	@Override
 	public com.liferay.portal.model.UserTrackerPath toEscapedModel() {
 		return new UserTrackerPathWrapper(_userTrackerPath.toEscapedModel());
 	}
@@ -233,26 +308,60 @@ public class UserTrackerPathWrapper implements UserTrackerPath,
 		return _userTrackerPath.toString();
 	}
 
+	@Override
+	public com.liferay.portal.model.UserTrackerPath toUnescapedModel() {
+		return new UserTrackerPathWrapper(_userTrackerPath.toUnescapedModel());
+	}
+
+	@Override
 	public java.lang.String toXmlString() {
 		return _userTrackerPath.toXmlString();
 	}
 
-	public void persist()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		_userTrackerPath.persist();
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+
+		if (!(obj instanceof UserTrackerPathWrapper)) {
+			return false;
+		}
+
+		UserTrackerPathWrapper userTrackerPathWrapper = (UserTrackerPathWrapper)obj;
+
+		if (Validator.equals(_userTrackerPath,
+					userTrackerPathWrapper._userTrackerPath)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
-	 * @deprecated Renamed to {@link #getWrappedModel}
+	 * @deprecated As of 6.1.0, replaced by {@link #getWrappedModel}
 	 */
+	@Deprecated
 	public UserTrackerPath getWrappedUserTrackerPath() {
 		return _userTrackerPath;
 	}
 
+	@Override
 	public UserTrackerPath getWrappedModel() {
 		return _userTrackerPath;
 	}
 
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return _userTrackerPath.isEntityCacheEnabled();
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return _userTrackerPath.isFinderCacheEnabled();
+	}
+
+	@Override
 	public void resetOriginalValues() {
 		_userTrackerPath.resetOriginalValues();
 	}

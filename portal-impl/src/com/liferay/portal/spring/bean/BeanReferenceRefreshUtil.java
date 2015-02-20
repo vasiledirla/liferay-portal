@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -56,6 +56,13 @@ public class BeanReferenceRefreshUtil {
 		refreshPoints.add(new RefreshPoint(field, referencedBeanName));
 	}
 
+	public interface PACL {
+
+		public Object getNewReferencedBean(
+			String referencedBeanName, BeanFactory beanFactory);
+
+	}
+
 	private static void _refresh(
 			BeanFactory beanFactory, Object targetBean,
 			List<RefreshPoint> refreshPoints)
@@ -77,7 +84,8 @@ public class BeanReferenceRefreshUtil {
 
 		String referencedBeanName = refreshPoint._referencedBeanName;
 
-		Object newReferencedBean = beanFactory.getBean(referencedBeanName);
+		Object newReferencedBean = _pacl.getNewReferencedBean(
+			referencedBeanName, beanFactory);
 
 		if (oldReferenceBean == newReferencedBean) {
 			return;
@@ -96,8 +104,20 @@ public class BeanReferenceRefreshUtil {
 	private static Log _log = LogFactoryUtil.getLog(
 		BeanReferenceRefreshUtil.class);
 
+	private static PACL _pacl = new NoPACL();
 	private static Map<Object, List<RefreshPoint>> _registeredRefreshPoints =
 		new IdentityHashMap<Object, List<RefreshPoint>>();
+
+	private static class NoPACL implements PACL {
+
+		@Override
+		public Object getNewReferencedBean(
+			String referencedBeanName, BeanFactory beanFactory) {
+
+			return beanFactory.getBean(referencedBeanName);
+		}
+
+	}
 
 	private static class RefreshPoint {
 

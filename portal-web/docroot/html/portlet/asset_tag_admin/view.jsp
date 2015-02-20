@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -17,91 +17,171 @@
 <%@ include file="/html/portlet/asset_tag_admin/init.jsp" %>
 
 <aui:form name="fm">
+	<aui:input name="deleteTagIds" type="hidden" />
 
-<div class="tags-admin-container lfr-app-column-view">
-	<div class="lfr-header-row">
-		<div class="lfr-header-row-content">
-			<div class="toolbar">
-				<aui:input cssClass="select-tags aui-state-default" inline="<%= true %>" label="" name="checkAllTags" title='<%= LanguageUtil.get(pageContext, "check-all-tags") %>' type="checkbox" />
+	<liferay-ui:search-container
+		emptyResultsMessage="there-are-no-tags"
+		rowChecker="<%= new RowChecker(renderResponse) %>"
+	>
+		<aui:nav-bar>
+			<aui:nav cssClass="navbar-nav">
+				<c:if test="<%= AssetPermission.contains(permissionChecker, themeDisplay.getSiteGroupId(), ActionKeys.ADD_TAG) %>">
+					<portlet:renderURL var="editTagURL">
+						<portlet:param name="struts_action" value="/asset_tag_admin/edit_tag" />
+						<portlet:param name="redirect" value="<%= currentURL %>" />
+					</portlet:renderURL>
 
-				<liferay-ui:icon-menu
-					align="left"
-					direction="down"
-					icon=""
-					message="actions"
-					showExpanded="<%= false %>"
-					showWhenSingleIcon="true"
+					<aui:nav-item href="<%= editTagURL %>" iconCssClass="icon-plus" label="add-tag" />
+				</c:if>
+
+				<c:if test="<%= PropsValues.ASSET_TAG_PERMISSIONS_ENABLED && AssetPermission.contains(permissionChecker, themeDisplay.getSiteGroupId(), ActionKeys.PERMISSIONS) && GroupPermissionUtil.contains(permissionChecker, themeDisplay.getSiteGroupId(), ActionKeys.PERMISSIONS) %>">
+					<liferay-security:permissionsURL
+						modelResource="com.liferay.portlet.asset"
+						modelResourceDescription="<%= themeDisplay.getScopeGroupName() %>"
+						resourcePrimKey="<%= String.valueOf(themeDisplay.getSiteGroupId()) %>"
+						var="permissionsURL"
+						windowState="<%= LiferayWindowState.POP_UP.toString() %>"
+					/>
+
+					<aui:nav-item data-url="<%= permissionsURL %>" id="tagsPermissionsButton" label="permissions" />
+				</c:if>
+
+				<aui:nav-item cssClass="hide" dropdown="<%= true %>" id="tagsActionsButton" label="actions">
+					<aui:nav-item iconCssClass="icon-random" id="mergeSelectedTags" label="merge" />
+
+					<aui:nav-item cssClass="item-remove" iconCssClass="icon-remove" id="deleteSelectedTags" label="delete" />
+				</aui:nav-item>
+			</aui:nav>
+
+			<aui:nav-bar-search cssClass="pull-right">
+				<div class="form-search">
+					<liferay-ui:input-search />
+				</div>
+			</aui:nav-bar-search>
+		</aui:nav-bar>
+
+		<liferay-ui:search-container-results>
+
+			<%
+			String keywords = ParamUtil.getString(request, "keywords");
+
+			if (Validator.isNotNull(keywords)) {
+				total = AssetTagServiceUtil.getTagsCount(scopeGroupId, keywords, new String[0]);
+
+				searchContainer.setTotal(total);
+
+				results = AssetTagServiceUtil.getTags(scopeGroupId, keywords, new String[0], searchContainer.getStart(), searchContainer.getEnd());
+
+				searchContainer.setResults(results);
+			}
+			else {
+				total = AssetTagServiceUtil.getTagsCount(scopeGroupId, null, new String[0]);
+
+				searchContainer.setTotal(total);
+
+				results = AssetTagServiceUtil.getTags(scopeGroupId, null, new String[0], searchContainer.getStart(), searchContainer.getEnd());
+
+				searchContainer.setResults(results);
+			}
+			%>
+
+		</liferay-ui:search-container-results>
+
+		<liferay-ui:search-container-row
+			className="com.liferay.portlet.asset.model.AssetTag"
+			keyProperty="tagId"
+			modelVar="tag"
+		>
+			<liferay-ui:search-container-column-text
+				name="name"
+				property="name"
+			/>
+
+			<liferay-ui:search-container-column-text
+				name="usages"
+			>
+				<c:choose>
+					<c:when test="<%= tag.getAssetCount() > 0 %>">
+						<liferay-ui:message arguments="<%= tag.getAssetCount() %>" key="used-in-x-assets" />
+					</c:when>
+					<c:otherwise>
+						<liferay-ui:message key="this-tag-is-not-used" />
+					</c:otherwise>
+				</c:choose>
+			</liferay-ui:search-container-column-text>
+
+			<c:if test="<%= PropsValues.ASSET_TAG_PROPERTIES_ENABLED %>">
+				<liferay-ui:search-container-column-text
+					name="properties"
 				>
-					<liferay-ui:icon
-						id="deleteSelectedTags"
-						image="delete"
-						url="javascript:;"
-					/>
 
-					<liferay-ui:icon
-						id="mergeSelectedTags"
-						image="../common/all_pages"
-						message="merge"
-						url="javascript:;"
-					/>
-				</liferay-ui:icon-menu>
+					<%
+					List<AssetTagProperty> tagProperties = AssetTagPropertyServiceUtil.getTagProperties(tag.getTagId());
 
-				<aui:button-row cssClass="tags-admin-actions">
-					<c:if test="<%= AssetPermission.contains(permissionChecker, themeDisplay.getParentGroupId(), ActionKeys.ADD_TAG) %>">
-						<aui:button cssClass="add-tag-button" name="addTagButton" value="add-tag" />
-					</c:if>
+					for (AssetTagProperty tagProperty : tagProperties) {
+					%>
 
-					<c:if test="<%= GroupPermissionUtil.contains(permissionChecker, themeDisplay.getParentGroupId(), ActionKeys.PERMISSIONS) %>">
-						<liferay-security:permissionsURL
-							modelResource="com.liferay.portlet.asset"
-							modelResourceDescription="<%= themeDisplay.getScopeGroupName() %>"
-							resourcePrimKey="<%= String.valueOf(themeDisplay.getParentGroupId()) %>"
-							var="permissionsURL"
-							windowState="<%= LiferayWindowState.POP_UP.toString() %>"
-						/>
+						<span class="property-key"><%= tagProperty.getKey() %></span>: <span class="property-value"><%= tagProperty.getValue() %></span><br />
 
-						<aui:button data-url="<%= permissionsURL %>" name="tagsPermissionsButton" value="permissions" />
-					</c:if>
-				</aui:button-row>
-			</div>
+					<%
+					}
+					%>
 
-			<div class="lfr-search-combobox search-button-container tags-search-combobox">
-				<aui:input cssClass="first keywords lfr-search-combobox-item tags-admin-search" label="" name="tagsAdminSearchInput" type="text" />
-			</div>
-		</div>
-	</div>
+				</liferay-ui:search-container-column-text>
+			</c:if>
 
-	<div class="tags-admin-content-wrapper">
-		<aui:layout cssClass="tags-admin-content">
-			<aui:column columnWidth="35" cssClass="tags-admin-list-container">
-				<div class="results-header">
-					<liferay-ui:message key="tags" />
-				</div>
+			<liferay-ui:search-container-column-jsp
+				cssClass="entry-action"
+				path="/html/portlet/asset_tag_admin/tag_action.jsp"
+			/>
+		</liferay-ui:search-container-row>
 
-				<div class="tags-admin-list lfr-component"></div>
-
-				<div class="tags-paginator"></div>
-			</aui:column>
-
-			<aui:column columnWidth="65" cssClass="tags-admin-edit-tag">
-				<div class="results-header">
-					<liferay-ui:message key="tag-details" />
-				</div>
-
-				<div class="tag-view-container"></div>
-			</aui:column>
-		</aui:layout>
-	</div>
-</div>
-
+		<liferay-ui:search-iterator />
+	</liferay-ui:search-container>
 </aui:form>
 
-<aui:script use="liferay-tags-admin">
-	new Liferay.Portlet.AssetTagsAdmin(
-		{
-			portletId: '<%= portletDisplay.getId() %>',
-			tagsPerPage: <%= SearchContainer.DEFAULT_DELTA %>,
-			tagsPerPageOptions: [<%= StringUtil.merge(PropsValues.SEARCH_CONTAINER_PAGE_DELTA_VALUES) %>]
+<aui:script use="aui-base,liferay-util-list-fields">
+	A.one('#<portlet:namespace /><%= searchContainerReference.getId() %>SearchContainer').delegate(
+		'click',
+		function() {
+			var hide = (Liferay.Util.listCheckedExcept(document.<portlet:namespace />fm, '<portlet:namespace /><%= RowChecker.ALL_ROW_IDS %>').length == 0);
+
+			A.one('#<portlet:namespace />tagsActionsButton').toggle(!hide);
+		},
+		'input[type=checkbox]'
+	);
+
+	A.one('#<portlet:namespace />deleteSelectedTags').on(
+		'click',
+		function() {
+			if (confirm('<liferay-ui:message key="are-you-sure-you-want-to-delete-this" />')) {
+				<portlet:actionURL var="deleteURL">
+					<portlet:param name="struts_action" value="/asset_tag_admin/edit_tag" />
+					<portlet:param name="<%= Constants.CMD %>" value="<%= Constants.DELETE %>" />
+					<portlet:param name="redirect" value="<%= currentURL %>" />
+				</portlet:actionURL>
+
+				document.<portlet:namespace />fm.<portlet:namespace />deleteTagIds.value = Liferay.Util.listCheckedExcept(document.<portlet:namespace />fm, '<portlet:namespace />allRowIds');
+
+				submitForm(document.<portlet:namespace />fm, '<%= deleteURL %>');
+			}
+		}
+	);
+
+	A.one('#<portlet:namespace />mergeSelectedTags').on(
+		'click',
+		function() {
+			if (A.all('input[name=<portlet:namespace />rowIds]:checked').size() > 1) {
+				<portlet:renderURL var="mergeURL">
+					<portlet:param name="struts_action" value="/asset_tag_admin/merge_tag" />
+					<portlet:param name="redirect" value="<%= currentURL %>" />
+				</portlet:renderURL>
+
+				location.href = '<%= mergeURL %>' + '&<portlet:namespace />mergeTagIds=' + Liferay.Util.listCheckedExcept(document.<portlet:namespace />fm, '<portlet:namespace />allRowIds');
+			}
+			else {
+				alert('<liferay-ui:message arguments="<%= 2 %>" key="please-choose-at-least-x-tags" />');
+			}
 		}
 	);
 </aui:script>

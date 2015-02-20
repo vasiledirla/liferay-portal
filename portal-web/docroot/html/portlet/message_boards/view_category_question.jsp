@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -25,7 +25,7 @@ long categoryId = MBUtil.getCategoryId(request, category);
 
 MBCategoryDisplay categoryDisplay = (MBCategoryDisplay)request.getAttribute("view.jsp-categoryDisplay");
 
-Set<Long> categorySubscriptionClassPKs = (Set<Long>)request.getAttribute("view.jsp-threadSubscriptionClassPKs");
+Set<Long> categorySubscriptionClassPKs = (Set<Long>)request.getAttribute("view.jsp-categorySubscriptionClassPKs");
 Set<Long> threadSubscriptionClassPKs = (Set<Long>)request.getAttribute("view.jsp-threadSubscriptionClassPKs");
 
 PortletURL portletURL = renderResponse.createRenderURL();
@@ -38,20 +38,20 @@ portletURL.setParameter("mbCategoryId", String.valueOf(categoryId));
 <liferay-ui:panel-container cssClass="message-boards-panels" extended="<%= false %>" id="messageBoardsPanelContainer" persistState="<%= true %>">
 
 	<%
-	int categoriesCount = MBCategoryServiceUtil.getCategoriesCount(scopeGroupId, categoryId);
+	int categoriesCount = MBCategoryServiceUtil.getCategoriesCount(scopeGroupId, categoryId, WorkflowConstants.STATUS_APPROVED);
 	%>
 
 	<c:if test="<%= categoriesCount > 0 %>">
-		<liferay-ui:panel collapsible="<%= categoriesPanelCollapsible %>" extended="<%= categoriesPanelExtended %>" id="messageBoardsCategoriesPanel" persistState="<%= true %>" title='<%= LanguageUtil.get(pageContext, (category != null) ? "subcategories" : "categories") %>'>
+		<liferay-ui:panel collapsible="<%= categoriesPanelCollapsible %>" extended="<%= categoriesPanelExtended %>" id="messageBoardsCategoriesPanel" persistState="<%= true %>" title='<%= LanguageUtil.get(request, (category != null) ? "subcategories" : "categories") %>'>
 			<liferay-ui:search-container
 				curParam="cur1"
 				deltaConfigurable="<%= false %>"
 				headerNames="category,categories,threads,posts"
 				iteratorURL="<%= portletURL %>"
+				total="<%= categoriesCount %>"
 			>
 				<liferay-ui:search-container-results
-					results="<%= MBCategoryServiceUtil.getCategories(scopeGroupId, categoryId, searchContainer.getStart(), searchContainer.getEnd()) %>"
-					total="<%= categoriesCount %>"
+					results="<%= MBCategoryServiceUtil.getCategories(scopeGroupId, categoryId, WorkflowConstants.STATUS_APPROVED, searchContainer.getStart(), searchContainer.getEnd()) %>"
 				/>
 
 				<liferay-ui:search-container-row
@@ -81,10 +81,10 @@ portletURL.setParameter("mbCategoryId", String.valueOf(categoryId));
 	emptyResultsMessage="there-are-no-questions-in-this-category"
 	headerNames="stats,question,last-post"
 	iteratorURL="<%= portletURL %>"
+	total="<%= MBThreadServiceUtil.getThreadsCount(scopeGroupId, categoryId, WorkflowConstants.STATUS_APPROVED) %>"
 >
 	<liferay-ui:search-container-results
 		results="<%= MBThreadServiceUtil.getThreads(scopeGroupId, categoryId, WorkflowConstants.STATUS_APPROVED, searchContainer.getStart(), searchContainer.getEnd()) %>"
-		total="<%= MBThreadServiceUtil.getThreadsCount(scopeGroupId, categoryId, WorkflowConstants.STATUS_APPROVED) %>"
 	/>
 
 	<liferay-ui:search-container-row
@@ -106,8 +106,6 @@ portletURL.setParameter("mbCategoryId", String.valueOf(categoryId));
 
 			row.setSkip(true);
 		}
-
-		message = message.toEscapedModel();
 
 		row.setBold(!MBThreadFlagLocalServiceUtil.hasThreadFlag(themeDisplay.getUserId(), thread));
 		row.setObject(new Object[] {message, threadSubscriptionClassPKs});
@@ -135,15 +133,15 @@ portletURL.setParameter("mbCategoryId", String.valueOf(categoryId));
 
 			<span class="question-details">
 				<span class="votes">
-					<span class="count"><%= String.valueOf(ratingScore) %></span> <span><%= LanguageUtil.get(pageContext, "votes") %></span>
+					<span class="count"><%= String.valueOf(ratingScore) %></span> <span><%= LanguageUtil.get(request, "votes") %></span>
 				</span>
 
 				<span class="status <%= (answers != 0) ? "answered" : " unanswered" %> ">
-					<span class="count"><%= answers %></span> <span><%= LanguageUtil.get(pageContext, (answers != 1) ? "answers" : "answer") %></span>
+					<span class="count"><%= answers %></span> <span><%= LanguageUtil.get(request, (answers != 1) ? "answers" : "answer") %></span>
 				</span>
 
 				<span class="views">
-					<span class="count"><%= thread.getViewCount() %></span> <span><%= LanguageUtil.get(pageContext, "views") %></span>
+					<span class="count"><%= thread.getViewCount() %></span> <span><%= LanguageUtil.get(request, "views") %></span>
 				</span>
 			</span>
 		</liferay-ui:search-container-column-text>
@@ -163,7 +161,7 @@ portletURL.setParameter("mbCategoryId", String.valueOf(categoryId));
 		<c:if test="<%= MBMessagePermission.contains(permissionChecker, message, ActionKeys.UPDATE) %>">
 			<liferay-ui:search-container-column-jsp
 				align="right"
-				cssClass="action-question"
+				cssClass="action-question entry-action"
 				path="/html/portlet/message_boards/message_action.jsp"
 			/>
 		</c:if>

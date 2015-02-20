@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,23 +16,19 @@ package com.liferay.portal.security.permission;
 
 import com.liferay.portal.kernel.cache.MultiVMPoolUtil;
 import com.liferay.portal.kernel.cache.PortalCache;
-import com.liferay.portal.kernel.lar.ImportExportThreadLocal;
-import com.liferay.portal.kernel.util.AutoResetThreadLocal;
+import com.liferay.portal.kernel.lar.ExportImportThreadLocal;
 import com.liferay.portal.kernel.util.HashUtil;
 import com.liferay.portal.kernel.util.Validator;
 import com.liferay.portal.util.PropsValues;
 
 import java.io.Serializable;
 
-import java.util.Map;
-
-import org.apache.commons.collections.map.LRUMap;
-
 /**
  * @author Charles May
  * @author Michael Young
  * @author Shuyang Zhou
  * @author Connor McKay
+ * @author László Csontos
  */
 public class PermissionCacheUtil {
 
@@ -45,169 +41,110 @@ public class PermissionCacheUtil {
 	public static final String RESOURCE_BLOCK_IDS_BAG_CACHE_NAME =
 		PermissionCacheUtil.class.getName() + "_RESOURCE_BLOCK_IDS_BAG";
 
+	public static final String USER_PERMISSION_CHECKER_BAG_CACHE_NAME =
+		PermissionCacheUtil.class.getName() + "_USER_PERMISSION_CHECKER_BAG";
+
 	public static void clearCache() {
-		if (ImportExportThreadLocal.isImportInProcess() ||
+		if (ExportImportThreadLocal.isImportInProcess() ||
 			!PermissionThreadLocal.isFlushEnabled()) {
 
 			return;
 		}
 
-		clearLocalCache();
-
 		_permissionCheckerBagPortalCache.removeAll();
 		_permissionPortalCache.removeAll();
 		_resourceBlockIdsBagCache.removeAll();
-	}
-
-	public static void clearLocalCache() {
-		if (_localCacheAvailable) {
-			Map<String, Object> localCache = _localCache.get();
-
-			localCache.clear();
-		}
+		_userPermissionCheckerBagPortalCache.removeAll();
 	}
 
 	public static PermissionCheckerBag getBag(long userId, long groupId) {
-		PermissionCheckerBag bag = null;
+		BagKey bagKey = new BagKey(userId, groupId);
 
-		Serializable key = new BagKey(userId, groupId);
-
-		if (_localCacheAvailable) {
-			Map<String, Object> localCache = _localCache.get();
-
-			bag = (PermissionCheckerBag)localCache.get(key);
-		}
-
-		if (bag == null) {
-			bag = (PermissionCheckerBag)_permissionCheckerBagPortalCache.get(
-				key);
-		}
-
-		return bag;
+		return _permissionCheckerBagPortalCache.get(bagKey);
 	}
 
 	public static Boolean getPermission(
-		long userId, boolean signedIn, boolean checkGuest, long groupId,
-		String name, String primKey, String actionId) {
+		long userId, boolean signedIn, long groupId, String name,
+		String primKey, String actionId) {
 
-		Boolean value = null;
+		PermissionKey permissionKey = new PermissionKey(
+			userId, signedIn, groupId, name, primKey, actionId);
 
-		Serializable key = new PermissionKey(
-			userId, signedIn, checkGuest, groupId, name, primKey, actionId);
-
-		if (_localCacheAvailable) {
-			Map<String, Object> localCache = _localCache.get();
-
-			value = (Boolean)localCache.get(key);
-		}
-
-		if (value == null) {
-			value = (Boolean)_permissionPortalCache.get(key);
-		}
-
-		return value;
+		return _permissionPortalCache.get(permissionKey);
 	}
 
 	public static ResourceBlockIdsBag getResourceBlockIdsBag(
-		long companyId, long groupId, long userId, String name,
-		boolean checkGuest) {
+		long companyId, long groupId, long userId, String name) {
 
-		ResourceBlockIdsBag resourceBlockIdsBag = null;
+		ResourceBlockIdsBagKey resourceBlockIdsBagKey =
+			new ResourceBlockIdsBagKey(companyId, groupId, userId, name);
 
-		Serializable key = new ResourceBlockIdsBagKey(
-			companyId, groupId, userId, name, checkGuest);
-
-		if (_localCacheAvailable) {
-			Map<String, Object> localCache = _localCache.get();
-
-			resourceBlockIdsBag = (ResourceBlockIdsBag)localCache.get(key);
-		}
-
-		if (resourceBlockIdsBag == null) {
-			resourceBlockIdsBag =
-				(ResourceBlockIdsBag)_resourceBlockIdsBagCache.get(key);
-		}
-
-		return resourceBlockIdsBag;
+		return _resourceBlockIdsBagCache.get(resourceBlockIdsBagKey);
 	}
 
-	public static PermissionCheckerBag putBag(
+	public static UserPermissionCheckerBag getUserBag(long userId) {
+		return _userPermissionCheckerBagPortalCache.get(userId);
+	}
+
+	public static void putBag(
 		long userId, long groupId, PermissionCheckerBag bag) {
 
 		if (bag == null) {
-			return null;
+			return;
 		}
 
-		Serializable key = new BagKey(userId, groupId);
+		BagKey bagKey = new BagKey(userId, groupId);
 
-		if (_localCacheAvailable) {
-			Map<Serializable, Object> localCache = _localCache.get();
-
-			localCache.put(key, bag);
-		}
-
-		_permissionCheckerBagPortalCache.put(key, bag);
-
-		return bag;
+		_permissionCheckerBagPortalCache.put(bagKey, bag);
 	}
 
-	public static Boolean putPermission(
-		long userId, boolean signedIn, boolean checkGuest, long groupId,
-		String name, String primKey, String actionId, Boolean value) {
+	public static void putPermission(
+		long userId, boolean signedIn, long groupId, String name,
+		String primKey, String actionId, Boolean value) {
 
-		if (value == null) {
-			return null;
-		}
+		PermissionKey permissionKey = new PermissionKey(
+			userId, signedIn, groupId, name, primKey, actionId);
 
-		Serializable key = new PermissionKey(
-			userId, signedIn, checkGuest, groupId, name, primKey, actionId);
-
-		if (_localCacheAvailable) {
-			Map<Serializable, Object> localCache = _localCache.get();
-
-			localCache.put(key, value);
-		}
-
-		_permissionPortalCache.put(key, value);
-
-		return value;
+		_permissionPortalCache.put(permissionKey, value);
 	}
 
-	public static ResourceBlockIdsBag putResourceBlockIdsBag(
+	public static void putResourceBlockIdsBag(
 		long companyId, long groupId, long userId, String name,
-		boolean checkGuest, ResourceBlockIdsBag resourceBlockIdsBag) {
+		ResourceBlockIdsBag resourceBlockIdsBag) {
 
 		if (resourceBlockIdsBag == null) {
-			return null;
+			return;
 		}
 
-		Serializable key = new ResourceBlockIdsBagKey(
-			companyId, groupId, userId, name, checkGuest);
+		ResourceBlockIdsBagKey resourceBlockIdsBagKey =
+			new ResourceBlockIdsBagKey(companyId, groupId, userId, name);
 
-		if (_localCacheAvailable) {
-			Map<Serializable, Object> localCache = _localCache.get();
-
-			localCache.put(key, resourceBlockIdsBag);
-		}
-
-		_resourceBlockIdsBagCache.put(key, resourceBlockIdsBag);
-
-		return resourceBlockIdsBag;
+		_resourceBlockIdsBagCache.put(
+			resourceBlockIdsBagKey, resourceBlockIdsBag);
 	}
 
-	private static ThreadLocal<LRUMap> _localCache;
-	private static boolean _localCacheAvailable;
-	private static PortalCache _permissionCheckerBagPortalCache =
-		MultiVMPoolUtil.getCache(
+	public static void putUserBag(
+		long userId, UserPermissionCheckerBag userPermissionCheckerBag) {
+
+		_userPermissionCheckerBagPortalCache.put(
+			userId, userPermissionCheckerBag);
+	}
+
+	private static PortalCache<BagKey, PermissionCheckerBag>
+		_permissionCheckerBagPortalCache = MultiVMPoolUtil.getCache(
 			PERMISSION_CHECKER_BAG_CACHE_NAME,
 			PropsValues.PERMISSIONS_OBJECT_BLOCKING_CACHE);
-	private static PortalCache _permissionPortalCache =
+	private static PortalCache<PermissionKey, Boolean> _permissionPortalCache =
 		MultiVMPoolUtil.getCache(
 			PERMISSION_CACHE_NAME,
 			PropsValues.PERMISSIONS_OBJECT_BLOCKING_CACHE);
-	private static PortalCache _resourceBlockIdsBagCache =
-		MultiVMPoolUtil.getCache(
+	private static PortalCache<ResourceBlockIdsBagKey, ResourceBlockIdsBag>
+		_resourceBlockIdsBagCache = MultiVMPoolUtil.getCache(
 			RESOURCE_BLOCK_IDS_BAG_CACHE_NAME,
+			PropsValues.PERMISSIONS_OBJECT_BLOCKING_CACHE);
+	private static PortalCache<Long, UserPermissionCheckerBag>
+		_userPermissionCheckerBagPortalCache = MultiVMPoolUtil.getCache(
+			USER_PERMISSION_CHECKER_BAG_CACHE_NAME,
 			PropsValues.PERMISSIONS_OBJECT_BLOCKING_CACHE);
 
 	private static class BagKey implements Serializable {
@@ -244,12 +181,11 @@ public class PermissionCacheUtil {
 	private static class PermissionKey implements Serializable {
 
 		public PermissionKey(
-			long userId, boolean signedIn, boolean checkGuest, long groupId,
-			String name, String primKey, String actionId) {
+			long userId, boolean signedIn, long groupId, String name,
+			String primKey, String actionId) {
 
 			_userId = userId;
 			_signedIn = signedIn;
-			_checkGuest = checkGuest;
 			_groupId = groupId;
 			_name = name;
 			_primKey = primKey;
@@ -262,7 +198,6 @@ public class PermissionCacheUtil {
 
 			if ((permissionKey._userId == _userId) &&
 				(permissionKey._signedIn == _signedIn) &&
-				(permissionKey._checkGuest == _checkGuest) &&
 				(permissionKey._groupId == _groupId) &&
 				Validator.equals(permissionKey._name, _name) &&
 				Validator.equals(permissionKey._primKey, _primKey) &&
@@ -280,7 +215,6 @@ public class PermissionCacheUtil {
 			int hashCode = HashUtil.hash(0, _userId);
 
 			hashCode = HashUtil.hash(hashCode, _signedIn);
-			hashCode = HashUtil.hash(hashCode, _checkGuest);
 			hashCode = HashUtil.hash(hashCode, _groupId);
 			hashCode = HashUtil.hash(hashCode, _name);
 			hashCode = HashUtil.hash(hashCode, _primKey);
@@ -292,7 +226,6 @@ public class PermissionCacheUtil {
 		private static final long serialVersionUID = 1L;
 
 		private final String _actionId;
-		private final boolean _checkGuest;
 		private final long _groupId;
 		private final String _name;
 		private final String _primKey;
@@ -304,14 +237,12 @@ public class PermissionCacheUtil {
 	private static class ResourceBlockIdsBagKey implements Serializable {
 
 		public ResourceBlockIdsBagKey(
-			long companyId, long groupId, long userId, String name,
-			boolean checkGuest) {
+			long companyId, long groupId, long userId, String name) {
 
 			_companyId = companyId;
 			_groupId = groupId;
 			_userId = userId;
 			_name = name;
-			_checkGuest = checkGuest;
 		}
 
 		@Override
@@ -322,7 +253,6 @@ public class PermissionCacheUtil {
 			if ((resourceBlockIdsKey._companyId == _companyId) &&
 				(resourceBlockIdsKey._groupId == _groupId) &&
 				(resourceBlockIdsKey._userId == _userId) &&
-				(resourceBlockIdsKey._checkGuest == _checkGuest) &&
 				Validator.equals(resourceBlockIdsKey._name, _name)) {
 
 				return true;
@@ -339,29 +269,17 @@ public class PermissionCacheUtil {
 			hashCode = HashUtil.hash(hashCode, _groupId);
 			hashCode = HashUtil.hash(hashCode, _userId);
 			hashCode = HashUtil.hash(hashCode, _name);
-			hashCode = HashUtil.hash(hashCode, _checkGuest);
 
 			return hashCode;
 		}
 
 		private static final long serialVersionUID = 1L;
 
-		private final boolean _checkGuest;
 		private final long _companyId;
 		private final long _groupId;
 		private final String _name;
 		private final long _userId;
 
-	}
-
-	static {
-		if (PropsValues.PERMISSIONS_THREAD_LOCAL_CACHE_MAX_SIZE > 0) {
-			_localCache = new AutoResetThreadLocal<LRUMap>(
-				PermissionCacheUtil.class + "._localCache",
-				new LRUMap(
-					PropsValues.PERMISSIONS_THREAD_LOCAL_CACHE_MAX_SIZE));
-			_localCacheAvailable = true;
-		}
 	}
 
 }

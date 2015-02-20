@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,7 +15,6 @@
 package com.liferay.portlet.documentlibrary.util;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.image.ImageBag;
 import com.liferay.portal.kernel.image.ImageToolUtil;
 import com.liferay.portal.kernel.lar.PortletDataContext;
@@ -35,6 +34,7 @@ import com.liferay.portal.util.PropsValues;
 import com.liferay.portlet.documentlibrary.NoSuchFileEntryException;
 import com.liferay.portlet.documentlibrary.store.DLStoreUtil;
 
+import java.awt.image.ColorModel;
 import java.awt.image.RenderedImage;
 
 import java.io.File;
@@ -54,6 +54,7 @@ import java.util.concurrent.Future;
 public class ImageProcessorImpl
 	extends DLPreviewableProcessor implements ImageProcessor {
 
+	@Override
 	public void afterPropertiesSet() {
 	}
 
@@ -69,6 +70,7 @@ public class ImageProcessorImpl
 		deleteFiles(fileVersion, type);
 	}
 
+	@Override
 	public void generateImages(
 			FileVersion sourceFileVersion, FileVersion destinationFileVersion)
 		throws Exception {
@@ -76,10 +78,12 @@ public class ImageProcessorImpl
 		_generateImages(sourceFileVersion, destinationFileVersion);
 	}
 
+	@Override
 	public Set<String> getImageMimeTypes() {
 		return _imageMimeTypes;
 	}
 
+	@Override
 	public InputStream getPreviewAsStream(FileVersion fileVersion)
 		throws Exception {
 
@@ -92,6 +96,7 @@ public class ImageProcessorImpl
 		return fileVersion.getContentStream(false);
 	}
 
+	@Override
 	public long getPreviewFileSize(FileVersion fileVersion) throws Exception {
 		if (_previewGenerationRequired(fileVersion)) {
 			String type = getPreviewType(fileVersion);
@@ -107,12 +112,14 @@ public class ImageProcessorImpl
 		return _getType(fileVersion);
 	}
 
+	@Override
 	public InputStream getThumbnailAsStream(FileVersion fileVersion, int index)
 		throws Exception {
 
 		return doGetThumbnailAsStream(fileVersion, index);
 	}
 
+	@Override
 	public long getThumbnailFileSize(FileVersion fileVersion, int index)
 		throws Exception {
 
@@ -124,6 +131,7 @@ public class ImageProcessorImpl
 		return _getType(fileVersion);
 	}
 
+	@Override
 	public boolean hasImages(FileVersion fileVersion) {
 		if (!PropsValues.DL_FILE_ENTRY_PREVIEW_ENABLED &&
 			!PropsValues.DL_FILE_ENTRY_THUMBNAIL_ENABLED) {
@@ -131,11 +139,14 @@ public class ImageProcessorImpl
 			return false;
 		}
 
+		if (fileVersion.getSize() == 0) {
+			return false;
+		}
+
 		boolean hasImages = false;
 
 		try {
 			if (_hasPreview(fileVersion) && hasThumbnails(fileVersion)) {
-
 				hasImages = true;
 			}
 
@@ -150,14 +161,17 @@ public class ImageProcessorImpl
 		return hasImages;
 	}
 
+	@Override
 	public boolean isImageSupported(FileVersion fileVersion) {
 		return isSupported(fileVersion);
 	}
 
+	@Override
 	public boolean isImageSupported(String mimeType) {
 		return isSupported(mimeType);
 	}
 
+	@Override
 	public boolean isSupported(String mimeType) {
 		if (Validator.isNull(mimeType)) {
 			return false;
@@ -166,6 +180,7 @@ public class ImageProcessorImpl
 		return _imageMimeTypes.contains(mimeType);
 	}
 
+	@Override
 	public void storeThumbnail(
 			long companyId, long groupId, long fileEntryId, long fileVersionId,
 			long custom1ImageId, long custom2ImageId, InputStream is,
@@ -274,7 +289,9 @@ public class ImageProcessorImpl
 				return;
 			}
 
-			if (renderedImage.getColorModel().getNumComponents() == 4) {
+			ColorModel colorModel = renderedImage.getColorModel();
+
+			if (colorModel.getNumColorComponents() == 4) {
 				Future<RenderedImage> future = ImageToolUtil.convertCMYKtoRGB(
 					bytes, imageBag.getType());
 
@@ -331,7 +348,7 @@ public class ImageProcessorImpl
 	}
 
 	private boolean _hasPreview(FileVersion fileVersion)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		if (PropsValues.DL_FILE_ENTRY_PREVIEW_ENABLED &&
 			_previewGenerationRequired(fileVersion)) {
@@ -376,7 +393,6 @@ public class ImageProcessorImpl
 
 		sendGenerationMessage(
 			DestinationNames.DOCUMENT_LIBRARY_IMAGE_PROCESSOR,
-			PropsValues.DL_FILE_ENTRY_PROCESSORS_TRIGGER_SYNCHRONOUSLY,
 			sourceFileVersion, destinationFileVersion);
 	}
 
@@ -428,8 +444,10 @@ public class ImageProcessorImpl
 			sb.append(2);
 		}
 
-		sb.append(StringPool.PERIOD);
-		sb.append(type);
+		if (Validator.isNotNull(type)) {
+			sb.append(StringPool.PERIOD);
+			sb.append(type);
+		}
 
 		String filePath = sb.toString();
 

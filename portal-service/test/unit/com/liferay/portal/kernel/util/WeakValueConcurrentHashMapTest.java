@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,52 +16,48 @@ package com.liferay.portal.kernel.util;
 
 import com.liferay.portal.kernel.memory.DummyFinalizeAction;
 import com.liferay.portal.kernel.memory.FinalizeManager;
-import com.liferay.portal.kernel.test.BaseTestCase;
+import com.liferay.portal.kernel.test.GCUtil;
+import com.liferay.portal.kernel.test.NewClassLoaderJUnitTestRunner;
+
+import java.util.Map;
+
+import org.junit.Assert;
+import org.junit.Test;
+import org.junit.runner.RunWith;
 
 /**
  * @author Shuyang Zhou
  */
-public class WeakValueConcurrentHashMapTest extends BaseTestCase {
+@RunWith(NewClassLoaderJUnitTestRunner.class)
+public class WeakValueConcurrentHashMapTest {
 
+	@Test
 	public void testAutoRemove() throws Exception {
-		WeakValueConcurrentHashMap<String, Object> weakValueConcurrentHashMap =
+		System.setProperty(
+			FinalizeManager.class.getName() + ".thread.enabled",
+			StringPool.FALSE);
+
+		Map<String, Object> map =
 			new WeakValueConcurrentHashMap<String, Object>();
 
 		String testKey = "testKey";
 		Object testValue = new Object();
 
-		weakValueConcurrentHashMap.put(testKey, testValue);
+		map.put(testKey, testValue);
 
-		long startTime = System.currentTimeMillis();
+		GCUtil.gc();
 
-		while ((System.currentTimeMillis() - startTime) < 100) {
-			System.gc();
-
-			Thread.sleep(1);
-
-			assertTrue(weakValueConcurrentHashMap.containsKey(testKey));
-		}
+		Assert.assertTrue(map.containsKey(testKey));
 
 		testValue = null;
 
-		startTime = System.currentTimeMillis();
+		GCUtil.gc();
 
-		while ((System.currentTimeMillis() - startTime) < 100) {
-			System.gc();
-
-			Thread.sleep(1);
-
-			if (!FinalizeManager.THREAD_ENABLED) {
-				FinalizeManager.register(
-					new Object(), new DummyFinalizeAction());
-			}
-
-			if (!weakValueConcurrentHashMap.containsKey(testKey)) {
-				break;
-			}
+		if (!FinalizeManager.THREAD_ENABLED) {
+			FinalizeManager.register(new Object(), new DummyFinalizeAction());
 		}
 
-		assertFalse(weakValueConcurrentHashMap.containsKey(testKey));
+		Assert.assertFalse(map.containsKey(testKey));
 	}
 
 }

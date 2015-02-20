@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,7 +14,6 @@
 
 package com.liferay.portlet.translator.util;
 
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.util.PrefsPropsUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
@@ -67,9 +66,7 @@ public class TranslatorUtil {
 		return null;
 	}
 
-	public static Map<String, String> getLanguageIdsMap(Locale locale)
-		throws SystemException {
-
+	public static Map<String, String> getLanguageIdsMap(Locale locale) {
 		Map<String, String> languageIdsMap = new HashMap<String, String>();
 
 		String[] languageIds = PrefsPropsUtil.getStringArray(
@@ -104,6 +101,7 @@ public class TranslatorUtil {
 			_map = map;
 		}
 
+		@Override
 		public int compare(Object obj1, Object obj2) {
 			String value1 = _map.get(obj1);
 			String value2 = _map.get(obj2);

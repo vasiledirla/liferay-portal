@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -18,9 +18,8 @@ import com.liferay.portal.kernel.io.unsync.UnsyncStringWriter;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.template.Template;
-import com.liferay.portal.kernel.template.TemplateContextType;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateException;
-import com.liferay.portal.kernel.template.TemplateManager;
 import com.liferay.portal.kernel.template.TemplateManagerUtil;
 import com.liferay.portal.kernel.template.TemplateResource;
 import com.liferay.portal.kernel.template.TemplateResourceLoaderUtil;
@@ -83,16 +82,16 @@ public class FreeMarkerPortlet extends MVCPortlet {
 		String servletContextName = portletContext.getPortletContextName();
 
 		String resourcePath = servletContextName.concat(
-			TemplateResource.SERVLET_SEPARATOR).concat(path);
+			TemplateConstants.SERVLET_SEPARATOR).concat(path);
 
 		boolean resourceExists = false;
 
 		try {
 			resourceExists = TemplateResourceLoaderUtil.hasTemplateResource(
-				TemplateManager.FREEMARKER, resourcePath);
+				TemplateConstants.LANG_TYPE_FTL, resourcePath);
 		}
 		catch (TemplateException te) {
-			throw new IOException(te.getMessage());
+			throw new IOException(te);
 		}
 
 		if (!resourceExists) {
@@ -102,11 +101,10 @@ public class FreeMarkerPortlet extends MVCPortlet {
 			try {
 				TemplateResource templateResource =
 					TemplateResourceLoaderUtil.getTemplateResource(
-						TemplateManager.FREEMARKER, resourcePath);
+						TemplateConstants.LANG_TYPE_FTL, resourcePath);
 
 				Template template = TemplateManagerUtil.getTemplate(
-					TemplateManager.FREEMARKER, templateResource,
-					TemplateContextType.CLASS_LOADER);
+					TemplateConstants.LANG_TYPE_FTL, templateResource, false);
 
 				TemplateTaglibSupportProvider templateTaglibSupportProvider =
 					getTaglibSupportProvider();

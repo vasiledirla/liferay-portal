@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,7 +16,7 @@ package com.liferay.portal.template;
 
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.template.TemplateResource;
+import com.liferay.portal.kernel.template.TemplateConstants;
 
 import java.net.URL;
 
@@ -26,10 +26,12 @@ import java.net.URL;
 public class ClassLoaderResourceParser extends URLResourceParser {
 
 	@Override
+	@SuppressWarnings("deprecation")
 	public URL getURL(String templateId) {
-		if (templateId.contains(TemplateResource.JOURNAL_SEPARATOR) ||
-			templateId.contains(TemplateResource.SERVLET_SEPARATOR) ||
-			templateId.contains(TemplateResource.THEME_LOADER_SEPARATOR)) {
+		if (templateId.contains(TemplateConstants.JOURNAL_SEPARATOR) ||
+			templateId.contains(TemplateConstants.SERVLET_SEPARATOR) ||
+			templateId.contains(TemplateConstants.TEMPLATE_SEPARATOR) ||
+			templateId.contains(TemplateConstants.THEME_LOADER_SEPARATOR)) {
 
 			return null;
 		}

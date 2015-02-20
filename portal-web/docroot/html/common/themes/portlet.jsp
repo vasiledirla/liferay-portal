@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,15 +14,16 @@
  */
 --%>
 
-<%@ include file="/html/common/init.jsp" %>
+<%@ include file="/html/common/themes/init.jsp" %>
 
 <portlet:defineObjects />
 
-<tiles:useAttribute classname="java.lang.String" id="tilesPortletContent" ignore="true" name="portlet_content" />
-<tiles:useAttribute classname="java.lang.String" id="tilesPortletDecorate" ignore="true" name="portlet_decorate" />
-<tiles:useAttribute classname="java.lang.String" id="tilesPortletPadding" ignore="true" name="portlet_padding" />
-
 <%
+String tilesPortletContent = GetterUtil.getString(TilesAttributeUtil.getTilesAttribute(pageContext, "portlet_content"));
+boolean tilesPortletDecorate = GetterUtil.getBoolean(TilesAttributeUtil.getTilesAttribute(pageContext, "portlet_decorate"), true);
+
+TilesAttributeUtil.removeComponentContext(pageContext);
+
 Portlet portlet = (Portlet)request.getAttribute(WebKeys.RENDER_PORTLET);
 
 PortletPreferences portletSetup = portletDisplay.getPortletSetup();
@@ -31,11 +32,9 @@ RenderResponseImpl renderResponseImpl = (RenderResponseImpl)PortletResponseImpl.
 
 // Portlet decorate
 
-boolean tilesPortletDecorateBoolean = GetterUtil.getBoolean(tilesPortletDecorate, true);
-
 boolean portletDecorateDefault = false;
 
-if (tilesPortletDecorateBoolean) {
+if (tilesPortletDecorate) {
 	portletDecorateDefault = GetterUtil.getBoolean(themeDisplay.getThemeSetting("portlet-setup-show-borders-default"), PropsValues.THEME_PORTLET_DECORATE_DEFAULT);
 }
 
@@ -71,7 +70,7 @@ portletDisplay.setDescription(portletDescription);
 
 Group group = layout.getGroup();
 
-boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
+boolean wsrp = ParamUtil.getBoolean(PortalUtil.getOriginalServletRequest(request), "wsrp");
 %>
 
 <c:choose>
@@ -88,21 +87,22 @@ boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
 	</c:when>
 	<c:when test="<%= themeDisplay.isStatePopUp() %>">
 		<div class="portlet-body">
-			<c:if test="<%= Validator.isNotNull(tilesPortletContent) %>">
-				<c:if test='<%= !tilesPortletContent.endsWith("/error.jsp") %>'>
-					<%@ include file="/html/common/themes/portlet_messages.jspf" %>
-				</c:if>
-
-				<liferay-util:include page="<%= StrutsUtil.TEXT_HTML_DIR + tilesPortletContent %>" />
+			<c:if test='<%= !tilesPortletContent.endsWith("/error.jsp") %>'>
+				<%@ include file="/html/common/themes/portlet_messages.jspf" %>
 			</c:if>
 
-			<c:if test="<%= Validator.isNull(tilesPortletContent) %>">
+			<c:choose>
+				<c:when test="<%= Validator.isNotNull(tilesPortletContent) %>">
+					<liferay-util:include page="<%= StrutsUtil.TEXT_HTML_DIR + tilesPortletContent %>" />
+				</c:when>
+				<c:otherwise>
 
-				<%
-				pageContext.getOut().print(renderRequest.getAttribute(WebKeys.PORTLET_CONTENT));
-				%>
+					<%
+					pageContext.getOut().print(renderRequest.getAttribute(WebKeys.PORTLET_CONTENT));
+					%>
 
-			</c:if>
+				</c:otherwise>
+			</c:choose>
 		</div>
 	</c:when>
 	<c:otherwise>
@@ -119,7 +119,7 @@ boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
 		if (freeformPortlet) {
 			Properties freeformStyleProps = PropertiesUtil.load(portletSetup.getValue("portlet-freeform-styles", StringPool.BLANK));
 
-			containerStyles = "style=\"height: ".concat(GetterUtil.getString(freeformStyleProps.getProperty("height"), "300px")).concat("; overflow: auto;\"");
+			containerStyles = "style=\"height: ".concat(GetterUtil.getString(HtmlUtil.escapeAttribute(freeformStyleProps.getProperty("height")), "300px")).concat("; overflow: auto;\"");
 		}
 		else {
 			containerStyles = "style=\"\"";
@@ -129,7 +129,7 @@ boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
 		<c:choose>
 			<c:when test="<%= portletDecorate %>">
 				<liferay-theme:wrap-portlet page="portlet.jsp">
-					<div class="<%= portletDisplay.isStateMin() ? "aui-helper-hidden" : "" %> portlet-content-container" <%= containerStyles %>>
+					<div class="<%= portletDisplay.isStateMin() ? "hide" : "" %> portlet-content-container" <%= containerStyles %>>
 						<%@ include file="/html/common/themes/portlet_content_wrapper.jspf" %>
 					</div>
 				</liferay-theme:wrap-portlet>
@@ -138,7 +138,7 @@ boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
 
 				<%
 				boolean showPortletActions =
-					(group.isLayoutPrototype() || tilesPortletDecorateBoolean) &&
+					(group.isLayoutPrototype() || tilesPortletDecorate) &&
 					(portletDisplay.isShowCloseIcon() ||
 					 portletDisplay.isShowConfigurationIcon() ||
 					 portletDisplay.isShowEditDefaultsIcon() ||
@@ -155,17 +155,17 @@ boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
 					<c:if test="<%= showPortletActions || portletDisplay.isShowBackIcon() %>">
 						<div class="portlet-borderless-bar">
 							<c:if test="<%= showPortletActions %>">
-								<span class="portlet-title-default"><%= portletDisplay.getTitle() %></span>
+								<span class="portlet-title-default"><%= HtmlUtil.escape(portletDisplay.getTitle()) %></span>
 
 								<span class="portlet-actions">
-									<span class="portlet-action portlet-options">
+									<span class="portlet-action">
 										<span class="portlet-action-separator">-</span>
 
 										<liferay-portlet:icon-options />
 									</span>
 
 									<c:if test="<%= portletDisplay.isShowCloseIcon() %>">
-										<span class="portlet-action portlet-close">
+										<span class="portlet-action">
 											<span class="portlet-action-separator">-</span>
 
 											<liferay-portlet:icon-close />
@@ -176,7 +176,7 @@ boolean wsrp = ParamUtil.getBoolean(request, "wsrp");
 										<span class="portlet-action portlet-back">
 											<span class="portlet-action-separator">-</span>
 
-											<a href="<%= portletDisplay.getURLBack() %>" title="<liferay-ui:message key="back" />"><liferay-ui:message key="back" /></a>
+											<a href="<%= HtmlUtil.escapeAttribute(portletDisplay.getURLBack()) %>" title="<liferay-ui:message key="back" />"><liferay-ui:message key="back" /></a>
 										</span>
 									</c:if>
 								</span>

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,8 +15,8 @@
 package com.liferay.portal.freemarker;
 
 import com.liferay.portal.kernel.template.StringTemplateResource;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateException;
-import com.liferay.portal.kernel.template.TemplateManager;
 import com.liferay.portal.kernel.template.TemplateResource;
 import com.liferay.portal.template.AbstractTemplate;
 import com.liferay.portal.template.TemplateContextHelper;
@@ -30,7 +30,10 @@ import freemarker.template.Template;
 
 import java.io.Writer;
 
-import java.util.HashMap;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+
 import java.util.Map;
 
 /**
@@ -43,34 +46,15 @@ public class FreeMarkerTemplate extends AbstractTemplate {
 		TemplateResource templateResource,
 		TemplateResource errorTemplateResource, Map<String, Object> context,
 		Configuration configuration,
-		TemplateContextHelper templateContextHelper) {
+		TemplateContextHelper templateContextHelper, boolean privileged) {
 
 		super(
-			templateResource, errorTemplateResource, templateContextHelper,
-			TemplateManager.FREEMARKER,
+			templateResource, errorTemplateResource, context,
+			templateContextHelper, TemplateConstants.LANG_TYPE_FTL,
 			PropsValues.FREEMARKER_ENGINE_RESOURCE_MODIFICATION_CHECK_INTERVAL);
 
-		_context = new HashMap<String, Object>();
-
-		if (context != null) {
-			for (Map.Entry<String, Object> entry : context.entrySet()) {
-				put(entry.getKey(), entry.getValue());
-			}
-		}
-
 		_configuration = configuration;
-	}
-
-	public Object get(String key) {
-		return _context.get(key);
-	}
-
-	public void put(String key, Object value) {
-		if (value == null) {
-			return;
-		}
-
-		_context.put(key, value);
+		_privileged = privileged;
 	}
 
 	@Override
@@ -120,22 +104,53 @@ public class FreeMarkerTemplate extends AbstractTemplate {
 		throws Exception {
 
 		TemplateResourceThreadLocal.setTemplateResource(
-			TemplateManager.FREEMARKER, templateResource);
+			TemplateConstants.LANG_TYPE_FTL, templateResource);
 
 		try {
-			Template template = _configuration.getTemplate(
-				getTemplateResourceUUID(templateResource),
-				TemplateResource.DEFAUT_ENCODING);
+			Template template = null;
 
-			template.process(_context, writer);
+			if (_privileged) {
+				template = AccessController.doPrivileged(
+					new TemplatePrivilegedExceptionAction(templateResource));
+			}
+			else {
+				template = _configuration.getTemplate(
+					getTemplateResourceUUID(templateResource),
+					TemplateConstants.DEFAUT_ENCODING);
+			}
+
+			template.process(context, writer);
+		}
+		catch (PrivilegedActionException pae) {
+			throw pae.getException();
 		}
 		finally {
 			TemplateResourceThreadLocal.setTemplateResource(
-				TemplateManager.FREEMARKER, null);
+				TemplateConstants.LANG_TYPE_FTL, null);
 		}
 	}
 
 	private Configuration _configuration;
-	private Map<String, Object> _context;
+	private boolean _privileged;
+
+	private class TemplatePrivilegedExceptionAction
+		implements PrivilegedExceptionAction<Template> {
+
+		public TemplatePrivilegedExceptionAction(
+			TemplateResource templateResource) {
+
+			_templateResource = templateResource;
+		}
+
+		@Override
+		public Template run() throws Exception {
+			return _configuration.getTemplate(
+				getTemplateResourceUUID(_templateResource),
+				TemplateConstants.DEFAUT_ENCODING);
+		}
+
+		private TemplateResource _templateResource;
+
+	}
 
 }

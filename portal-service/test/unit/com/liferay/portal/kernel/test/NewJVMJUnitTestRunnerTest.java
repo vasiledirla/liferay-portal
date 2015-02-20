@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -34,19 +34,19 @@ import org.junit.runner.RunWith;
 @RunWith(NewJVMJUnitTestRunner.class)
 public class NewJVMJUnitTestRunnerTest {
 
-	@After
-	public void after() {
-		Assert.assertEquals(2, _counter.getAndIncrement());
-
-		assertProcessId();
-	}
-
 	@Before
-	public void before() {
+	public void setUp() {
 		Assert.assertEquals(0, _counter.getAndIncrement());
 		Assert.assertNull(_processId);
 
 		_processId = getProcessId();
+	}
+
+	@After
+	public void tearDown() {
+		Assert.assertEquals(2, _counter.getAndIncrement());
+
+		assertProcessId();
 	}
 
 	@Test

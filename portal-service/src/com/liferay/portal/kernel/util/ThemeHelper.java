@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,7 +14,7 @@
 
 package com.liferay.portal.kernel.util;
 
-import com.liferay.portal.kernel.template.TemplateManager;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateResourceLoaderUtil;
 import com.liferay.portal.model.PortletConstants;
 import com.liferay.portal.model.Theme;
@@ -50,7 +50,10 @@ public class ThemeHelper {
 
 		String contextPath = ContextPathUtil.getContextPath(servletContext);
 
-		if (!contextPath.equals(PortalUtil.getPathContext())) {
+		if (!Validator.equals(
+				PortalUtil.getPathContext(contextPath),
+				PortalUtil.getPathContext())) {
+
 			servletContextName = GetterUtil.getString(
 				servletContext.getServletContextName());
 		}
@@ -164,11 +167,11 @@ public class ThemeHelper {
 
 		if (extension.equals(TEMPLATE_EXTENSION_FTL)) {
 			return TemplateResourceLoaderUtil.hasTemplateResource(
-				TemplateManager.FREEMARKER, resourcePath);
+				TemplateConstants.LANG_TYPE_FTL, resourcePath);
 		}
 		else if (extension.equals(TEMPLATE_EXTENSION_VM)) {
 			return TemplateResourceLoaderUtil.hasTemplateResource(
-				TemplateManager.VELOCITY, resourcePath);
+				TemplateConstants.LANG_TYPE_VM, resourcePath);
 		}
 		else {
 			URL url = null;

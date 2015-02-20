@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,24 +14,30 @@
 
 package com.liferay.portlet.bookmarks.util;
 
-import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.language.LanguageUtil;
+import com.liferay.portal.kernel.log.Log;
+import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.portlet.LiferayWindowState;
+import com.liferay.portal.kernel.search.Document;
+import com.liferay.portal.kernel.search.Field;
+import com.liferay.portal.kernel.search.Hits;
 import com.liferay.portal.kernel.util.GetterUtil;
-import com.liferay.portal.kernel.util.LocaleUtil;
-import com.liferay.portal.kernel.util.LocalizationUtil;
+import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.OrderByComparator;
 import com.liferay.portal.kernel.util.ParamUtil;
-import com.liferay.portal.kernel.util.PropsKeys;
+import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
-import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.model.Company;
 import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PortalUtil;
-import com.liferay.portal.util.PropsUtil;
-import com.liferay.portal.util.PropsValues;
+import com.liferay.portal.util.PortletKeys;
 import com.liferay.portal.util.WebKeys;
+import com.liferay.portlet.PortletURLFactoryUtil;
 import com.liferay.portlet.bookmarks.model.BookmarksEntry;
 import com.liferay.portlet.bookmarks.model.BookmarksFolder;
 import com.liferay.portlet.bookmarks.model.BookmarksFolderConstants;
+import com.liferay.portlet.bookmarks.service.BookmarksEntryLocalServiceUtil;
 import com.liferay.portlet.bookmarks.service.BookmarksFolderLocalServiceUtil;
 import com.liferay.portlet.bookmarks.util.comparator.EntryCreateDateComparator;
 import com.liferay.portlet.bookmarks.util.comparator.EntryModifiedDateComparator;
@@ -39,14 +45,14 @@ import com.liferay.portlet.bookmarks.util.comparator.EntryNameComparator;
 import com.liferay.portlet.bookmarks.util.comparator.EntryPriorityComparator;
 import com.liferay.portlet.bookmarks.util.comparator.EntryURLComparator;
 import com.liferay.portlet.bookmarks.util.comparator.EntryVisitsComparator;
-import com.liferay.util.ContentUtil;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
-import javax.portlet.PortletPreferences;
+import javax.portlet.PortletRequest;
 import javax.portlet.PortletURL;
 import javax.portlet.RenderResponse;
 
@@ -70,13 +76,15 @@ public class BookmarksUtil {
 			addPortletBreadcrumbEntries(folder, request, renderResponse);
 		}
 
+		BookmarksEntry unescapedEntry = entry.toUnescapedModel();
+
 		PortletURL portletURL = renderResponse.createRenderURL();
 
 		portletURL.setParameter("struts_action", "/bookmarks/view_entry");
 		portletURL.setParameter("entryId", String.valueOf(entry.getEntryId()));
 
 		PortalUtil.addPortletBreadcrumbEntry(
-			request, entry.getName(), portletURL.toString());
+			request, unescapedEntry.getName(), portletURL.toString());
 	}
 
 	public static void addPortletBreadcrumbEntries(
@@ -92,10 +100,9 @@ public class BookmarksUtil {
 			ThemeDisplay themeDisplay = (ThemeDisplay)request.getAttribute(
 				WebKeys.THEME_DISPLAY);
 
-			portletURL.setWindowState(LiferayWindowState.POP_UP);
-
 			portletURL.setParameter(
 				"struts_action", "/bookmarks/select_folder");
+			portletURL.setWindowState(LiferayWindowState.POP_UP);
 
 			PortalUtil.addPortletBreadcrumbEntry(
 				request, themeDisplay.translate("home"), portletURL.toString());
@@ -122,8 +129,10 @@ public class BookmarksUtil {
 		if (folder.getFolderId() !=
 				BookmarksFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
 
+			BookmarksFolder unescapedFolder = folder.toUnescapedModel();
+
 			PortalUtil.addPortletBreadcrumbEntry(
-				request, folder.getName(), portletURL.toString());
+				request, unescapedFolder.getName(), portletURL.toString());
 		}
 	}
 
@@ -142,142 +151,145 @@ public class BookmarksUtil {
 		addPortletBreadcrumbEntries(folder, request, renderResponse);
 	}
 
-	public static Map<Locale, String> getEmailEntryAddedBodyMap(
-		PortletPreferences preferences) {
+	public static String getAbsolutePath(
+			PortletRequest portletRequest, long folderId)
+		throws PortalException {
 
-		Map<Locale, String> map = LocalizationUtil.getLocalizationMap(
-			preferences, "emailEntryAddedBody");
+		ThemeDisplay themeDisplay = (ThemeDisplay)portletRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
 
-		Locale defaultLocale = LocaleUtil.getDefault();
-
-		String defaultValue = map.get(defaultLocale);
-
-		if (Validator.isNotNull(defaultValue)) {
-			return map;
+		if (folderId == BookmarksFolderConstants.DEFAULT_PARENT_FOLDER_ID) {
+			return themeDisplay.translate("home");
 		}
 
-		map.put(
-			defaultLocale,
-			ContentUtil.get(
-				PropsUtil.get(PropsKeys.BOOKMARKS_EMAIL_ENTRY_ADDED_BODY)));
+		BookmarksFolder folder =
+			BookmarksFolderLocalServiceUtil.fetchBookmarksFolder(folderId);
 
-		return map;
-	}
+		List<BookmarksFolder> folders = folder.getAncestors();
 
-	public static boolean getEmailEntryAddedEnabled(
-		PortletPreferences preferences) {
+		StringBundler sb = new StringBundler((folders.size() * 3) + 5);
 
-		String emailEntryAddedEnabled = preferences.getValue(
-			"emailEntryAddedEnabled", StringPool.BLANK);
+		sb.append(themeDisplay.translate("home"));
+		sb.append(StringPool.SPACE);
 
-		if (Validator.isNotNull(emailEntryAddedEnabled)) {
-			return GetterUtil.getBoolean(emailEntryAddedEnabled);
-		}
-		else {
-			return GetterUtil.getBoolean(PropsUtil.get(
-				PropsKeys.BOOKMARKS_EMAIL_ENTRY_ADDED_ENABLED));
-		}
-	}
+		Collections.reverse(folders);
 
-	public static Map<Locale, String> getEmailEntryAddedSubjectMap(
-		PortletPreferences preferences) {
-
-		Map<Locale, String> map = LocalizationUtil.getLocalizationMap(
-			preferences, "emailEntryAddedSubject");
-
-		Locale defaultLocale = LocaleUtil.getDefault();
-
-		String defaultValue = map.get(defaultLocale);
-
-		if (Validator.isNotNull(defaultValue)) {
-			return map;
+		for (BookmarksFolder curFolder : folders) {
+			sb.append(StringPool.RAQUO_CHAR);
+			sb.append(StringPool.SPACE);
+			sb.append(curFolder.getName());
 		}
 
-		map.put(
-			defaultLocale,
-			ContentUtil.get(
-				PropsUtil.get(PropsKeys.BOOKMARKS_EMAIL_ENTRY_ADDED_SUBJECT)));
+		sb.append(StringPool.RAQUO_CHAR);
+		sb.append(StringPool.SPACE);
+		sb.append(folder.getName());
 
-		return map;
+		return sb.toString();
 	}
 
-	public static Map<Locale, String> getEmailEntryUpdatedBodyMap(
-		PortletPreferences preferences) {
+	public static String getControlPanelLink(
+			PortletRequest portletRequest, long folderId)
+		throws PortalException {
 
-		Map<Locale, String> map = LocalizationUtil.getLocalizationMap(
-			preferences, "emailEntryUpdatedBody");
+		ThemeDisplay themeDisplay = (ThemeDisplay)portletRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
 
-		Locale defaultLocale = LocaleUtil.getDefault();
+		PortletURL portletURL = PortletURLFactoryUtil.create(
+			portletRequest, PortletKeys.BOOKMARKS_ADMIN,
+			PortalUtil.getControlPanelPlid(themeDisplay.getCompanyId()),
+			PortletRequest.RENDER_PHASE);
 
-		String defaultValue = map.get(defaultLocale);
+		portletURL.setParameter("struts_action", "/bookmarks/view");
+		portletURL.setParameter("folderId", String.valueOf(folderId));
 
-		if (Validator.isNotNull(defaultValue)) {
-			return map;
+		return portletURL.toString();
+	}
+
+	public static Map<String, String> getEmailDefinitionTerms(
+		PortletRequest portletRequest, String emailFromAddress,
+		String emailFromName) {
+
+		ThemeDisplay themeDisplay = (ThemeDisplay)portletRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
+
+		Map<String, String> definitionTerms =
+			new LinkedHashMap<String, String>();
+
+		definitionTerms.put(
+			"[$BOOKMARKS_ENTRY_USER_NAME$]",
+			LanguageUtil.get(
+				themeDisplay.getLocale(),
+				"the-user-who-added-the-bookmark-entry"));
+		definitionTerms.put(
+			"[$BOOKMARKS_ENTRY_STATUS_BY_USER_NAME$]",
+			LanguageUtil.get(
+				themeDisplay.getLocale(),
+				"the-user-who-updated-the-bookmark-entry"));
+		definitionTerms.put(
+			"[$BOOKMARKS_ENTRY_URL$]",
+			LanguageUtil.get(
+				themeDisplay.getLocale(), "the-bookmark-entry-url"));
+		definitionTerms.put(
+			"[$FROM_ADDRESS$]", HtmlUtil.escape(emailFromAddress));
+		definitionTerms.put("[$FROM_NAME$]", HtmlUtil.escape(emailFromName));
+
+		Company company = themeDisplay.getCompany();
+
+		definitionTerms.put("[$PORTAL_URL$]", company.getVirtualHostname());
+
+		definitionTerms.put(
+			"[$PORTLET_NAME$]", PortalUtil.getPortletTitle(portletRequest));
+		definitionTerms.put(
+			"[$TO_ADDRESS$]",
+			LanguageUtil.get(
+				themeDisplay.getLocale(),
+				"the-address-of-the-email-recipient"));
+		definitionTerms.put(
+			"[$TO_NAME$]",
+			LanguageUtil.get(
+				themeDisplay.getLocale(), "the-name-of-the-email-recipient"));
+
+		return definitionTerms;
+	}
+
+	public static List<Object> getEntries(Hits hits) {
+		List<Object> entries = new ArrayList<Object>();
+
+		for (Document document : hits.getDocs()) {
+			String entryClassName = document.get(Field.ENTRY_CLASS_NAME);
+			long entryClassPK = GetterUtil.getLong(
+				document.get(Field.ENTRY_CLASS_PK));
+
+			try {
+				Object obj = null;
+
+				if (entryClassName.equals(BookmarksEntry.class.getName())) {
+					obj = BookmarksEntryLocalServiceUtil.getEntry(entryClassPK);
+				}
+				else if (entryClassName.equals(
+							BookmarksFolder.class.getName())) {
+
+					obj = BookmarksFolderLocalServiceUtil.getFolder(
+						entryClassPK);
+				}
+
+				entries.add(obj);
+			}
+			catch (Exception e) {
+				if (_log.isWarnEnabled()) {
+					_log.warn(
+						"Bookmarks search index is stale and contains entry " +
+							entryClassPK);
+				}
+
+				continue;
+			}
 		}
 
-		map.put(
-			defaultLocale,
-			ContentUtil.get(
-				PropsUtil.get(PropsKeys.BOOKMARKS_EMAIL_ENTRY_UPDATED_BODY)));
-
-		return map;
+		return entries;
 	}
 
-	public static boolean getEmailEntryUpdatedEnabled(
-		PortletPreferences preferences) {
-
-		String emailEntryUpdatedEnabled = preferences.getValue(
-			"emailEntryUpdatedEnabled", StringPool.BLANK);
-
-		if (Validator.isNotNull(emailEntryUpdatedEnabled)) {
-			return GetterUtil.getBoolean(emailEntryUpdatedEnabled);
-		}
-		else {
-			return GetterUtil.getBoolean(PropsUtil.get(
-				PropsKeys.BOOKMARKS_EMAIL_ENTRY_UPDATED_ENABLED));
-		}
-	}
-
-	public static Map<Locale, String> getEmailEntryUpdatedSubjectMap(
-		PortletPreferences preferences) {
-
-		Map<Locale, String> map = LocalizationUtil.getLocalizationMap(
-			preferences, "emailEntryUpdatedSubject");
-
-		Locale defaultLocale = LocaleUtil.getDefault();
-
-		String defaultValue = map.get(defaultLocale);
-
-		if (Validator.isNotNull(defaultValue)) {
-			return map;
-		}
-
-		map.put(
-			defaultLocale,
-			ContentUtil.get(
-				PropsUtil.get(
-					PropsKeys.BOOKMARKS_EMAIL_ENTRY_UPDATED_SUBJECT)));
-
-		return map;
-	}
-
-	public static String getEmailFromAddress(
-			PortletPreferences preferences, long companyId)
-		throws SystemException {
-
-		return PortalUtil.getEmailFromAddress(
-			preferences, companyId, PropsValues.BOOKMARKS_EMAIL_FROM_ADDRESS);
-	}
-
-	public static String getEmailFromName(
-			PortletPreferences preferences, long companyId)
-		throws SystemException {
-
-		return PortalUtil.getEmailFromName(
-			preferences, companyId, PropsValues.BOOKMARKS_EMAIL_FROM_NAME);
-	}
-
-	public static OrderByComparator getEntryOrderByComparator(
+	public static OrderByComparator<BookmarksEntry> getEntryOrderByComparator(
 		String orderByCol, String orderByType) {
 
 		boolean orderByAsc = false;
@@ -286,7 +298,7 @@ public class BookmarksUtil {
 			orderByAsc = true;
 		}
 
-		OrderByComparator orderByComparator = null;
+		OrderByComparator<BookmarksEntry> orderByComparator = null;
 
 		if (orderByCol.equals("create-date")) {
 			orderByComparator = new EntryCreateDateComparator(orderByAsc);
@@ -309,5 +321,7 @@ public class BookmarksUtil {
 
 		return orderByComparator;
 	}
+
+	private static Log _log = LogFactoryUtil.getLog(BookmarksUtil.class);
 
 }

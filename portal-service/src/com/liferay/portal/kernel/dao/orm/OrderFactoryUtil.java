@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -23,7 +23,7 @@ import com.liferay.portal.kernel.util.OrderByComparator;
 public class OrderFactoryUtil {
 
 	public static void addOrderByComparator(
-		DynamicQuery dynamicQuery, OrderByComparator obc) {
+		DynamicQuery dynamicQuery, OrderByComparator<?> obc) {
 
 		if (obc == null) {
 			return;
@@ -32,7 +32,7 @@ public class OrderFactoryUtil {
 		String[] orderByFields = obc.getOrderByFields();
 
 		for (String orderByField : orderByFields) {
-			if (obc.isAscending()) {
+			if (obc.isAscending(orderByField)) {
 				dynamicQuery.addOrder(asc(orderByField));
 			}
 			else {

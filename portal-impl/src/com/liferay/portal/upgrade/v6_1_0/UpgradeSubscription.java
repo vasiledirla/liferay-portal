@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -83,6 +83,43 @@ public class UpgradeSubscription extends UpgradeProcess {
 		}
 	}
 
+	protected boolean hasSubscription(
+			long companyId, long userId, long classNameId, long classPK)
+		throws Exception {
+
+		Connection con = null;
+		PreparedStatement ps = null;
+		ResultSet rs = null;
+
+		try {
+			con = DataAccess.getUpgradeOptimizedConnection();
+
+			ps = con.prepareStatement(
+				"select count(*) from Subscription where companyId = ? and " +
+					"userId = ? and classNameId = ? and classPK = ?");
+
+			ps.setLong(1, companyId);
+			ps.setLong(2, userId);
+			ps.setLong(3, classNameId);
+			ps.setLong(4, classPK);
+
+			rs = ps.executeQuery();
+
+			while (rs.next()) {
+				int count = rs.getInt(1);
+
+				if (count > 0) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+		finally {
+			DataAccess.cleanUp(con, ps, rs);
+		}
+	}
+
 	protected void updateMBMessages(long companyId) throws Exception {
 		Connection con = null;
 		PreparedStatement ps = null;
@@ -91,12 +128,14 @@ public class UpgradeSubscription extends UpgradeProcess {
 		try {
 			con = DataAccess.getUpgradeOptimizedConnection();
 
-			StringBundler sb = new StringBundler(5);
+			StringBundler sb = new StringBundler(8);
 
 			sb.append("select userId, MIN(userName) as userName, ");
 			sb.append("classNameId, classPK, MIN(createDate) as createDate, ");
 			sb.append("MIN(modifiedDate) as modifiedDate from MBMessage ");
-			sb.append("where (companyId = " + companyId + ") and ");
+			sb.append("where (companyId = ");
+			sb.append(companyId);
+			sb.append(") and ");
 			sb.append("(classNameId != 0) and (parentMessageId != 0) ");
 			sb.append("group by userId, classNameId, classPK");
 
@@ -113,6 +152,10 @@ public class UpgradeSubscription extends UpgradeProcess {
 				Timestamp modifiedDate = rs.getTimestamp("modifiedDate");
 				long classNameId = rs.getLong("classNameId");
 				long classPK = rs.getLong("classPK");
+
+				if (hasSubscription(companyId, userId, classNameId, classPK)) {
+					continue;
+				}
 
 				long subscriptionId = increment();
 				String frequency = "instant";

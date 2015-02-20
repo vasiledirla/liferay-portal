@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,8 +14,6 @@
 
 package com.liferay.portal.kernel.servlet;
 
-import com.liferay.portal.kernel.log.Log;
-import com.liferay.portal.kernel.log.LogFactoryUtil;
 import com.liferay.portal.kernel.util.CharPool;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.StringUtil;
@@ -23,10 +21,13 @@ import com.liferay.portal.kernel.util.StringUtil;
 import java.io.IOException;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
-import java.net.URLConnection;
 
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
 import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
@@ -36,8 +37,14 @@ import javax.servlet.ServletContext;
 /**
  * @author Brian Wing Shun Chan
  * @author Raymond Augé
+ * @author James Lefeu
  */
 public class ServletContextUtil {
+
+	public static final String PATH_WEB_INF = "/WEB-INF";
+
+	public static final String URI_ATTRIBUTE =
+		ServletContextUtil.class.getName().concat(".rootURI");
 
 	public static Set<String> getClassNames(ServletContext servletContext)
 		throws IOException {
@@ -55,113 +62,129 @@ public class ServletContextUtil {
 	}
 
 	public static long getLastModified(
-		ServletContext servletContext, String resourcePath) {
+		ServletContext servletContext, String path) {
 
-		return getLastModified(servletContext, resourcePath, false);
+		return getLastModified(servletContext, path, false);
 	}
 
 	public static long getLastModified(
-		ServletContext servletContext, String resourcePath, boolean cache) {
+		ServletContext servletContext, String path, boolean cache) {
+
+		String lastModifiedCacheKey = null;
 
 		if (cache) {
+			lastModifiedCacheKey = ServletContextUtil.class.getName();
+			lastModifiedCacheKey = lastModifiedCacheKey.concat(
+				StringPool.PERIOD).concat(path);
+
 			Long lastModified = (Long)servletContext.getAttribute(
-				ServletContextUtil.class.getName() + StringPool.PERIOD +
-					resourcePath);
+				lastModifiedCacheKey);
 
 			if (lastModified != null) {
 				return lastModified.longValue();
 			}
 		}
 
+		String curPath = null;
+
 		long lastModified = 0;
 
-		Set<String> resourcePaths = null;
+		Queue<String> pathQueue = new LinkedList<String>();
 
-		if (resourcePath.endsWith(StringPool.SLASH)) {
-			resourcePaths = servletContext.getResourcePaths(resourcePath);
-		}
-		else {
-			resourcePaths = new HashSet<String>();
+		pathQueue.offer(path);
 
-			resourcePaths.add(resourcePath);
-		}
+		while ((curPath = pathQueue.poll()) != null) {
+			if (curPath.charAt(curPath.length() - 1) == CharPool.SLASH) {
+				Set<String> pathSet = servletContext.getResourcePaths(curPath);
 
-		if ((resourcePaths == null) || resourcePaths.isEmpty()) {
-			if (cache) {
-				servletContext.setAttribute(
-					ServletContextUtil.class.getName() + StringPool.PERIOD +
-						resourcePath,
-					new Long(lastModified));
-			}
-
-			return lastModified;
-		}
-
-		for (String curResourcePath : resourcePaths) {
-			if (curResourcePath.endsWith(StringPool.SLASH)) {
-				long curLastModified = getLastModified(
-					servletContext, curResourcePath);
-
-				if (curLastModified > lastModified) {
-					lastModified = curLastModified;
+				if (pathSet != null) {
+					pathQueue.addAll(pathSet);
 				}
 			}
 			else {
-				try {
-					URL resourceURL = servletContext.getResource(
-						curResourcePath);
+				long curLastModified = FileTimestampUtil.getTimestamp(
+					servletContext, curPath);
 
-					if (resourceURL == null) {
-						_log.error(
-							"Resource url for " + curResourcePath + " is null");
-
-						continue;
-					}
-
-					URLConnection urlConnection = resourceURL.openConnection();
-
-					if (urlConnection.getLastModified() > lastModified) {
-						lastModified = urlConnection.getLastModified();
-					}
-				}
-				catch (IOException ioe) {
-					_log.error(ioe, ioe);
+				if (curLastModified > lastModified) {
+					lastModified = curLastModified;
 				}
 			}
 		}
 
 		if (cache) {
 			servletContext.setAttribute(
-				ServletContextUtil.class.getName() + StringPool.PERIOD +
-					resourcePath,
-				new Long(lastModified));
+				lastModifiedCacheKey, new Long(lastModified));
 		}
 
 		return lastModified;
 	}
 
+	public static String getResourcePath(URL url) throws URISyntaxException {
+		URI uri = getResourceURI(url);
+
+		return uri.toString();
+	}
+
+	public static URI getResourceURI(URL url) throws URISyntaxException {
+		return _getResourceURI(url, url.getPath());
+	}
+
 	public static String getRootPath(ServletContext servletContext)
 		throws MalformedURLException {
 
-		URL rootURL = servletContext.getResource(_PATH_WEB_XML);
+		URI rootURI = getRootURI(servletContext);
 
-		String rootPath = rootURL.getPath();
+		return rootURI.toString();
+	}
 
-		int pos = rootPath.indexOf(_PATH_WEB_XML);
+	public static URI getRootURI(ServletContext servletContext)
+		throws MalformedURLException {
 
-		return rootPath.substring(0, pos);
+		URI rootURI = (URI)servletContext.getAttribute(URI_ATTRIBUTE);
+
+		if (rootURI != null) {
+			return rootURI;
+		}
+
+		try {
+			URL rootURL = servletContext.getResource(PATH_WEB_INF);
+
+			String path = rootURL.getPath();
+
+			int index = path.indexOf(PATH_WEB_INF);
+
+			if (index < 0) {
+				throw new MalformedURLException("Invalid URL " + rootURL);
+			}
+
+			if (index == 0) {
+				path = StringPool.SLASH;
+			}
+			else {
+				path = path.substring(0, index);
+			}
+
+			rootURI = _getResourceURI(rootURL, path);
+
+			servletContext.setAttribute(URI_ATTRIBUTE, rootURI);
+		}
+		catch (URISyntaxException urise) {
+			throw new MalformedURLException(urise.getMessage());
+		}
+
+		return rootURI;
 	}
 
 	private static String _getClassName(String path) {
 		return _getClassName(null, path);
 	}
 
-	private static String _getClassName(String rootResourcePath, String path) {
+	private static String _getClassName(String rootPath, String path) {
 		String className = path.substring(
 			0, path.length() - _EXT_CLASS.length());
 
-		if (rootResourcePath != null) {
-			className = className.substring(rootResourcePath.length() + 1);
+		if (rootPath != null) {
+			className = className.substring(rootPath.length() + 1);
 		}
 
 		className = StringUtil.replace(
@@ -171,34 +194,33 @@ public class ServletContextUtil {
 	}
 
 	private static void _getClassNames(
-			ServletContext servletContext, String rootResourcePath,
+			ServletContext servletContext, String rootPath,
 			Set<String> classNames)
 		throws IOException {
 
 		_getClassNames(
-			servletContext, rootResourcePath,
-			servletContext.getResourcePaths(rootResourcePath), classNames);
+			servletContext, rootPath, servletContext.getResourcePaths(rootPath),
+			classNames);
 	}
 
 	private static void _getClassNames(
-			ServletContext servletContext, String rootResourcePath,
-			Set<String> resourcePaths, Set<String> classNames)
+			ServletContext servletContext, String rootPath, Set<String> paths,
+			Set<String> classNames)
 		throws IOException {
 
-		if (resourcePaths == null) {
+		if (paths == null) {
 			return;
 		}
 
-		for (String resourcePath : resourcePaths) {
-			if (resourcePath.endsWith(_EXT_CLASS)) {
-				String className = _getClassName(
-					rootResourcePath, resourcePath);
+		for (String path : paths) {
+			if (path.endsWith(_EXT_CLASS)) {
+				String className = _getClassName(rootPath, path);
 
 				classNames.add(className);
 			}
-			else if (resourcePath.endsWith(_EXT_JAR)) {
+			else if (path.endsWith(_EXT_JAR)) {
 				JarInputStream jarFile = new JarInputStream(
-					servletContext.getResourceAsStream(resourcePath));
+					servletContext.getResourceAsStream(path));
 
 				while (true) {
 					JarEntry jarEntry = jarFile.getNextJarEntry();
@@ -217,22 +239,23 @@ public class ServletContextUtil {
 				}
 
 				jarFile.close();
-
 			}
-			else if (resourcePath.endsWith(StringPool.SLASH)) {
+			else if (path.endsWith(StringPool.SLASH)) {
 				_getClassNames(
-					servletContext, rootResourcePath,
-					servletContext.getResourcePaths(resourcePath), classNames);
+					servletContext, rootPath,
+					servletContext.getResourcePaths(path), classNames);
 			}
 		}
+	}
+
+	private static URI _getResourceURI(URL url, String path)
+		throws URISyntaxException {
+
+		return new URI(url.getProtocol(), path, null);
 	}
 
 	private static final String _EXT_CLASS = ".class";
 
 	private static final String _EXT_JAR = ".jar";
-
-	private static final String _PATH_WEB_XML = "/WEB-INF/web.xml";
-
-	private static Log _log = LogFactoryUtil.getLog(ServletContextUtil.class);
 
 }

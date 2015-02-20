@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,8 @@
 
 package com.liferay.portal.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.jsonwebservice.JSONWebService;
@@ -22,11 +24,9 @@ import com.liferay.portal.kernel.transaction.Transactional;
 import com.liferay.portal.security.ac.AccessControlled;
 
 /**
- * The interface for the portlet preferences remote service.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service interface for PortletPreferences. Methods of this
+ * service are expected to have security checks based on the propagated JAAS
+ * credentials because this service can be accessed remotely.
  *
  * @author Brian Wing Shun Chan
  * @see PortletPreferencesServiceUtil
@@ -34,6 +34,7 @@ import com.liferay.portal.security.ac.AccessControlled;
  * @see com.liferay.portal.service.impl.PortletPreferencesServiceImpl
  * @generated
  */
+@ProviderType
 @AccessControlled
 @JSONWebService
 @Transactional(isolation = Isolation.PORTAL, rollbackFor =  {
@@ -44,6 +45,8 @@ public interface PortletPreferencesService extends BaseService {
 	 *
 	 * Never modify or reference this interface directly. Always use {@link PortletPreferencesServiceUtil} to access the portlet preferences remote service. Add custom service methods to {@link com.liferay.portal.service.impl.PortletPreferencesServiceImpl} and rerun ServiceBuilder to automatically copy the method declarations to this interface.
 	 */
+	public void deleteArchivedPreferences(long portletItemId)
+		throws com.liferay.portal.kernel.exception.PortalException;
 
 	/**
 	* Returns the Spring bean ID for this bean.
@@ -52,6 +55,22 @@ public interface PortletPreferencesService extends BaseService {
 	*/
 	public java.lang.String getBeanIdentifier();
 
+	public void restoreArchivedPreferences(long groupId,
+		com.liferay.portal.model.Layout layout, java.lang.String portletId,
+		com.liferay.portal.model.PortletItem portletItem,
+		javax.portlet.PortletPreferences preferences)
+		throws com.liferay.portal.kernel.exception.PortalException;
+
+	public void restoreArchivedPreferences(long groupId,
+		com.liferay.portal.model.Layout layout, java.lang.String portletId,
+		long portletItemId, javax.portlet.PortletPreferences preferences)
+		throws com.liferay.portal.kernel.exception.PortalException;
+
+	public void restoreArchivedPreferences(long groupId, java.lang.String name,
+		com.liferay.portal.model.Layout layout, java.lang.String portletId,
+		javax.portlet.PortletPreferences preferences)
+		throws com.liferay.portal.kernel.exception.PortalException;
+
 	/**
 	* Sets the Spring bean ID for this bean.
 	*
@@ -59,32 +78,8 @@ public interface PortletPreferencesService extends BaseService {
 	*/
 	public void setBeanIdentifier(java.lang.String beanIdentifier);
 
-	public void deleteArchivedPreferences(long portletItemId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException;
-
-	public void restoreArchivedPreferences(long groupId,
-		com.liferay.portal.model.Layout layout, java.lang.String portletId,
-		long portletItemId, javax.portlet.PortletPreferences preferences)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException;
-
-	public void restoreArchivedPreferences(long groupId,
-		com.liferay.portal.model.Layout layout, java.lang.String portletId,
-		com.liferay.portal.model.PortletItem portletItem,
-		javax.portlet.PortletPreferences preferences)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException;
-
-	public void restoreArchivedPreferences(long groupId, java.lang.String name,
-		com.liferay.portal.model.Layout layout, java.lang.String portletId,
-		javax.portlet.PortletPreferences preferences)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException;
-
 	public void updateArchivePreferences(long userId, long groupId,
 		java.lang.String name, java.lang.String portletId,
 		javax.portlet.PortletPreferences preferences)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException;
+		throws com.liferay.portal.kernel.exception.PortalException;
 }

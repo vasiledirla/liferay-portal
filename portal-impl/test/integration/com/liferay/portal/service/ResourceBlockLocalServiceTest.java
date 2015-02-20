@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,11 +15,15 @@
 package com.liferay.portal.service;
 
 import com.liferay.portal.kernel.dao.jdbc.DataAccess;
+import com.liferay.portal.kernel.exception.SystemException;
+import com.liferay.portal.kernel.test.ExecutionTestListeners;
 import com.liferay.portal.model.PermissionedModel;
 import com.liferay.portal.model.ResourceBlockPermissionsContainer;
-import com.liferay.portal.test.EnvironmentExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.test.listeners.MainServletExecutionTestListener;
+import com.liferay.portal.test.log.ExpectedLog;
+import com.liferay.portal.test.log.ExpectedLogs;
+import com.liferay.portal.test.log.ExpectedType;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -33,6 +37,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.Semaphore;
 
+import org.hibernate.util.JDBCExceptionReporter;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -42,7 +48,7 @@ import org.junit.runner.RunWith;
  * @author Connor McKay
  * @author Shuyang Zhou
  */
-@ExecutionTestListeners(listeners = {EnvironmentExecutionTestListener.class})
+@ExecutionTestListeners(listeners = {MainServletExecutionTestListener.class})
 @RunWith(LiferayIntegrationJUnitTestRunner.class)
 public class ResourceBlockLocalServiceTest {
 
@@ -50,10 +56,9 @@ public class ResourceBlockLocalServiceTest {
 	public void setUp() throws Exception {
 		Connection connection = DataAccess.getConnection();
 
-		PreparedStatement preparedStatement =
-			connection.prepareStatement(
-				"DELETE FROM ResourceBlock WHERE companyId = ? AND groupId " +
-					"= ? AND name = ?");
+		PreparedStatement preparedStatement = connection.prepareStatement(
+			"DELETE FROM ResourceBlock WHERE companyId = ? AND groupId " +
+				"= ? AND name = ?");
 
 		preparedStatement.setLong(1, _COMPANY_ID);
 		preparedStatement.setLong(2, _GROUP_ID);
@@ -64,6 +69,19 @@ public class ResourceBlockLocalServiceTest {
 		DataAccess.cleanUp(connection, preparedStatement);
 	}
 
+	@ExpectedLogs(
+		expectedLogs = {
+			@ExpectedLog(
+				expectedLog =
+					"Deadlock found when trying to get lock; try restarting " +
+						"transaction",
+				expectedType = ExpectedType.EXACT),
+			@ExpectedLog(
+				expectedLog = "Duplicate entry ",
+				expectedType = ExpectedType.PREFIX)
+		},
+		level = "ERROR", loggerClass = JDBCExceptionReporter.class
+	)
 	@Test
 	public void testConcurrentAccessing() throws Exception {
 		PermissionedModel permissionedModel = new MockPermissionedModel();
@@ -133,6 +151,19 @@ public class ResourceBlockLocalServiceTest {
 		_assertNoSuchResourceBlock(_RESOURCE_BLOCK_ID);
 	}
 
+	@ExpectedLogs(
+		expectedLogs = {
+			@ExpectedLog(
+				expectedLog =
+					"Deadlock found when trying to get lock; try restarting " +
+						"transaction",
+				expectedType = ExpectedType.EXACT),
+			@ExpectedLog(
+				expectedLog = "Duplicate entry ",
+				expectedType = ExpectedType.PREFIX)
+		},
+		level = "ERROR", loggerClass = JDBCExceptionReporter.class
+	)
 	@Test
 	public void testConcurrentUpdateResourceBlockId() throws Exception {
 		PermissionedModel permissionedModel = new MockPermissionedModel();
@@ -191,9 +222,8 @@ public class ResourceBlockLocalServiceTest {
 
 		Connection connection = DataAccess.getConnection();
 
-		PreparedStatement preparedStatement =
-			connection.prepareStatement(
-				"SELECT * FROM ResourceBlock WHERE resourceBlockId = ?");
+		PreparedStatement preparedStatement = connection.prepareStatement(
+			"SELECT * FROM ResourceBlock WHERE resourceBlockId = ?");
 
 		preparedStatement.setLong(1, resourceBlockId);
 
@@ -210,10 +240,9 @@ public class ResourceBlockLocalServiceTest {
 
 		Connection connection = DataAccess.getConnection();
 
-		PreparedStatement preparedStatement =
-			connection.prepareStatement(
-				"SELECT * FROM ResourceBlock WHERE companyId = ? AND groupId " +
-					"= ? AND name = ?");
+		PreparedStatement preparedStatement = connection.prepareStatement(
+			"SELECT * FROM ResourceBlock WHERE companyId = ? AND groupId " +
+				"= ? AND name = ?");
 
 		preparedStatement.setLong(1, companyId);
 		preparedStatement.setLong(2, groupId);
@@ -232,10 +261,9 @@ public class ResourceBlockLocalServiceTest {
 
 		Connection connection = DataAccess.getConnection();
 
-		PreparedStatement preparedStatement =
-			connection.prepareStatement(
-				"SELECT referenceCount FROM ResourceBlock WHERE " +
-					"resourceBlockId = " + resourceBlockId);
+		PreparedStatement preparedStatement = connection.prepareStatement(
+			"SELECT referenceCount FROM ResourceBlock WHERE " +
+				"resourceBlockId = " + resourceBlockId);
 
 		ResultSet resultSet = preparedStatement.executeQuery();
 
@@ -263,13 +291,16 @@ public class ResourceBlockLocalServiceTest {
 
 	private class MockPermissionedModel implements PermissionedModel {
 
+		@Override
 		public long getResourceBlockId() {
 			return _resourceBlockId;
 		}
 
+		@Override
 		public void persist() {
 		}
 
+		@Override
 		public void setResourceBlockId(long resourceBlockId) {
 			_resourceBlockId = resourceBlockId;
 		}
@@ -287,6 +318,7 @@ public class ResourceBlockLocalServiceTest {
 			_semaphore = semaphore;
 		}
 
+		@Override
 		public Void call() throws Exception {
 			if (_semaphore != null) {
 				_semaphore.acquire();
@@ -317,13 +349,22 @@ public class ResourceBlockLocalServiceTest {
 			_semaphore = semaphore;
 		}
 
+		@Override
 		public Void call() throws Exception {
-			ResourceBlockLocalServiceUtil.updateResourceBlockId(
-				_COMPANY_ID, _GROUP_ID, _MODEL_NAME, _permissionedModel,
-				_permissionsHash, _resourceBlockPermissionsContainer);
+			while (true) {
+				try {
+					ResourceBlockLocalServiceUtil.updateResourceBlockId(
+						_COMPANY_ID, _GROUP_ID, _MODEL_NAME, _permissionedModel,
+						_permissionsHash, _resourceBlockPermissionsContainer);
 
-			if (_semaphore != null) {
-				_semaphore.release();
+					if (_semaphore != null) {
+						_semaphore.release();
+					}
+
+					break;
+				}
+				catch (SystemException se) {
+				}
 			}
 
 			return null;

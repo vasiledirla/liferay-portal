@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,18 +16,17 @@ package com.liferay.portal.spring.aop;
 
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.spring.aop.Skip;
 import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.ProxyUtil;
 
 import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 
@@ -45,6 +44,22 @@ import org.springframework.util.ClassUtils;
  * @author Shuyang Zhou
  */
 public class ServiceBeanAopProxy implements AopProxy, InvocationHandler {
+
+	public static AdvisedSupport getAdvisedSupport(Object proxy)
+		throws Exception {
+
+		InvocationHandler invocationHandler = ProxyUtil.getInvocationHandler(
+			proxy);
+
+		Class<?> invocationHandlerClass = invocationHandler.getClass();
+
+		Field advisedSupportField = invocationHandlerClass.getDeclaredField(
+			"_advisedSupport");
+
+		advisedSupportField.setAccessible(true);
+
+		return (AdvisedSupport)advisedSupportField.get(invocationHandler);
+	}
 
 	public ServiceBeanAopProxy(
 		AdvisedSupport advisedSupport, MethodInterceptor methodInterceptor,
@@ -117,17 +132,24 @@ public class ServiceBeanAopProxy implements AopProxy, InvocationHandler {
 		_serviceBeanAopCacheManager = serviceBeanAopCacheManager;
 	}
 
+	@Override
 	public Object getProxy() {
 		return getProxy(ClassUtils.getDefaultClassLoader());
 	}
 
+	@Override
 	public Object getProxy(ClassLoader classLoader) {
 		Class<?>[] proxiedInterfaces = AopProxyUtils.completeProxiedInterfaces(
 			_advisedSupport);
 
-		return ProxyUtil.newProxyInstance(classLoader, proxiedInterfaces, this);
+		InvocationHandler invocationHandler = _pacl.getInvocationHandler(
+			this, _advisedSupport);
+
+		return ProxyUtil.newProxyInstance(
+			classLoader, proxiedInterfaces, invocationHandler);
 	}
 
+	@Override
 	public Object invoke(Object proxy, Method method, Object[] arguments)
 		throws Throwable {
 
@@ -136,28 +158,13 @@ public class ServiceBeanAopProxy implements AopProxy, InvocationHandler {
 		Object target = null;
 
 		try {
-			Class<?> targetClass = null;
-
 			target = targetSource.getTarget();
-
-			if (target != null) {
-				targetClass = target.getClass();
-			}
 
 			ServiceBeanMethodInvocation serviceBeanMethodInvocation =
 				new ServiceBeanMethodInvocation(
-					target, targetClass, method, arguments);
+					target, targetSource.getTargetClass(), method, arguments);
 
-			Skip skip = ServiceBeanAopCacheManager.getAnnotation(
-				serviceBeanMethodInvocation, Skip.class, null);
-
-			if (skip != null) {
-				serviceBeanMethodInvocation.setMethodInterceptors(
-					Collections.<MethodInterceptor>emptyList());
-			}
-			else {
-				_setMethodInterceptors(serviceBeanMethodInvocation);
-			}
+			_setMethodInterceptors(serviceBeanMethodInvocation);
 
 			return serviceBeanMethodInvocation.proceed();
 		}
@@ -166,6 +173,13 @@ public class ServiceBeanAopProxy implements AopProxy, InvocationHandler {
 				targetSource.releaseTarget(target);
 			}
 		}
+	}
+
+	public interface PACL {
+
+		public InvocationHandler getInvocationHandler(
+			InvocationHandler invocationHandler, AdvisedSupport advisedSupport);
+
 	}
 
 	private List<MethodInterceptor> _getMethodInterceptors(
@@ -236,11 +250,25 @@ public class ServiceBeanAopProxy implements AopProxy, InvocationHandler {
 
 	private static Log _log = LogFactoryUtil.getLog(ServiceBeanAopProxy.class);
 
+	private static PACL _pacl = new NoPACL();
+
 	private AdvisedSupport _advisedSupport;
 	private AdvisorChainFactory _advisorChainFactory;
 	private final List<MethodInterceptor> _classLevelMethodInterceptors;
 	private final List<MethodInterceptor> _fullMethodInterceptors;
 	private boolean _mergeSpringMethodInterceptors;
 	private ServiceBeanAopCacheManager _serviceBeanAopCacheManager;
+
+	private static class NoPACL implements PACL {
+
+		@Override
+		public InvocationHandler getInvocationHandler(
+			InvocationHandler invocationHandler,
+			AdvisedSupport advisedSupport) {
+
+			return invocationHandler;
+		}
+
+	}
 
 }

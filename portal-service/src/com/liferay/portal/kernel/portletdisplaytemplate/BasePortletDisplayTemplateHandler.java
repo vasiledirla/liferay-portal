@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,47 +14,30 @@
 
 package com.liferay.portal.kernel.portletdisplaytemplate;
 
-import com.liferay.portal.kernel.util.StringUtil;
-import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.kernel.xml.Document;
-import com.liferay.portal.kernel.xml.Element;
-import com.liferay.portal.kernel.xml.SAXReaderUtil;
+import com.liferay.portal.kernel.template.BaseTemplateHandler;
+import com.liferay.portal.kernel.template.TemplateVariableGroup;
+import com.liferay.portlet.portletdisplaytemplate.util.PortletDisplayTemplateUtil;
 
 import java.util.Collections;
-import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 /**
  * @author Eduardo Garcia
  */
 public abstract class BasePortletDisplayTemplateHandler
-	implements PortletDisplayTemplateHandler {
+	extends BaseTemplateHandler {
 
-	public List<Element> getDefaultTemplateElements() throws Exception {
-		String defaultTemplatesConfigPath = getDefaultTemplatesConfigPath();
-
-		if (Validator.isNull(defaultTemplatesConfigPath)) {
-			return Collections.emptyList();
-		}
-
-		Class<?> clazz = getClass();
-
-		String xml = StringUtil.read(
-			clazz.getClassLoader(), defaultTemplatesConfigPath, false);
-
-		Document document = SAXReaderUtil.read(xml);
-
-		Element rootElement = document.getRootElement();
-
-		return rootElement.elements("template");
+	public Map<String, Object> getCustomContextObjects() {
+		return Collections.emptyMap();
 	}
 
-	public String getHelpTemplatePath() {
-		return "com/liferay/portlet/portletdisplaytemplate/dependencies/" +
-			"portlet_display_template.vm";
-	}
+	@Override
+	public Map<String, TemplateVariableGroup> getTemplateVariableGroups(
+			long classPK, String language, Locale locale)
+		throws Exception {
 
-	protected String getDefaultTemplatesConfigPath() {
-		return null;
+		return PortletDisplayTemplateUtil.getTemplateVariableGroups(language);
 	}
 
 }

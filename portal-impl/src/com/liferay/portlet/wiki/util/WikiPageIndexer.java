@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,14 +14,11 @@
 
 package com.liferay.portlet.wiki.util;
 
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
-import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.Projection;
-import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.ProjectionList;
 import com.liferay.portal.kernel.dao.orm.Property;
 import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.QueryUtil;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.search.BaseIndexer;
 import com.liferay.portal.kernel.search.BooleanClauseOccur;
 import com.liferay.portal.kernel.search.BooleanQuery;
@@ -29,27 +26,29 @@ import com.liferay.portal.kernel.search.BooleanQueryFactoryUtil;
 import com.liferay.portal.kernel.search.Document;
 import com.liferay.portal.kernel.search.DocumentImpl;
 import com.liferay.portal.kernel.search.Field;
-import com.liferay.portal.kernel.search.Hits;
 import com.liferay.portal.kernel.search.SearchContext;
 import com.liferay.portal.kernel.search.SearchEngineUtil;
 import com.liferay.portal.kernel.search.Summary;
+import com.liferay.portal.kernel.util.ArrayUtil;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.HtmlUtil;
 import com.liferay.portal.kernel.util.Validator;
-import com.liferay.portal.kernel.workflow.WorkflowConstants;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
+import com.liferay.portal.security.permission.ActionKeys;
+import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.util.PortletKeys;
+import com.liferay.portlet.documentlibrary.model.DLFileEntry;
+import com.liferay.portlet.messageboards.model.MBMessage;
 import com.liferay.portlet.wiki.model.WikiNode;
 import com.liferay.portlet.wiki.model.WikiPage;
 import com.liferay.portlet.wiki.service.WikiNodeLocalServiceUtil;
 import com.liferay.portlet.wiki.service.WikiNodeServiceUtil;
 import com.liferay.portlet.wiki.service.WikiPageLocalServiceUtil;
+import com.liferay.portlet.wiki.service.permission.WikiPagePermission;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 
+import javax.portlet.PortletRequest;
+import javax.portlet.PortletResponse;
 import javax.portlet.PortletURL;
 
 /**
@@ -65,15 +64,69 @@ public class WikiPageIndexer extends BaseIndexer {
 	public static final String PORTLET_ID = PortletKeys.WIKI;
 
 	public WikiPageIndexer() {
+		setDefaultSelectedFieldNames(
+			Field.COMPANY_ID, Field.CONTENT, Field.ENTRY_CLASS_NAME,
+			Field.ENTRY_CLASS_PK, Field.TITLE, Field.UID);
+		setFilterSearch(true);
 		setPermissionAware(true);
 	}
 
+	@Override
+	public void addRelatedEntryFields(Document document, Object obj)
+		throws Exception {
+
+		long classPK = 0;
+
+		if (obj instanceof DLFileEntry) {
+			DLFileEntry dlFileEntry = (DLFileEntry)obj;
+
+			classPK = dlFileEntry.getClassPK();
+		}
+		else if (obj instanceof MBMessage) {
+			MBMessage message = (MBMessage)obj;
+
+			classPK = message.getClassPK();
+		}
+
+		WikiPage page = null;
+
+		try {
+			page = WikiPageLocalServiceUtil.getPage(classPK);
+		}
+		catch (Exception e) {
+			return;
+		}
+
+		document.addKeyword(Field.NODE_ID, page.getNodeId());
+	}
+
+	@Override
 	public String[] getClassNames() {
 		return CLASS_NAMES;
 	}
 
+	@Override
 	public String getPortletId() {
 		return PORTLET_ID;
+	}
+
+	@Override
+	public boolean hasPermission(
+			PermissionChecker permissionChecker, String entryClassName,
+			long entryClassPK, String actionId)
+		throws Exception {
+
+		WikiPage page = WikiPageLocalServiceUtil.getPage(entryClassPK);
+
+		return WikiPagePermission.contains(
+			permissionChecker, page, ActionKeys.VIEW);
+	}
+
+	@Override
+	public boolean isVisible(long classPK, int status) throws Exception {
+		WikiPage page = WikiPageLocalServiceUtil.getPage(classPK);
+
+		return isVisible(page.getStatus(), status);
 	}
 
 	@Override
@@ -81,17 +134,11 @@ public class WikiPageIndexer extends BaseIndexer {
 			BooleanQuery contextQuery, SearchContext searchContext)
 		throws Exception {
 
-		int status = GetterUtil.getInteger(
-			searchContext.getAttribute(Field.STATUS),
-			WorkflowConstants.STATUS_APPROVED);
-
-		if (status != WorkflowConstants.STATUS_ANY) {
-			contextQuery.addRequiredTerm(Field.STATUS, status);
-		}
+		addStatus(contextQuery, searchContext);
 
 		long[] nodeIds = searchContext.getNodeIds();
 
-		if ((nodeIds != null) && (nodeIds.length > 0)) {
+		if (ArrayUtil.isNotEmpty(nodeIds)) {
 			BooleanQuery nodeIdsQuery = BooleanQueryFactoryUtil.create(
 				searchContext);
 
@@ -110,36 +157,8 @@ public class WikiPageIndexer extends BaseIndexer {
 		}
 	}
 
-	protected void addReindexCriteria(
-		DynamicQuery dynamicQuery, long companyId) {
-
-		Property property = PropertyFactoryUtil.forName("companyId");
-
-		dynamicQuery.add(property.eq(companyId));
-	}
-
-	protected void addReindexCriteria(
-		DynamicQuery dynamicQuery, long groupId, long nodeId) {
-
-		Property groupIdProperty = PropertyFactoryUtil.forName("groupId");
-
-		dynamicQuery.add(groupIdProperty.eq(groupId));
-
-		Property nodeIdProperty = PropertyFactoryUtil.forName("nodeId");
-
-		dynamicQuery.add(nodeIdProperty.eq(nodeId));
-
-		Property headProperty = PropertyFactoryUtil.forName("head");
-
-		dynamicQuery.add(headProperty.eq(true));
-	}
-
 	@Override
 	protected void doDelete(Object obj) throws Exception {
-		SearchContext searchContext = new SearchContext();
-
-		searchContext.setSearchEngineId(getSearchEngineId());
-
 		if (obj instanceof Object[]) {
 			Object[] array = (Object[])obj;
 
@@ -153,40 +172,11 @@ public class WikiPageIndexer extends BaseIndexer {
 
 			SearchEngineUtil.deleteDocument(
 				getSearchEngineId(), companyId, document.get(Field.UID));
-
-		}
-		else if (obj instanceof WikiNode) {
-			WikiNode node = (WikiNode)obj;
-
-			BooleanQuery booleanQuery = BooleanQueryFactoryUtil.create(
-				searchContext);
-
-			booleanQuery.addRequiredTerm(Field.PORTLET_ID, PORTLET_ID);
-
-			booleanQuery.addRequiredTerm("nodeId", node.getNodeId());
-
-			Hits hits = SearchEngineUtil.search(
-				getSearchEngineId(), node.getCompanyId(), booleanQuery,
-				QueryUtil.ALL_POS, QueryUtil.ALL_POS);
-
-			for (int i = 0; i < hits.getLength(); i++) {
-				Document document = hits.doc(i);
-
-				SearchEngineUtil.deleteDocument(
-					getSearchEngineId(), node.getCompanyId(),
-					document.get(Field.UID));
-			}
 		}
 		else if (obj instanceof WikiPage) {
 			WikiPage page = (WikiPage)obj;
 
-			Document document = new DocumentImpl();
-
-			document.addUID(PORTLET_ID, page.getNodeId(), page.getTitle());
-
-			SearchEngineUtil.deleteDocument(
-				getSearchEngineId(), page.getCompanyId(),
-				document.get(Field.UID));
+			deleteDocument(page.getCompanyId(), page.getPageId());
 		}
 	}
 
@@ -211,8 +201,8 @@ public class WikiPageIndexer extends BaseIndexer {
 
 	@Override
 	protected Summary doGetSummary(
-		Document document, Locale locale, String snippet,
-		PortletURL portletURL) {
+		Document document, Locale locale, String snippet, PortletURL portletURL,
+		PortletRequest portletRequest, PortletResponse portletResponse) {
 
 		Summary summary = createSummary(document, Field.TITLE, Field.CONTENT);
 
@@ -233,6 +223,10 @@ public class WikiPageIndexer extends BaseIndexer {
 	protected void doReindex(Object obj) throws Exception {
 		WikiPage page = (WikiPage)obj;
 
+		if (!page.isHead() || (!page.isApproved() && !page.isInTrash())) {
+			return;
+		}
+
 		if (Validator.isNotNull(page.getRedirectTitle())) {
 			return;
 		}
@@ -245,7 +239,8 @@ public class WikiPageIndexer extends BaseIndexer {
 
 	@Override
 	protected void doReindex(String className, long classPK) throws Exception {
-		WikiPage page = WikiPageLocalServiceUtil.getPage(classPK);
+		WikiPage page = WikiPageLocalServiceUtil.getPage(
+			classPK, (Boolean)null);
 
 		doReindex(page);
 	}
@@ -262,143 +257,71 @@ public class WikiPageIndexer extends BaseIndexer {
 		return PORTLET_ID;
 	}
 
-	protected void reindexNodes(long companyId) throws Exception {
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			WikiNode.class, PACLClassLoaderUtil.getPortalClassLoader());
+	protected void reindexNodes(final long companyId) throws PortalException {
+		ActionableDynamicQuery actionableDynamicQuery =
+			WikiNodeLocalServiceUtil.getActionableDynamicQuery();
 
-		Projection minNodeIdProjection = ProjectionFactoryUtil.min("nodeId");
-		Projection maxNodeIdProjection = ProjectionFactoryUtil.max("nodeId");
+		actionableDynamicQuery.setCompanyId(companyId);
+		actionableDynamicQuery.setPerformActionMethod(
+			new ActionableDynamicQuery.PerformActionMethod() {
 
-		ProjectionList projectionList = ProjectionFactoryUtil.projectionList();
+				@Override
+				public void performAction(Object object)
+					throws PortalException {
 
-		projectionList.add(minNodeIdProjection);
-		projectionList.add(maxNodeIdProjection);
+					WikiNode node = (WikiNode)object;
 
-		dynamicQuery.setProjection(projectionList);
+					reindexPages(
+						companyId, node.getGroupId(), node.getNodeId());
+				}
 
-		addReindexCriteria(dynamicQuery, companyId);
+			});
 
-		List<Object[]> results = WikiNodeLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
-
-		Object[] minAndMaxNodeIds = results.get(0);
-
-		if ((minAndMaxNodeIds[0] == null) || (minAndMaxNodeIds[1] == null)) {
-			return;
-		}
-
-		long minNodeId = (Long)minAndMaxNodeIds[0];
-		long maxNodeId = (Long)minAndMaxNodeIds[1];
-
-		long startNodeId = minNodeId;
-		long endNodeId = startNodeId + DEFAULT_INTERVAL;
-
-		while (startNodeId <= maxNodeId) {
-			reindexNodes(companyId, startNodeId, endNodeId);
-
-			startNodeId = endNodeId;
-			endNodeId += DEFAULT_INTERVAL;
-		}
+		actionableDynamicQuery.performActions();
 	}
 
-	protected void reindexNodes(
-			long companyId, long startNodeId, long endNodeId)
-		throws Exception {
+	protected void reindexPages(long companyId, long groupId, final long nodeId)
+		throws PortalException {
 
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			WikiNode.class, PACLClassLoaderUtil.getPortalClassLoader());
+		final ActionableDynamicQuery actionableDynamicQuery =
+			WikiPageLocalServiceUtil.getActionableDynamicQuery();
 
-		Property property = PropertyFactoryUtil.forName("nodeId");
+		actionableDynamicQuery.setAddCriteriaMethod(
+			new ActionableDynamicQuery.AddCriteriaMethod() {
 
-		dynamicQuery.add(property.ge(startNodeId));
-		dynamicQuery.add(property.lt(endNodeId));
+				@Override
+				public void addCriteria(DynamicQuery dynamicQuery) {
+					Property nodeIdProperty = PropertyFactoryUtil.forName(
+						"nodeId");
 
-		addReindexCriteria(dynamicQuery, companyId);
+					dynamicQuery.add(nodeIdProperty.eq(nodeId));
 
-		List<WikiNode> nodes = WikiNodeLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
+					Property headProperty = PropertyFactoryUtil.forName("head");
 
-		for (WikiNode node : nodes) {
-			long groupId = node.getGroupId();
-			long nodeId = node.getNodeId();
+					dynamicQuery.add(headProperty.eq(true));
+				}
 
-			reindexPages(companyId, groupId, nodeId);
-		}
-	}
+			});
+		actionableDynamicQuery.setCompanyId(companyId);
+		actionableDynamicQuery.setGroupId(groupId);
+		actionableDynamicQuery.setPerformActionMethod(
+			new ActionableDynamicQuery.PerformActionMethod() {
 
-	protected void reindexPages(long companyId, long groupId, long nodeId)
-		throws Exception {
+				@Override
+				public void performAction(Object object)
+					throws PortalException {
 
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			WikiPage.class, PACLClassLoaderUtil.getPortalClassLoader());
+					WikiPage page = (WikiPage)object;
 
-		Projection minPageIdProjection = ProjectionFactoryUtil.min("pageId");
-		Projection maxPageIdProjection = ProjectionFactoryUtil.max("pageId");
+					Document document = getDocument(page);
 
-		ProjectionList projectionList = ProjectionFactoryUtil.projectionList();
+					actionableDynamicQuery.addDocument(document);
+				}
 
-		projectionList.add(minPageIdProjection);
-		projectionList.add(maxPageIdProjection);
+			});
+		actionableDynamicQuery.setSearchEngineId(getSearchEngineId());
 
-		dynamicQuery.setProjection(projectionList);
-
-		addReindexCriteria(dynamicQuery, groupId, nodeId);
-
-		List<Object[]> results = WikiPageLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
-
-		Object[] minAndMaxPageIds = results.get(0);
-
-		if ((minAndMaxPageIds[0] == null) || (minAndMaxPageIds[1] == null)) {
-			return;
-		}
-
-		long minPageId = (Long)minAndMaxPageIds[0];
-		long maxPageId = (Long)minAndMaxPageIds[1];
-
-		long startPageId = minPageId;
-		long endPageId = startPageId + DEFAULT_INTERVAL;
-
-		while (startPageId <= maxPageId) {
-			reindexPages(companyId, groupId, nodeId, startPageId, endPageId);
-
-			startPageId = endPageId;
-			endPageId += DEFAULT_INTERVAL;
-		}
-	}
-
-	protected void reindexPages(
-			long companyId, long groupId, long nodeId, long startPageId,
-			long endPageId)
-		throws Exception {
-
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			WikiPage.class, PACLClassLoaderUtil.getPortalClassLoader());
-
-		Property property = PropertyFactoryUtil.forName("pageId");
-
-		dynamicQuery.add(property.ge(startPageId));
-		dynamicQuery.add(property.lt(endPageId));
-
-		addReindexCriteria(dynamicQuery, groupId, nodeId);
-
-		List<WikiPage> pages = WikiPageLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
-
-		if (pages.isEmpty()) {
-			return;
-		}
-
-		Collection<Document> documents = new ArrayList<Document>(pages.size());
-
-		for (WikiPage page : pages) {
-			Document document = getDocument(page);
-
-			documents.add(document);
-		}
-
-		SearchEngineUtil.updateDocuments(
-			getSearchEngineId(), companyId, documents);
+		actionableDynamicQuery.performActions();
 	}
 
 }

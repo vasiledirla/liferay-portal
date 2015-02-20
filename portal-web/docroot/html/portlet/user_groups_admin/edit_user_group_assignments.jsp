@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -64,15 +64,16 @@ portletURL.setParameter("userGroupId", String.valueOf(userGroup.getUserGroupId()
 	<liferay-ui:search-container
 		rowChecker="<%= new UserUserGroupChecker(renderResponse, userGroup) %>"
 		searchContainer="<%= new UserSearch(renderRequest, portletURL) %>"
+		var="userSearchContainer"
 	>
 		<liferay-ui:search-form
 			page="/html/portlet/users_admin/user_search.jsp"
 		/>
 
 		<%
-		UserSearchTerms searchTerms = (UserSearchTerms)searchContainer.getSearchTerms();
+		UserSearchTerms searchTerms = (UserSearchTerms)userSearchContainer.getSearchTerms();
 
-		LinkedHashMap userParams = new LinkedHashMap();
+		LinkedHashMap<String, Object> userParams = new LinkedHashMap<String, Object>();
 
 		if (filterManageableOrganizations) {
 			userParams.put("usersOrgsTree", user.getOrganizations());
@@ -113,8 +114,6 @@ portletURL.setParameter("userGroupId", String.valueOf(userGroup.getUserGroupId()
 
 		<aui:button onClick="<%= taglibOnClick %>" value="update-associations" />
 
-		<br /><br />
-
 		<liferay-ui:search-iterator />
 	</liferay-ui:search-container>
 </aui:form>
@@ -124,10 +123,11 @@ portletURL.setParameter("userGroupId", String.valueOf(userGroup.getUserGroupId()
 		window,
 		'<portlet:namespace />updateUserGroupUsers',
 		function(assignmentsRedirect) {
-			document.<portlet:namespace />fm.<portlet:namespace /><%= Constants.CMD %>.value = "user_group_users";
+			document.<portlet:namespace />fm.<portlet:namespace /><%= Constants.CMD %>.value = 'user_group_users';
 			document.<portlet:namespace />fm.<portlet:namespace />assignmentsRedirect.value = assignmentsRedirect;
-			document.<portlet:namespace />fm.<portlet:namespace />addUserIds.value = Liferay.Util.listCheckedExcept(document.<portlet:namespace />fm, "<portlet:namespace />allRowIds");
-			document.<portlet:namespace />fm.<portlet:namespace />removeUserIds.value = Liferay.Util.listUncheckedExcept(document.<portlet:namespace />fm, "<portlet:namespace />allRowIds");
+			document.<portlet:namespace />fm.<portlet:namespace />addUserIds.value = Liferay.Util.listCheckedExcept(document.<portlet:namespace />fm, '<portlet:namespace />allRowIds');
+			document.<portlet:namespace />fm.<portlet:namespace />removeUserIds.value = Liferay.Util.listUncheckedExcept(document.<portlet:namespace />fm, '<portlet:namespace />allRowIds');
+
 			submitForm(document.<portlet:namespace />fm);
 		},
 		['liferay-util-list-fields']
@@ -136,5 +136,5 @@ portletURL.setParameter("userGroupId", String.valueOf(userGroup.getUserGroupId()
 
 <%
 PortalUtil.addPortletBreadcrumbEntry(request, userGroup.getName(), null);
-PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(pageContext, "assign-members"), currentURL);
+PortalUtil.addPortletBreadcrumbEntry(request, LanguageUtil.get(request, "assign-members"), currentURL);
 %>

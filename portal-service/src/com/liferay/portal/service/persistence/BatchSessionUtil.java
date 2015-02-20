@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -20,9 +20,11 @@ import com.liferay.portal.kernel.security.pacl.permission.PortalRuntimePermissio
 import com.liferay.portal.model.BaseModel;
 
 /**
- * @author Brian Wing Shun Chan
- * @see    BatchSession
+ * @author     Brian Wing Shun Chan
+ * @see        BatchSession
+ * @deprecated As of 6.2.0, see LPS-30598.
  */
+@Deprecated
 public class BatchSessionUtil {
 
 	public static void delete(Session session, BaseModel<?> model)

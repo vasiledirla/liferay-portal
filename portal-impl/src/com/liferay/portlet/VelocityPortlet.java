@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,8 +15,7 @@
 package com.liferay.portlet;
 
 import com.liferay.portal.kernel.template.Template;
-import com.liferay.portal.kernel.template.TemplateContextType;
-import com.liferay.portal.kernel.template.TemplateManager;
+import com.liferay.portal.kernel.template.TemplateConstants;
 import com.liferay.portal.kernel.template.TemplateManagerUtil;
 import com.liferay.portal.kernel.template.TemplateResource;
 import com.liferay.portal.kernel.template.TemplateResourceLoaderUtil;
@@ -158,7 +157,7 @@ public class VelocityPortlet extends GenericPortlet {
 		StringBundler sb = new StringBundler(4);
 
 		sb.append(_portletContextName);
-		sb.append(TemplateResource.SERVLET_SEPARATOR);
+		sb.append(TemplateConstants.SERVLET_SEPARATOR);
 		sb.append(StrutsUtil.TEXT_HTML_DIR);
 		sb.append(name);
 
@@ -172,7 +171,7 @@ public class VelocityPortlet extends GenericPortlet {
 
 		TemplateResource templateResource =
 			TemplateResourceLoaderUtil.getTemplateResource(
-				TemplateManager.VELOCITY, templateId);
+				TemplateConstants.LANG_TYPE_VM, templateId);
 
 		if (templateResource == null) {
 			throw new Exception(
@@ -180,8 +179,7 @@ public class VelocityPortlet extends GenericPortlet {
 		}
 
 		Template template = TemplateManagerUtil.getTemplate(
-			TemplateManager.VELOCITY, templateResource,
-			TemplateContextType.STANDARD);
+			TemplateConstants.LANG_TYPE_VM, templateResource, false);
 
 		prepareTemplate(template, portletRequest, portletResponse);
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,13 +14,11 @@
 
 package com.liferay.portlet.wiki.util;
 
+import com.liferay.portal.kernel.dao.orm.ActionableDynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQuery;
-import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.Projection;
-import com.liferay.portal.kernel.dao.orm.ProjectionFactoryUtil;
-import com.liferay.portal.kernel.dao.orm.ProjectionList;
 import com.liferay.portal.kernel.dao.orm.Property;
 import com.liferay.portal.kernel.dao.orm.PropertyFactoryUtil;
+import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.search.BaseIndexer;
 import com.liferay.portal.kernel.search.Document;
 import com.liferay.portal.kernel.search.DocumentImpl;
@@ -30,7 +28,6 @@ import com.liferay.portal.kernel.search.SearchEngineUtil;
 import com.liferay.portal.kernel.search.Summary;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
-import com.liferay.portal.security.pacl.PACLClassLoaderUtil;
 import com.liferay.portal.security.permission.ActionKeys;
 import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.util.PortletKeys;
@@ -38,11 +35,10 @@ import com.liferay.portlet.wiki.model.WikiNode;
 import com.liferay.portlet.wiki.service.WikiNodeLocalServiceUtil;
 import com.liferay.portlet.wiki.service.permission.WikiNodePermission;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
 
+import javax.portlet.PortletRequest;
+import javax.portlet.PortletResponse;
 import javax.portlet.PortletURL;
 
 /**
@@ -55,14 +51,19 @@ public class WikiNodeIndexer extends BaseIndexer {
 	public static final String PORTLET_ID = PortletKeys.WIKI;
 
 	public WikiNodeIndexer() {
+		setDefaultSelectedFieldNames(
+			Field.COMPANY_ID, Field.ENTRY_CLASS_NAME, Field.ENTRY_CLASS_PK,
+			Field.UID);
 		setFilterSearch(false);
 		setPermissionAware(false);
 	}
 
+	@Override
 	public String[] getClassNames() {
 		return CLASS_NAMES;
 	}
 
+	@Override
 	public String getPortletId() {
 		return PORTLET_ID;
 	}
@@ -77,18 +78,6 @@ public class WikiNodeIndexer extends BaseIndexer {
 
 		return WikiNodePermission.contains(
 			permissionChecker, node, ActionKeys.VIEW);
-	}
-
-	protected void addReindexCriteria(
-		DynamicQuery dynamicQuery, long companyId) {
-
-		Property companyIdProperty = PropertyFactoryUtil.forName("companyId");
-
-		dynamicQuery.add(companyIdProperty.eq(companyId));
-
-		Property statusProperty = PropertyFactoryUtil.forName("status");
-
-		dynamicQuery.add(statusProperty.eq(WorkflowConstants.STATUS_IN_TRASH));
 	}
 
 	@Override
@@ -120,7 +109,8 @@ public class WikiNodeIndexer extends BaseIndexer {
 	@Override
 	protected Summary doGetSummary(
 			Document document, Locale locale, String snippet,
-			PortletURL portletURL)
+			PortletURL portletURL, PortletRequest portletRequest,
+			PortletResponse portletResponse)
 		throws Exception {
 
 		return null;
@@ -131,6 +121,14 @@ public class WikiNodeIndexer extends BaseIndexer {
 		WikiNode node = (WikiNode)obj;
 
 		Document document = getDocument(obj);
+
+		if (!node.isInTrash()) {
+			SearchEngineUtil.deleteDocument(
+				getSearchEngineId(), node.getCompanyId(),
+				document.get(Field.UID));
+
+			return;
+		}
 
 		SearchEngineUtil.updateDocument(
 			getSearchEngineId(), node.getCompanyId(), document);
@@ -155,76 +153,41 @@ public class WikiNodeIndexer extends BaseIndexer {
 		return PORTLET_ID;
 	}
 
-	protected void reindexEntries(long companyId) throws Exception {
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			WikiNode.class, PACLClassLoaderUtil.getPortalClassLoader());
+	protected void reindexEntries(long companyId) throws PortalException {
+		final ActionableDynamicQuery actionableDynamicQuery =
+			WikiNodeLocalServiceUtil.getActionableDynamicQuery();
 
-		Projection minEntryIdProjection = ProjectionFactoryUtil.min("nodeId");
-		Projection maxEntryIdProjection = ProjectionFactoryUtil.max("nodeId");
+		actionableDynamicQuery.setAddCriteriaMethod(
+			new ActionableDynamicQuery.AddCriteriaMethod() {
 
-		ProjectionList projectionList = ProjectionFactoryUtil.projectionList();
+				@Override
+				public void addCriteria(DynamicQuery dynamicQuery) {
+					Property property = PropertyFactoryUtil.forName("status");
 
-		projectionList.add(minEntryIdProjection);
-		projectionList.add(maxEntryIdProjection);
+					dynamicQuery.add(
+						property.eq(WorkflowConstants.STATUS_IN_TRASH));
+				}
 
-		dynamicQuery.setProjection(projectionList);
+			});
+		actionableDynamicQuery.setCompanyId(companyId);
+		actionableDynamicQuery.setPerformActionMethod(
+			new ActionableDynamicQuery.PerformActionMethod() {
 
-		addReindexCriteria(dynamicQuery, companyId);
+				@Override
+				public void performAction(Object object)
+					throws PortalException {
 
-		List<Object[]> results = WikiNodeLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
+					WikiNode node = (WikiNode)object;
 
-		Object[] minAndMaxNodeIds = results.get(0);
+					Document document = getDocument(node);
 
-		if ((minAndMaxNodeIds[0] == null) || (minAndMaxNodeIds[1] == null)) {
-			return;
-		}
+					actionableDynamicQuery.addDocument(document);
+				}
 
-		long minNodeId = (Long)minAndMaxNodeIds[0];
-		long maxNodeId = (Long)minAndMaxNodeIds[1];
+			});
+		actionableDynamicQuery.setSearchEngineId(getSearchEngineId());
 
-		long startNodeId = minNodeId;
-		long endNodeId = startNodeId + DEFAULT_INTERVAL;
-
-		while (startNodeId <= maxNodeId) {
-			reindexEntries(companyId, startNodeId, endNodeId);
-
-			startNodeId = endNodeId;
-			endNodeId += DEFAULT_INTERVAL;
-		}
-	}
-
-	protected void reindexEntries(
-			long companyId, long startNodeId, long endNodeId)
-		throws Exception {
-
-		DynamicQuery dynamicQuery = DynamicQueryFactoryUtil.forClass(
-			WikiNode.class, PACLClassLoaderUtil.getPortalClassLoader());
-
-		Property property = PropertyFactoryUtil.forName("nodeId");
-
-		dynamicQuery.add(property.ge(startNodeId));
-		dynamicQuery.add(property.lt(endNodeId));
-
-		addReindexCriteria(dynamicQuery, companyId);
-
-		List<WikiNode> nodes = WikiNodeLocalServiceUtil.dynamicQuery(
-			dynamicQuery);
-
-		if (nodes.isEmpty()) {
-			return;
-		}
-
-		Collection<Document> documents = new ArrayList<Document>(nodes.size());
-
-		for (WikiNode node : nodes) {
-			Document document = getDocument(node);
-
-			documents.add(document);
-		}
-
-		SearchEngineUtil.updateDocuments(
-			getSearchEngineId(), companyId, documents);
+		actionableDynamicQuery.performActions();
 	}
 
 }

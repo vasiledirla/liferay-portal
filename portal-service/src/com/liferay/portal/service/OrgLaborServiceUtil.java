@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,15 +14,18 @@
 
 package com.liferay.portal.service;
 
+import aQute.bnd.annotation.ProviderType;
+
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
 import com.liferay.portal.kernel.util.ReferenceRegistry;
 
 /**
- * The utility for the org labor remote service. This utility wraps {@link com.liferay.portal.service.impl.OrgLaborServiceImpl} and is the primary access point for service operations in application layer code running on a remote server.
- *
- * <p>
- * This is a remote service. Methods of this service are expected to have security checks based on the propagated JAAS credentials because this service can be accessed remotely.
- * </p>
+ * Provides the remote service utility for OrgLabor. This utility wraps
+ * {@link com.liferay.portal.service.impl.OrgLaborServiceImpl} and is the
+ * primary access point for service operations in application layer code running
+ * on a remote server. Methods of this service are expected to have security
+ * checks based on the propagated JAAS credentials because this service can be
+ * accessed remotely.
  *
  * @author Brian Wing Shun Chan
  * @see OrgLaborService
@@ -30,12 +33,29 @@ import com.liferay.portal.kernel.util.ReferenceRegistry;
  * @see com.liferay.portal.service.impl.OrgLaborServiceImpl
  * @generated
  */
+@ProviderType
 public class OrgLaborServiceUtil {
 	/*
 	 * NOTE FOR DEVELOPERS:
 	 *
 	 * Never modify this class directly. Add custom service methods to {@link com.liferay.portal.service.impl.OrgLaborServiceImpl} and rerun ServiceBuilder to regenerate this class.
 	 */
+	public static com.liferay.portal.model.OrgLabor addOrgLabor(
+		long organizationId, int typeId, int sunOpen, int sunClose,
+		int monOpen, int monClose, int tueOpen, int tueClose, int wedOpen,
+		int wedClose, int thuOpen, int thuClose, int friOpen, int friClose,
+		int satOpen, int satClose)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService()
+				   .addOrgLabor(organizationId, typeId, sunOpen, sunClose,
+			monOpen, monClose, tueOpen, tueClose, wedOpen, wedClose, thuOpen,
+			thuClose, friOpen, friClose, satOpen, satClose);
+	}
+
+	public static void deleteOrgLabor(long orgLaborId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		getService().deleteOrgLabor(orgLaborId);
+	}
 
 	/**
 	* Returns the Spring bean ID for this bean.
@@ -44,6 +64,17 @@ public class OrgLaborServiceUtil {
 	*/
 	public static java.lang.String getBeanIdentifier() {
 		return getService().getBeanIdentifier();
+	}
+
+	public static com.liferay.portal.model.OrgLabor getOrgLabor(long orgLaborId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getOrgLabor(orgLaborId);
+	}
+
+	public static java.util.List<com.liferay.portal.model.OrgLabor> getOrgLabors(
+		long organizationId)
+		throws com.liferay.portal.kernel.exception.PortalException {
+		return getService().getOrgLabors(organizationId);
 	}
 
 	/**
@@ -55,45 +86,12 @@ public class OrgLaborServiceUtil {
 		getService().setBeanIdentifier(beanIdentifier);
 	}
 
-	public static com.liferay.portal.model.OrgLabor addOrgLabor(
-		long organizationId, int typeId, int sunOpen, int sunClose,
-		int monOpen, int monClose, int tueOpen, int tueClose, int wedOpen,
-		int wedClose, int thuOpen, int thuClose, int friOpen, int friClose,
-		int satOpen, int satClose)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService()
-				   .addOrgLabor(organizationId, typeId, sunOpen, sunClose,
-			monOpen, monClose, tueOpen, tueClose, wedOpen, wedClose, thuOpen,
-			thuClose, friOpen, friClose, satOpen, satClose);
-	}
-
-	public static void deleteOrgLabor(long orgLaborId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		getService().deleteOrgLabor(orgLaborId);
-	}
-
-	public static com.liferay.portal.model.OrgLabor getOrgLabor(long orgLaborId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getOrgLabor(orgLaborId);
-	}
-
-	public static java.util.List<com.liferay.portal.model.OrgLabor> getOrgLabors(
-		long organizationId)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
-		return getService().getOrgLabors(organizationId);
-	}
-
 	public static com.liferay.portal.model.OrgLabor updateOrgLabor(
 		long orgLaborId, int typeId, int sunOpen, int sunClose, int monOpen,
 		int monClose, int tueOpen, int tueClose, int wedOpen, int wedClose,
 		int thuOpen, int thuClose, int friOpen, int friClose, int satOpen,
 		int satClose)
-		throws com.liferay.portal.kernel.exception.PortalException,
-			com.liferay.portal.kernel.exception.SystemException {
+		throws com.liferay.portal.kernel.exception.PortalException {
 		return getService()
 				   .updateOrgLabor(orgLaborId, typeId, sunOpen, sunClose,
 			monOpen, monClose, tueOpen, tueClose, wedOpen, wedClose, thuOpen,
@@ -112,8 +110,9 @@ public class OrgLaborServiceUtil {
 	}
 
 	/**
-	 * @deprecated
+	 * @deprecated As of 6.2.0
 	 */
+	@Deprecated
 	public void setService(OrgLaborService service) {
 	}
 

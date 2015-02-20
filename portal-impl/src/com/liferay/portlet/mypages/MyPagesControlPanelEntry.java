@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,11 +14,11 @@
 
 package com.liferay.portlet.mypages;
 
+import com.liferay.portal.model.Group;
 import com.liferay.portal.model.Portlet;
 import com.liferay.portal.model.RoleConstants;
 import com.liferay.portal.security.permission.PermissionChecker;
 import com.liferay.portal.service.RoleLocalServiceUtil;
-import com.liferay.portal.theme.ThemeDisplay;
 import com.liferay.portal.util.PropsValues;
 import com.liferay.portlet.BaseControlPanelEntry;
 
@@ -28,26 +28,16 @@ import com.liferay.portlet.BaseControlPanelEntry;
  */
 public class MyPagesControlPanelEntry extends BaseControlPanelEntry {
 
-	public boolean isVisible(
-			PermissionChecker permissionChecker, Portlet portlet)
-		throws Exception {
-
-		return false;
-	}
-
 	@Override
-	public boolean isVisible(
-			Portlet portlet, String category, ThemeDisplay themeDisplay)
+	protected boolean hasAccessPermissionDenied(
+			PermissionChecker permissionChecker, Group group, Portlet portlet)
 		throws Exception {
 
 		if (!PropsValues.LAYOUT_USER_PRIVATE_LAYOUTS_ENABLED &&
 			!PropsValues.LAYOUT_USER_PUBLIC_LAYOUTS_ENABLED) {
 
-			return false;
+			return true;
 		}
-
-		PermissionChecker permissionChecker =
-			themeDisplay.getPermissionChecker();
 
 		boolean hasPowerUserRole = RoleLocalServiceUtil.hasUserRole(
 			permissionChecker.getUserId(), permissionChecker.getCompanyId(),
@@ -57,10 +47,10 @@ public class MyPagesControlPanelEntry extends BaseControlPanelEntry {
 			 PropsValues.LAYOUT_USER_PUBLIC_LAYOUTS_POWER_USER_REQUIRED) &&
 			!hasPowerUserRole) {
 
-			return false;
+			return true;
 		}
 
-		return super.isVisible(portlet, category, themeDisplay);
+		return false;
 	}
 
 }

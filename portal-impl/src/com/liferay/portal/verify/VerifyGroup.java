@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,24 +21,30 @@ import com.liferay.portal.kernel.dao.orm.DynamicQuery;
 import com.liferay.portal.kernel.dao.orm.DynamicQueryFactoryUtil;
 import com.liferay.portal.kernel.dao.orm.RestrictionsFactoryUtil;
 import com.liferay.portal.kernel.dao.shard.ShardUtil;
+import com.liferay.portal.kernel.lar.PortletDataHandler;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.staging.StagingConstants;
 import com.liferay.portal.kernel.util.GetterUtil;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.StringPool;
+import com.liferay.portal.kernel.util.StringUtil;
 import com.liferay.portal.kernel.util.UnicodeProperties;
 import com.liferay.portal.model.Company;
 import com.liferay.portal.model.Group;
 import com.liferay.portal.model.GroupConstants;
 import com.liferay.portal.model.LayoutSet;
 import com.liferay.portal.model.Organization;
+import com.liferay.portal.model.Portlet;
 import com.liferay.portal.model.Shard;
 import com.liferay.portal.model.User;
 import com.liferay.portal.service.CompanyLocalServiceUtil;
 import com.liferay.portal.service.GroupLocalServiceUtil;
+import com.liferay.portal.service.PortletLocalServiceUtil;
 import com.liferay.portal.service.ShardLocalServiceUtil;
 import com.liferay.portal.service.UserLocalServiceUtil;
 import com.liferay.portal.service.impl.GroupLocalServiceImpl;
+import com.liferay.portal.util.PortalInstances;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portal.util.PropsValues;
 import com.liferay.portal.util.RobotsUtil;
@@ -47,7 +53,9 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 
 /**
  * @author Brian Wing Shun Chan
@@ -62,6 +70,7 @@ public class VerifyGroup extends VerifyProcess {
 		verifyRobots();
 		verifySites();
 		verifyStagedGroups();
+		verifyTree();
 	}
 
 	protected String getRobots(LayoutSet layoutSet) {
@@ -123,6 +132,8 @@ public class VerifyGroup extends VerifyProcess {
 
 			if (!ShardUtil.isEnabled() || shardName.equals(currentShardName)) {
 				GroupLocalServiceUtil.checkCompanyGroup(company.getCompanyId());
+
+				GroupLocalServiceUtil.checkSystemGroups(company.getCompanyId());
 			}
 		}
 	}
@@ -135,7 +146,7 @@ public class VerifyGroup extends VerifyProcess {
 
 			User user = null;
 
-			if (group.isCompany()) {
+			if (group.isCompany() && !group.isCompanyStagingGroup()) {
 				friendlyURL = GroupConstants.GLOBAL_FRIENDLY_URL;
 			}
 			else if (group.isUser()) {
@@ -198,6 +209,14 @@ public class VerifyGroup extends VerifyProcess {
 			while (rs.next()) {
 				long groupId = rs.getLong("groupId");
 				String name = rs.getString("name");
+
+				if (name.endsWith(
+						GroupLocalServiceImpl.ORGANIZATION_NAME_SUFFIX) ||
+					name.endsWith(
+						GroupLocalServiceImpl.ORGANIZATION_STAGING_SUFFIX)) {
+
+					continue;
+				}
 
 				int pos = name.indexOf(
 					GroupLocalServiceImpl.ORGANIZATION_NAME_SUFFIX);
@@ -277,6 +296,8 @@ public class VerifyGroup extends VerifyProcess {
 			typeSettingsProperties.setProperty(
 				"stagedRemotely", Boolean.FALSE.toString());
 
+			verifyStagingTypeSettingsProperties(typeSettingsProperties);
+
 			GroupLocalServiceUtil.updateGroup(
 				group.getGroupId(), typeSettingsProperties.toString());
 
@@ -287,6 +308,58 @@ public class VerifyGroup extends VerifyProcess {
 
 				GroupLocalServiceUtil.updateGroup(stagingGroup);
 			}
+		}
+	}
+
+	protected void verifyStagingTypeSettingsProperties(
+		UnicodeProperties typeSettingsProperties) {
+
+		Set<String> keys = typeSettingsProperties.keySet();
+
+		Iterator<String> iterator = keys.iterator();
+
+		while (iterator.hasNext()) {
+			String key = iterator.next();
+
+			if (!key.contains(StagingConstants.STAGED_PORTLET)) {
+				continue;
+			}
+
+			String portletId = StringUtil.replace(
+				key, StagingConstants.STAGED_PORTLET, StringPool.BLANK);
+
+			Portlet portlet = PortletLocalServiceUtil.getPortletById(portletId);
+
+			if (portlet == null) {
+				if (_log.isInfoEnabled()) {
+					_log.info("Removing type settings property " + key);
+				}
+
+				iterator.remove();
+
+				continue;
+			}
+
+			PortletDataHandler portletDataHandler =
+				portlet.getPortletDataHandlerInstance();
+
+			if ((portletDataHandler == null) ||
+				!portletDataHandler.isDataSiteLevel()) {
+
+				if (_log.isInfoEnabled()) {
+					_log.info("Removing type settings property " + key);
+				}
+
+				iterator.remove();
+			}
+		}
+	}
+
+	protected void verifyTree() throws Exception {
+		long[] companyIds = PortalInstances.getCompanyIdsBySQL();
+
+		for (long companyId : companyIds) {
+			GroupLocalServiceUtil.rebuildTree(companyId);
 		}
 	}
 

@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,53 +16,45 @@
 
 <%@ include file="/html/portlet/journal/init.jsp" %>
 
-<%= LanguageUtil.format(pageContext, "this-page-displays-the-last-x-web-content,-structures,-and-templates-that-you-accessed", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
-
-<br /><br />
+<%= LanguageUtil.format(request, "this-page-displays-the-last-x-web-content,-structures,-and-templates-that-you-accessed", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
 
 <table class="lfr-table" width="100%">
 <tr>
 	<td class="lfr-top" width="33%">
-		<table border="0" cellpadding="4" cellspacing="0" width="100%">
-			<tr class="portlet-section-header results-header" style="font-size: x-small; font-weight: bold;">
-				<td colspan="2">
-					<%= LanguageUtil.format(pageContext, "last-x-web-content", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
+		<table class="table table-bordered table-hover table-striped">
+			<thead class="table-columns">
+			<tr>
+				<td class="table-cell" colspan="2">
+					<%= LanguageUtil.format(request, "last-x-web-content", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
 				</td>
 			</tr>
+			</thead>
 
-			<%
-			Stack recentArticles = JournalUtil.getRecentArticles(renderRequest);
+			<tbody class="table-data">
 
-			int recentArticlesSize = recentArticles.size();
+				<%
+				Stack recentArticles = JournalUtil.getRecentArticles(renderRequest);
 
-			for (int i = recentArticlesSize - 1; i >= 0; i--) {
-				JournalArticle article = (JournalArticle)recentArticles.get(i);
+				int recentArticlesSize = recentArticles.size();
 
-				article = article.toEscapedModel();
+				for (int i = recentArticlesSize - 1; i >= 0; i--) {
+					JournalArticle article = (JournalArticle)recentArticles.get(i);
+				%>
 
-				String className = "portlet-section-body results-row";
-				String classHoverName = "portlet-section-body-hover results-row hover";
+					<portlet:renderURL var="editArticleURL">
+						<portlet:param name="struts_action" value="/journal/edit_article" />
+						<portlet:param name="redirect" value="<%= currentURL %>" />
+						<portlet:param name="groupId" value="<%= String.valueOf(article.getGroupId()) %>" />
+						<portlet:param name="articleId" value="<%= article.getArticleId() %>" />
+						<portlet:param name="version" value="<%= String.valueOf(article.getVersion()) %>" />
+					</portlet:renderURL>
 
-				if (MathUtil.isEven(i)) {
-					className = "portlet-section-alternate results-row alt";
-					classHoverName = "portlet-section-alternate-hover results-row alt hover";
-				}
-			%>
-
-				<portlet:renderURL var="editArticleURL">
-					<portlet:param name="struts_action" value="/journal/edit_article" />
-					<portlet:param name="redirect" value="<%= currentURL %>" />
-					<portlet:param name="groupId" value="<%= String.valueOf(article.getGroupId()) %>" />
-					<portlet:param name="articleId" value="<%= article.getArticleId() %>" />
-					<portlet:param name="version" value="<%= String.valueOf(article.getVersion()) %>" />
-				</portlet:renderURL>
-
-				<tr class="<%= className %>" onMouseEnter="this.className = '<%= classHoverName %>';" onMouseLeave="this.className = '<%= className %>';" style="font-size: x-small;">
-					<td>
-						<aui:a href="<%= editArticleURL %>"><%= article.getArticleId() %></aui:a>
+				<tr>
+					<td class="table-cell">
+						<aui:a href="<%= editArticleURL %>"><%= HtmlUtil.escape(article.getArticleId()) %></aui:a>
 					</td>
-					<td>
-						<aui:a href="<%= editArticleURL %>"><%= article.getTitle(locale) %></aui:a>
+					<td class="table-cell">
+						<aui:a href="<%= editArticleURL %>"><%= HtmlUtil.escape(article.getTitle(locale)) %></aui:a>
 					</td>
 				</tr>
 
@@ -70,48 +62,33 @@
 			}
 			%>
 
+			</tbody>
 		</table>
 	</td>
-	<td class="lfr-top" width="33%">
-		<table border="0" cellpadding="4" cellspacing="0" width="100%">
-			<tr class="portlet-section-header results-header" style="font-size: x-small; font-weight: bold;">
-				<td colspan="2">
-					<%= LanguageUtil.format(pageContext, "last-x-structures", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
-				</td>
-			</tr>
+	<td width="33%">
+		<table class="table table-bordered table-hover table-striped">
+			<thead class="table-columns">
+				<tr>
+					<td class="table-cell" colspan="2">
+						<%= LanguageUtil.format(request, "last-x-structures", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
+					</td>
+				</tr>
+			</thead>
+
+			<tbody class="table-data">
 
 			<%
-			Stack recentStructures = JournalUtil.getRecentStructures(renderRequest);
+			Stack recentDDMStructures = JournalUtil.getRecentDDMStructures(renderRequest);
 
-			int recentStructuresSize = recentStructures.size();
+			int recentDDMStructuresSize = recentDDMStructures.size();
 
-			for (int i = recentStructuresSize - 1; i >= 0; i--) {
-				JournalStructure structure = (JournalStructure)recentStructures.get(i);
-
-				structure = structure.toEscapedModel();
-
-				String className = "portlet-section-body results-row";
-				String classHoverName = "portlet-section-body-hover results-row hover";
-
-				if (MathUtil.isEven(i)) {
-					className = "portlet-section-alternate results-row alt";
-					classHoverName = "portlet-section-alternate-hover results-row alt hover";
-				}
+			for (int i = recentDDMStructuresSize - 1; i >= 0; i--) {
+				DDMStructure ddmStructure = (DDMStructure)recentDDMStructures.get(i);
 			%>
 
-				<portlet:renderURL var="editStructureURL">
-					<portlet:param name="struts_action" value="/journal/edit_structure" />
-					<portlet:param name="redirect" value="<%= currentURL %>" />
-					<portlet:param name="groupId" value="<%= String.valueOf(structure.getGroupId()) %>" />
-					<portlet:param name="structureId" value="<%= structure.getStructureId() %>" />
-				</portlet:renderURL>
-
-				<tr class="<%= className %>" onMouseEnter="this.className = '<%= classHoverName %>';" onMouseLeave="this.className = '<%= className %>';" style="font-size: x-small;">
-					<td>
-						<aui:a href="<%= editStructureURL %>"><%= structure.getId() %></aui:a>
-					</td>
-					<td>
-						<aui:a href="<%= editStructureURL %>"><%= structure.getName(locale) %></aui:a>
+				<tr>
+					<td class="table-cell">
+						<%= HtmlUtil.escape(ddmStructure.getName(locale)) %>
 					</td>
 				</tr>
 
@@ -119,48 +96,33 @@
 			}
 			%>
 
+		</tbody>
 		</table>
 	</td>
-	<td class="lfr-top" width="33%">
-		<table border="0" cellpadding="4" cellspacing="0" width="100%">
-			<tr class="portlet-section-header results-header" style="font-size: x-small; font-weight: bold;">
-				<td colspan="2">
-					<%= LanguageUtil.format(pageContext, "last-x-templates", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
-				</td>
-			</tr>
+	<td width="33%">
+		<table class="table table-bordered table-hover table-striped">
+			<thead class="table-columns">
+				<tr>
+					<td class="table-cell" colspan="2">
+						<%= LanguageUtil.format(request, "last-x-templates", String.valueOf(JournalUtil.MAX_STACK_SIZE), false) %>
+					</td>
+				</tr>
+			</thead>
+
+			<tbody class="table-data">
 
 			<%
-			Stack recentTemplates = JournalUtil.getRecentTemplates(renderRequest);
+			Stack recentDDMTemplates = JournalUtil.getRecentDDMTemplates(renderRequest);
 
-			int recentTemplatesSize = recentTemplates.size();
+			int recentDDMTemplatesSize = recentDDMTemplates.size();
 
-			for (int i = recentTemplatesSize - 1; i >= 0; i--) {
-				JournalTemplate template = (JournalTemplate)recentTemplates.get(i);
-
-				template = template.toEscapedModel();
-
-				String className = "portlet-section-body results-row";
-				String classHoverName = "portlet-section-body-hover results-row hover";
-
-				if (MathUtil.isEven(recentTemplatesSize - i - 1)) {
-					className = "portlet-section-alternate results-row alt";
-					classHoverName = "portlet-section-alternate-hover results-row alt hover";
-				}
+			for (int i = recentDDMTemplatesSize - 1; i >= 0; i--) {
+				DDMTemplate ddmTemplate = (DDMTemplate)recentDDMTemplates.get(i);
 			%>
 
-				<portlet:renderURL var="editTemplateURL">
-					<portlet:param name="struts_action" value="/journal/edit_template" />
-					<portlet:param name="redirect" value="<%= currentURL %>" />
-					<portlet:param name="groupId" value="<%= String.valueOf(template.getGroupId()) %>" />
-					<portlet:param name="templateId" value="<%= template.getTemplateId() %>" />
-				</portlet:renderURL>
-
-				<tr class="<%= className %>" onMouseEnter="this.className = '<%= classHoverName %>';" onMouseLeave="this.className = '<%= className %>';" style="font-size: x-small;">
-					<td>
-						<aui:a href="<%= editTemplateURL %>"><%= template.getId() %></aui:a>
-					</td>
-					<td>
-						<aui:a href="<%= editTemplateURL %>"><%= template.getName(locale) %></aui:a>
+				<tr>
+					<td class="table-cell">
+						<%= HtmlUtil.escape(ddmTemplate.getName(locale)) %>
 					</td>
 				</tr>
 
@@ -168,6 +130,7 @@
 			}
 			%>
 
+		</tbody>
 		</table>
 	</td>
 </tr>

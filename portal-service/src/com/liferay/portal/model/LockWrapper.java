@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,6 +14,10 @@
 
 package com.liferay.portal.model;
 
+import aQute.bnd.annotation.ProviderType;
+
+import com.liferay.portal.kernel.util.Validator;
+
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -23,26 +27,31 @@ import java.util.Map;
  * This class is a wrapper for {@link Lock}.
  * </p>
  *
- * @author    Brian Wing Shun Chan
- * @see       Lock
+ * @author Brian Wing Shun Chan
+ * @see Lock
  * @generated
  */
+@ProviderType
 public class LockWrapper implements Lock, ModelWrapper<Lock> {
 	public LockWrapper(Lock lock) {
 		_lock = lock;
 	}
 
+	@Override
 	public Class<?> getModelClass() {
 		return Lock.class;
 	}
 
+	@Override
 	public String getModelClassName() {
 		return Lock.class.getName();
 	}
 
+	@Override
 	public Map<String, Object> getModelAttributes() {
 		Map<String, Object> attributes = new HashMap<String, Object>();
 
+		attributes.put("mvccVersion", getMvccVersion());
 		attributes.put("uuid", getUuid());
 		attributes.put("lockId", getLockId());
 		attributes.put("companyId", getCompanyId());
@@ -58,7 +67,14 @@ public class LockWrapper implements Lock, ModelWrapper<Lock> {
 		return attributes;
 	}
 
+	@Override
 	public void setModelAttributes(Map<String, Object> attributes) {
+		Long mvccVersion = (Long)attributes.get("mvccVersion");
+
+		if (mvccVersion != null) {
+			setMvccVersion(mvccVersion);
+		}
+
 		String uuid = (String)attributes.get("uuid");
 
 		if (uuid != null) {
@@ -126,150 +142,14 @@ public class LockWrapper implements Lock, ModelWrapper<Lock> {
 		}
 	}
 
-	/**
-	* Returns the primary key of this lock.
-	*
-	* @return the primary key of this lock
-	*/
-	public long getPrimaryKey() {
-		return _lock.getPrimaryKey();
+	@Override
+	public java.lang.Object clone() {
+		return new LockWrapper((Lock)_lock.clone());
 	}
 
-	/**
-	* Sets the primary key of this lock.
-	*
-	* @param primaryKey the primary key of this lock
-	*/
-	public void setPrimaryKey(long primaryKey) {
-		_lock.setPrimaryKey(primaryKey);
-	}
-
-	/**
-	* Returns the uuid of this lock.
-	*
-	* @return the uuid of this lock
-	*/
-	public java.lang.String getUuid() {
-		return _lock.getUuid();
-	}
-
-	/**
-	* Sets the uuid of this lock.
-	*
-	* @param uuid the uuid of this lock
-	*/
-	public void setUuid(java.lang.String uuid) {
-		_lock.setUuid(uuid);
-	}
-
-	/**
-	* Returns the lock ID of this lock.
-	*
-	* @return the lock ID of this lock
-	*/
-	public long getLockId() {
-		return _lock.getLockId();
-	}
-
-	/**
-	* Sets the lock ID of this lock.
-	*
-	* @param lockId the lock ID of this lock
-	*/
-	public void setLockId(long lockId) {
-		_lock.setLockId(lockId);
-	}
-
-	/**
-	* Returns the company ID of this lock.
-	*
-	* @return the company ID of this lock
-	*/
-	public long getCompanyId() {
-		return _lock.getCompanyId();
-	}
-
-	/**
-	* Sets the company ID of this lock.
-	*
-	* @param companyId the company ID of this lock
-	*/
-	public void setCompanyId(long companyId) {
-		_lock.setCompanyId(companyId);
-	}
-
-	/**
-	* Returns the user ID of this lock.
-	*
-	* @return the user ID of this lock
-	*/
-	public long getUserId() {
-		return _lock.getUserId();
-	}
-
-	/**
-	* Sets the user ID of this lock.
-	*
-	* @param userId the user ID of this lock
-	*/
-	public void setUserId(long userId) {
-		_lock.setUserId(userId);
-	}
-
-	/**
-	* Returns the user uuid of this lock.
-	*
-	* @return the user uuid of this lock
-	* @throws SystemException if a system exception occurred
-	*/
-	public java.lang.String getUserUuid()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		return _lock.getUserUuid();
-	}
-
-	/**
-	* Sets the user uuid of this lock.
-	*
-	* @param userUuid the user uuid of this lock
-	*/
-	public void setUserUuid(java.lang.String userUuid) {
-		_lock.setUserUuid(userUuid);
-	}
-
-	/**
-	* Returns the user name of this lock.
-	*
-	* @return the user name of this lock
-	*/
-	public java.lang.String getUserName() {
-		return _lock.getUserName();
-	}
-
-	/**
-	* Sets the user name of this lock.
-	*
-	* @param userName the user name of this lock
-	*/
-	public void setUserName(java.lang.String userName) {
-		_lock.setUserName(userName);
-	}
-
-	/**
-	* Returns the create date of this lock.
-	*
-	* @return the create date of this lock
-	*/
-	public java.util.Date getCreateDate() {
-		return _lock.getCreateDate();
-	}
-
-	/**
-	* Sets the create date of this lock.
-	*
-	* @param createDate the create date of this lock
-	*/
-	public void setCreateDate(java.util.Date createDate) {
-		_lock.setCreateDate(createDate);
+	@Override
+	public int compareTo(com.liferay.portal.model.Lock lock) {
+		return _lock.compareTo(lock);
 	}
 
 	/**
@@ -277,80 +157,34 @@ public class LockWrapper implements Lock, ModelWrapper<Lock> {
 	*
 	* @return the class name of this lock
 	*/
+	@Override
 	public java.lang.String getClassName() {
 		return _lock.getClassName();
 	}
 
 	/**
-	* Sets the class name of this lock.
+	* Returns the company ID of this lock.
 	*
-	* @param className the class name of this lock
+	* @return the company ID of this lock
 	*/
-	public void setClassName(java.lang.String className) {
-		_lock.setClassName(className);
+	@Override
+	public long getCompanyId() {
+		return _lock.getCompanyId();
 	}
 
 	/**
-	* Returns the key of this lock.
+	* Returns the create date of this lock.
 	*
-	* @return the key of this lock
+	* @return the create date of this lock
 	*/
-	public java.lang.String getKey() {
-		return _lock.getKey();
+	@Override
+	public java.util.Date getCreateDate() {
+		return _lock.getCreateDate();
 	}
 
-	/**
-	* Sets the key of this lock.
-	*
-	* @param key the key of this lock
-	*/
-	public void setKey(java.lang.String key) {
-		_lock.setKey(key);
-	}
-
-	/**
-	* Returns the owner of this lock.
-	*
-	* @return the owner of this lock
-	*/
-	public java.lang.String getOwner() {
-		return _lock.getOwner();
-	}
-
-	/**
-	* Sets the owner of this lock.
-	*
-	* @param owner the owner of this lock
-	*/
-	public void setOwner(java.lang.String owner) {
-		_lock.setOwner(owner);
-	}
-
-	/**
-	* Returns the inheritable of this lock.
-	*
-	* @return the inheritable of this lock
-	*/
-	public boolean getInheritable() {
-		return _lock.getInheritable();
-	}
-
-	/**
-	* Returns <code>true</code> if this lock is inheritable.
-	*
-	* @return <code>true</code> if this lock is inheritable; <code>false</code> otherwise
-	*/
-	public boolean isInheritable() {
-		return _lock.isInheritable();
-	}
-
-	/**
-	* Sets whether this lock is inheritable.
-	*
-	* @param inheritable the inheritable of this lock
-	*/
-	public void setInheritable(boolean inheritable) {
-		_lock.setInheritable(inheritable);
+	@Override
+	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
+		return _lock.getExpandoBridge();
 	}
 
 	/**
@@ -358,63 +192,119 @@ public class LockWrapper implements Lock, ModelWrapper<Lock> {
 	*
 	* @return the expiration date of this lock
 	*/
+	@Override
 	public java.util.Date getExpirationDate() {
 		return _lock.getExpirationDate();
 	}
 
+	@Override
+	public long getExpirationTime() {
+		return _lock.getExpirationTime();
+	}
+
 	/**
-	* Sets the expiration date of this lock.
+	* Returns the inheritable of this lock.
 	*
-	* @param expirationDate the expiration date of this lock
+	* @return the inheritable of this lock
 	*/
-	public void setExpirationDate(java.util.Date expirationDate) {
-		_lock.setExpirationDate(expirationDate);
+	@Override
+	public boolean getInheritable() {
+		return _lock.getInheritable();
 	}
 
-	public boolean isNew() {
-		return _lock.isNew();
+	/**
+	* Returns the key of this lock.
+	*
+	* @return the key of this lock
+	*/
+	@Override
+	public java.lang.String getKey() {
+		return _lock.getKey();
 	}
 
-	public void setNew(boolean n) {
-		_lock.setNew(n);
+	/**
+	* Returns the lock ID of this lock.
+	*
+	* @return the lock ID of this lock
+	*/
+	@Override
+	public long getLockId() {
+		return _lock.getLockId();
 	}
 
-	public boolean isCachedModel() {
-		return _lock.isCachedModel();
+	/**
+	* Returns the mvcc version of this lock.
+	*
+	* @return the mvcc version of this lock
+	*/
+	@Override
+	public long getMvccVersion() {
+		return _lock.getMvccVersion();
 	}
 
-	public void setCachedModel(boolean cachedModel) {
-		_lock.setCachedModel(cachedModel);
+	/**
+	* Returns the owner of this lock.
+	*
+	* @return the owner of this lock
+	*/
+	@Override
+	public java.lang.String getOwner() {
+		return _lock.getOwner();
 	}
 
-	public boolean isEscapedModel() {
-		return _lock.isEscapedModel();
+	/**
+	* Returns the primary key of this lock.
+	*
+	* @return the primary key of this lock
+	*/
+	@Override
+	public long getPrimaryKey() {
+		return _lock.getPrimaryKey();
 	}
 
+	@Override
 	public java.io.Serializable getPrimaryKeyObj() {
 		return _lock.getPrimaryKeyObj();
 	}
 
-	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
-		_lock.setPrimaryKeyObj(primaryKeyObj);
-	}
-
-	public com.liferay.portlet.expando.model.ExpandoBridge getExpandoBridge() {
-		return _lock.getExpandoBridge();
-	}
-
-	public void setExpandoBridgeAttributes(
-		com.liferay.portal.service.ServiceContext serviceContext) {
-		_lock.setExpandoBridgeAttributes(serviceContext);
-	}
-
+	/**
+	* Returns the user ID of this lock.
+	*
+	* @return the user ID of this lock
+	*/
 	@Override
-	public java.lang.Object clone() {
-		return new LockWrapper((Lock)_lock.clone());
+	public long getUserId() {
+		return _lock.getUserId();
 	}
 
-	public int compareTo(com.liferay.portal.model.Lock lock) {
-		return _lock.compareTo(lock);
+	/**
+	* Returns the user name of this lock.
+	*
+	* @return the user name of this lock
+	*/
+	@Override
+	public java.lang.String getUserName() {
+		return _lock.getUserName();
+	}
+
+	/**
+	* Returns the user uuid of this lock.
+	*
+	* @return the user uuid of this lock
+	*/
+	@Override
+	public java.lang.String getUserUuid() {
+		return _lock.getUserUuid();
+	}
+
+	/**
+	* Returns the uuid of this lock.
+	*
+	* @return the uuid of this lock
+	*/
+	@Override
+	public java.lang.String getUuid() {
+		return _lock.getUuid();
 	}
 
 	@Override
@@ -422,10 +312,225 @@ public class LockWrapper implements Lock, ModelWrapper<Lock> {
 		return _lock.hashCode();
 	}
 
+	@Override
+	public boolean isCachedModel() {
+		return _lock.isCachedModel();
+	}
+
+	@Override
+	public boolean isEscapedModel() {
+		return _lock.isEscapedModel();
+	}
+
+	@Override
+	public boolean isExpired() {
+		return _lock.isExpired();
+	}
+
+	/**
+	* Returns <code>true</code> if this lock is inheritable.
+	*
+	* @return <code>true</code> if this lock is inheritable; <code>false</code> otherwise
+	*/
+	@Override
+	public boolean isInheritable() {
+		return _lock.isInheritable();
+	}
+
+	@Override
+	public boolean isNeverExpires() {
+		return _lock.isNeverExpires();
+	}
+
+	@Override
+	public boolean isNew() {
+		return _lock.isNew();
+	}
+
+	@Override
+	public void persist() {
+		_lock.persist();
+	}
+
+	@Override
+	public void setCachedModel(boolean cachedModel) {
+		_lock.setCachedModel(cachedModel);
+	}
+
+	/**
+	* Sets the class name of this lock.
+	*
+	* @param className the class name of this lock
+	*/
+	@Override
+	public void setClassName(java.lang.String className) {
+		_lock.setClassName(className);
+	}
+
+	/**
+	* Sets the company ID of this lock.
+	*
+	* @param companyId the company ID of this lock
+	*/
+	@Override
+	public void setCompanyId(long companyId) {
+		_lock.setCompanyId(companyId);
+	}
+
+	/**
+	* Sets the create date of this lock.
+	*
+	* @param createDate the create date of this lock
+	*/
+	@Override
+	public void setCreateDate(java.util.Date createDate) {
+		_lock.setCreateDate(createDate);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.model.BaseModel<?> baseModel) {
+		_lock.setExpandoBridgeAttributes(baseModel);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portlet.expando.model.ExpandoBridge expandoBridge) {
+		_lock.setExpandoBridgeAttributes(expandoBridge);
+	}
+
+	@Override
+	public void setExpandoBridgeAttributes(
+		com.liferay.portal.service.ServiceContext serviceContext) {
+		_lock.setExpandoBridgeAttributes(serviceContext);
+	}
+
+	/**
+	* Sets the expiration date of this lock.
+	*
+	* @param expirationDate the expiration date of this lock
+	*/
+	@Override
+	public void setExpirationDate(java.util.Date expirationDate) {
+		_lock.setExpirationDate(expirationDate);
+	}
+
+	/**
+	* Sets whether this lock is inheritable.
+	*
+	* @param inheritable the inheritable of this lock
+	*/
+	@Override
+	public void setInheritable(boolean inheritable) {
+		_lock.setInheritable(inheritable);
+	}
+
+	/**
+	* Sets the key of this lock.
+	*
+	* @param key the key of this lock
+	*/
+	@Override
+	public void setKey(java.lang.String key) {
+		_lock.setKey(key);
+	}
+
+	/**
+	* Sets the lock ID of this lock.
+	*
+	* @param lockId the lock ID of this lock
+	*/
+	@Override
+	public void setLockId(long lockId) {
+		_lock.setLockId(lockId);
+	}
+
+	/**
+	* Sets the mvcc version of this lock.
+	*
+	* @param mvccVersion the mvcc version of this lock
+	*/
+	@Override
+	public void setMvccVersion(long mvccVersion) {
+		_lock.setMvccVersion(mvccVersion);
+	}
+
+	@Override
+	public void setNew(boolean n) {
+		_lock.setNew(n);
+	}
+
+	/**
+	* Sets the owner of this lock.
+	*
+	* @param owner the owner of this lock
+	*/
+	@Override
+	public void setOwner(java.lang.String owner) {
+		_lock.setOwner(owner);
+	}
+
+	/**
+	* Sets the primary key of this lock.
+	*
+	* @param primaryKey the primary key of this lock
+	*/
+	@Override
+	public void setPrimaryKey(long primaryKey) {
+		_lock.setPrimaryKey(primaryKey);
+	}
+
+	@Override
+	public void setPrimaryKeyObj(java.io.Serializable primaryKeyObj) {
+		_lock.setPrimaryKeyObj(primaryKeyObj);
+	}
+
+	/**
+	* Sets the user ID of this lock.
+	*
+	* @param userId the user ID of this lock
+	*/
+	@Override
+	public void setUserId(long userId) {
+		_lock.setUserId(userId);
+	}
+
+	/**
+	* Sets the user name of this lock.
+	*
+	* @param userName the user name of this lock
+	*/
+	@Override
+	public void setUserName(java.lang.String userName) {
+		_lock.setUserName(userName);
+	}
+
+	/**
+	* Sets the user uuid of this lock.
+	*
+	* @param userUuid the user uuid of this lock
+	*/
+	@Override
+	public void setUserUuid(java.lang.String userUuid) {
+		_lock.setUserUuid(userUuid);
+	}
+
+	/**
+	* Sets the uuid of this lock.
+	*
+	* @param uuid the uuid of this lock
+	*/
+	@Override
+	public void setUuid(java.lang.String uuid) {
+		_lock.setUuid(uuid);
+	}
+
+	@Override
 	public com.liferay.portal.model.CacheModel<com.liferay.portal.model.Lock> toCacheModel() {
 		return _lock.toCacheModel();
 	}
 
+	@Override
 	public com.liferay.portal.model.Lock toEscapedModel() {
 		return new LockWrapper(_lock.toEscapedModel());
 	}
@@ -435,38 +540,59 @@ public class LockWrapper implements Lock, ModelWrapper<Lock> {
 		return _lock.toString();
 	}
 
+	@Override
+	public com.liferay.portal.model.Lock toUnescapedModel() {
+		return new LockWrapper(_lock.toUnescapedModel());
+	}
+
+	@Override
 	public java.lang.String toXmlString() {
 		return _lock.toXmlString();
 	}
 
-	public void persist()
-		throws com.liferay.portal.kernel.exception.SystemException {
-		_lock.persist();
-	}
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
 
-	public long getExpirationTime() {
-		return _lock.getExpirationTime();
-	}
+		if (!(obj instanceof LockWrapper)) {
+			return false;
+		}
 
-	public boolean isExpired() {
-		return _lock.isExpired();
-	}
+		LockWrapper lockWrapper = (LockWrapper)obj;
 
-	public boolean isNeverExpires() {
-		return _lock.isNeverExpires();
+		if (Validator.equals(_lock, lockWrapper._lock)) {
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
-	 * @deprecated Renamed to {@link #getWrappedModel}
+	 * @deprecated As of 6.1.0, replaced by {@link #getWrappedModel}
 	 */
+	@Deprecated
 	public Lock getWrappedLock() {
 		return _lock;
 	}
 
+	@Override
 	public Lock getWrappedModel() {
 		return _lock;
 	}
 
+	@Override
+	public boolean isEntityCacheEnabled() {
+		return _lock.isEntityCacheEnabled();
+	}
+
+	@Override
+	public boolean isFinderCacheEnabled() {
+		return _lock.isFinderCacheEnabled();
+	}
+
+	@Override
 	public void resetOriginalValues() {
 		_lock.resetOriginalValues();
 	}

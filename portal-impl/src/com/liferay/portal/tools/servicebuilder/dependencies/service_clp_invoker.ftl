@@ -4,6 +4,18 @@ import ${packagePath}.service.${entity.name}${sessionTypeName}ServiceUtil;
 
 import java.util.Arrays;
 
+/**
+ * @author ${author}
+<#if classDeprecated>
+ * @deprecated ${classDeprecatedComment}
+</#if>
+ * @generated
+ */
+
+<#if classDeprecated>
+	@Deprecated
+</#if>
+
 public class ${entity.name}${sessionTypeName}ServiceClpInvoker {
 
 	public ${entity.name}${sessionTypeName}ServiceClpInvoker() {
@@ -49,6 +61,8 @@ public class ${entity.name}${sessionTypeName}ServiceClpInvoker {
 
 						<#if (parameterTypeName == "boolean") || (parameterTypeName == "double") || (parameterTypeName == "float") || (parameterTypeName == "int") || (parameterTypeName == "long") || (parameterTypeName == "short")>
 							((${serviceBuilder.getPrimitiveObj(parameter.type)})arguments[${parameter_index}])${serviceBuilder.getPrimitiveObjValue(serviceBuilder.getPrimitiveObj(parameter.type))}
+						<#elseif (method.name == "dynamicQuery") && (parameterTypeName == "com.liferay.portal.kernel.util.OrderByComparator<T>")>
+							(com.liferay.portal.kernel.util.OrderByComparator<?>)arguments[${parameter_index}]
 						<#else>
 							(${parameterTypeName})arguments[${parameter_index}]
 						</#if>

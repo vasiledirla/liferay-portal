@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -35,8 +35,9 @@ public class JNDIUtil {
 	}
 
 	/**
-	 * @deprecated {@link #lookup(Context, String)}
+	 * @deprecated As of 6.2.0, replaced by {@link #lookup(Context, String)}
 	 */
+	@Deprecated
 	public static Object lookup(Context context, String location, boolean cache)
 		throws NamingException {
 
@@ -61,7 +62,7 @@ public class JNDIUtil {
 
 			// java:comp/env/ObjectName to ObjectName
 
-			if (location.indexOf("java:comp/env/") != -1) {
+			if (location.contains("java:comp/env/")) {
 				try {
 					String newLocation = StringUtil.replace(
 						location, "java:comp/env/", "");
@@ -91,7 +92,7 @@ public class JNDIUtil {
 
 			// java:ObjectName to ObjectName
 
-			else if (location.indexOf("java:") != -1) {
+			else if (location.contains("java:")) {
 				try {
 					String newLocation = StringUtil.replace(
 						location, "java:", "");
@@ -121,7 +122,7 @@ public class JNDIUtil {
 
 			// ObjectName to java:ObjectName
 
-			else if (location.indexOf("java:") == -1) {
+			else if (!location.contains("java:")) {
 				try {
 					String newLocation = "java:" + location;
 

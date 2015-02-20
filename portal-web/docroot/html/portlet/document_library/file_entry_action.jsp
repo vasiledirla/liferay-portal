@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -21,12 +21,6 @@ ResultRow row = (ResultRow)request.getAttribute(WebKeys.SEARCH_CONTAINER_RESULT_
 
 FileEntry fileEntry = null;
 DLFileShortcut fileShortcut = null;
-
-boolean showWhenSingleIcon = false;
-
-if (portletId.equals(PortletKeys.DOCUMENT_LIBRARY)) {
-	showWhenSingleIcon = true;
-}
 
 if (row != null) {
 	Object result = row.getObject();
@@ -80,7 +74,6 @@ else {
 			if (request.getAttribute("view_entries.jsp-fileShortcut") != null) {
 				fileShortcut = (DLFileShortcut)request.getAttribute("view_entries.jsp-fileShortcut");
 			}
-
 		}
 		else {
 			fileShortcut = (DLFileShortcut)request.getAttribute("view_file_shortcut.jsp-fileShortcut");
@@ -92,12 +85,15 @@ long folderId = 0;
 
 if (fileShortcut != null) {
 	folderId = fileShortcut.getFolderId();
+
+	fileEntry = DLAppLocalServiceUtil.getFileEntry(fileShortcut.getToFileEntryId());
 }
 else if (fileEntry != null) {
 	folderId = fileEntry.getFolderId();
 }
 
-boolean restore = false;
+boolean checkedOut = fileEntry.isCheckedOut();
+boolean hasLock = fileEntry.hasLock();
 
 PortletURL viewFolderURL = liferayPortletResponse.createRenderURL();
 
@@ -107,10 +103,14 @@ viewFolderURL.setParameter("folderId", String.valueOf(folderId));
 if (fileShortcut != null) {
 	fileEntry = DLAppLocalServiceUtil.getFileEntry(fileShortcut.getToFileEntryId());
 }
+
+DLFileEntryActionsDisplayContext dlFileEntryActionsDisplayContext = new DLFileEntryActionsDisplayContext(request, dlPortletInstanceSettings, fileEntry);
+
+DLActionsDisplayContext dlActionsDisplayContext = dlFileEntryActionsDisplayContext.getDLActionsDisplayContext();
 %>
 
 <liferay-util:buffer var="iconMenu">
-	<liferay-ui:icon-menu align='<%= showMinimalActionButtons ? "auto": "right" %>' direction='<%= showMinimalActionButtons ? "down" : null %>' extended="<%= showMinimalActionButtons ? false : true %>" icon="<%= showMinimalActionButtons ? StringPool.BLANK : null %>" message='<%= showMinimalActionButtons ? StringPool.BLANK : "actions" %>' showExpanded="<%= false %>" showWhenSingleIcon="<%= showWhenSingleIcon %>">
+	<liferay-ui:icon-menu direction='<%= dlActionsDisplayContext.isShowMinimalActionsButton() ? "down" : "left" %>' extended="<%= dlActionsDisplayContext.isShowMinimalActionsButton() ? false : true %>" icon="<%= dlActionsDisplayContext.isShowMinimalActionsButton() ? StringPool.BLANK : null %>" message='<%= dlActionsDisplayContext.isShowMinimalActionsButton() ? StringPool.BLANK : "actions" %>' showExpanded="<%= false %>" showWhenSingleIcon="<%= dlActionsDisplayContext.isShowWhenSingleIconActionButton() %>" triggerCssClass="btn btn-default">
 		<%@ include file="/html/portlet/document_library/action/download.jspf" %>
 		<%@ include file="/html/portlet/document_library/action/open_document.jspf" %>
 		<%@ include file="/html/portlet/document_library/action/view_original.jspf" %>
@@ -123,7 +123,7 @@ if (fileShortcut != null) {
 </liferay-util:buffer>
 
 <c:choose>
-	<c:when test="<%= portletName.equals(PortletKeys.DOCUMENT_LIBRARY_DISPLAY) %>">
+	<c:when test="<%= portletName.equals(PortletKeys.DOCUMENT_LIBRARY_DISPLAY) && !dlActionsDisplayContext.isShowMinimalActionsButton() %>">
 
 		<%= iconMenu %>
 

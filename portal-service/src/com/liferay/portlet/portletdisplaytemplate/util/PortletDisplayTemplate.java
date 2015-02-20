@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,32 +14,45 @@
 
 package com.liferay.portlet.portletdisplaytemplate.util;
 
-import com.liferay.portal.theme.ThemeDisplay;
+import com.liferay.portal.kernel.template.TemplateHandler;
+import com.liferay.portal.kernel.template.TemplateVariableGroup;
 import com.liferay.portlet.dynamicdatamapping.model.DDMTemplate;
 
 import java.util.List;
 import java.util.Map;
 
-import javax.servlet.jsp.PageContext;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @author Eduardo Garcia
  */
 public interface PortletDisplayTemplate {
 
+	public static final String DISPLAY_STYLE_PREFIX = "ddmTemplate_";
+
 	public DDMTemplate fetchDDMTemplate(long groupId, String displayStyle);
 
-	public long getDDMTemplateGroupId(ThemeDisplay themeDisplay);
+	public long getDDMTemplateGroupId(long groupId);
+
+	public String getDDMTemplateUuid(String displayStyle);
 
 	public long getPortletDisplayTemplateDDMTemplateId(
-		ThemeDisplay themeDisplay, String displayStyle);
+		long groupId, String displayStyle);
+
+	public List<TemplateHandler> getPortletDisplayTemplateHandlers();
+
+	public Map<String, TemplateVariableGroup> getTemplateVariableGroups(
+		String language);
 
 	public String renderDDMTemplate(
-			PageContext pageContext, long ddmTemplateId, List<?> entries)
+			HttpServletRequest request, HttpServletResponse response,
+			long ddmTemplateId, List<?> entries)
 		throws Exception;
 
 	public String renderDDMTemplate(
-			PageContext pageContext, long ddmTemplateId, List<?> entries,
+			HttpServletRequest request, HttpServletResponse response,
+			long ddmTemplateId, List<?> entries,
 			Map<String, Object> contextObjects)
 		throws Exception;
 

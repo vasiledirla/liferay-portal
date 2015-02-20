@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -15,16 +15,16 @@
 package com.liferay.portlet.documentlibrary.service;
 
 import com.liferay.portal.kernel.exception.PortalException;
-import com.liferay.portal.kernel.exception.SystemException;
 import com.liferay.portal.kernel.repository.model.FileEntry;
 import com.liferay.portal.kernel.repository.model.FileVersion;
+import com.liferay.portal.kernel.test.ExecutionTestListeners;
 import com.liferay.portal.kernel.workflow.WorkflowConstants;
 import com.liferay.portal.service.ServiceContext;
-import com.liferay.portal.test.EnvironmentExecutionTestListener;
-import com.liferay.portal.test.ExecutionTestListeners;
-import com.liferay.portal.test.LiferayIntegrationJUnitTestRunner;
+import com.liferay.portal.test.listeners.MainServletExecutionTestListener;
+import com.liferay.portal.test.runners.LiferayIntegrationJUnitTestRunner;
 import com.liferay.portlet.documentlibrary.InvalidFileVersionException;
 import com.liferay.portlet.documentlibrary.model.DLFileVersion;
+import com.liferay.portlet.documentlibrary.util.test.DLAppTestUtil;
 
 import java.util.List;
 
@@ -35,7 +35,7 @@ import org.junit.runner.RunWith;
 /**
  * @author Alexander Chow
  */
-@ExecutionTestListeners(listeners = {EnvironmentExecutionTestListener.class})
+@ExecutionTestListeners(listeners = {MainServletExecutionTestListener.class})
 @RunWith(LiferayIntegrationJUnitTestRunner.class)
 public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 
@@ -80,7 +80,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	}
 
 	protected void assertFileEntryTitle(String fileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		FileEntry fileEntry = DLAppServiceUtil.getFileEntry(
 			_fileEntry.getFileEntryId());
@@ -89,7 +89,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	}
 
 	protected void assertLatestFileVersionTitle(String fileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		DLFileVersion latestDLFileVersion =
 			DLFileVersionLocalServiceUtil.getLatestFileVersion(
@@ -100,7 +100,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 
 	protected void deleteFileVersion(
 			String version, String fileName, boolean pwc)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		DLAppServiceUtil.deleteFileVersion(
 			_fileEntry.getFileEntryId(), version);
@@ -118,19 +118,22 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	protected void deleteVersion(boolean versioned, boolean leaveCheckedOut)
 		throws Exception {
 
-		_fileEntry = addFileEntry(false, _VERSION_1_0);
+		_fileEntry = DLAppTestUtil.addFileEntry(
+			group.getGroupId(), parentFolder.getFolderId(), _VERSION_1_0);
 
 		long fileEntryId = _fileEntry.getFileEntryId();
 
 		if (versioned) {
-			updateFileEntry(fileEntryId, null, _VERSION_1_1);
+			DLAppTestUtil.updateFileEntry(
+				group.getGroupId(), fileEntryId, null, _VERSION_1_1);
 		}
 
 		if (leaveCheckedOut) {
 			DLAppServiceUtil.checkOutFileEntry(
 				fileEntryId, new ServiceContext());
 
-			updateFileEntry(fileEntryId, null, _VERSION_PWC);
+			DLAppTestUtil.updateFileEntry(
+				group.getGroupId(), fileEntryId, null, _VERSION_PWC);
 		}
 
 		if (versioned && leaveCheckedOut) {
@@ -168,7 +171,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	}
 
 	protected void failDeleteFileVersion(String version)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		try {
 			deleteFileVersion(version, null, true);
@@ -180,7 +183,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	}
 
 	protected void failRevertFileVersion(String version)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		try {
 			revertFileVersion(version, null);
@@ -191,7 +194,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 		}
 	}
 
-	protected int getFileVersionsCount() throws SystemException {
+	protected int getFileVersionsCount() {
 		List<FileVersion> fileVersions = _fileEntry.getFileVersions(
 			WorkflowConstants.STATUS_ANY);
 
@@ -199,7 +202,7 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	}
 
 	protected void revertFileVersion(String version, String fileName)
-		throws PortalException, SystemException {
+		throws PortalException {
 
 		DLAppServiceUtil.revertFileEntry(
 			_fileEntry.getFileEntryId(), version, new ServiceContext());
@@ -212,19 +215,22 @@ public class DLFileVersionHistoryTest extends BaseDLAppTestCase {
 	protected void revertVersion(boolean versioned, boolean leaveCheckedOut)
 		throws Exception {
 
-		_fileEntry = addFileEntry(false, _VERSION_1_0);
+		_fileEntry = DLAppTestUtil.addFileEntry(
+			group.getGroupId(), parentFolder.getFolderId(), _VERSION_1_0);
 
 		long fileEntryId = _fileEntry.getFileEntryId();
 
 		if (versioned) {
-			updateFileEntry(fileEntryId, null, _VERSION_1_1);
+			DLAppTestUtil.updateFileEntry(
+				group.getGroupId(), fileEntryId, null, _VERSION_1_1);
 		}
 
 		if (leaveCheckedOut) {
 			DLAppServiceUtil.checkOutFileEntry(
 				fileEntryId, new ServiceContext());
 
-			updateFileEntry(fileEntryId, null, _VERSION_PWC);
+			DLAppTestUtil.updateFileEntry(
+				group.getGroupId(), fileEntryId, null, _VERSION_PWC);
 		}
 
 		if (versioned && leaveCheckedOut) {

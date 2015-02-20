@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,17 +19,21 @@
 <%
 boolean includeSelectAll = GetterUtil.getBoolean(request.getAttribute("liferay-ui:app_view_toolbar:includeSelectAll"));
 String searchJsp = (String)request.getAttribute("liferay-ui:app_view_toolbar:searchJsp");
+
+String cssClass = "select-all-entries";
+
+if (!includeSelectAll) {
+	cssClass += " hide";
+}
 %>
 
-<div class="app-view-taglib lfr-header-row">
+<div class="app-view-taglib">
 	<div class="lfr-header-row-content">
 		<c:if test="<%= Validator.isNotNull(searchJsp) %>">
-			<liferay-util:include page="<%= searchJsp%>" />
+			<liferay-util:include page="<%= searchJsp %>" />
 		</c:if>
 
-		<div class="toolbar">
-			<c:if test="<%= includeSelectAll %>">
-				<c:if test="<%= !user.isDefaultUser() %>">
-					<aui:input cssClass="select-all-entries aui-state-default" inline="<%= true %>" label="" name="<%= RowChecker.ALL_ROW_IDS %>" type="checkbox" />
-				</c:if>
+		<div>
+			<c:if test="<%= !user.isDefaultUser() %>">
+				<aui:input cssClass="<%= cssClass %>" inline="<%= true %>" label="" name="<%= RowChecker.ALL_ROW_IDS %>" title="select-all" type="checkbox" />
 			</c:if>

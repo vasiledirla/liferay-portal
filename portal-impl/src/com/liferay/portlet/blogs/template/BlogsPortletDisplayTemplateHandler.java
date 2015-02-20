@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -16,13 +16,19 @@ package com.liferay.portlet.blogs.template;
 
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.portletdisplaytemplate.BasePortletDisplayTemplateHandler;
+import com.liferay.portal.kernel.template.TemplateVariableGroup;
 import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.util.PortalUtil;
 import com.liferay.portal.util.PortletKeys;
 import com.liferay.portal.util.PropsValues;
 import com.liferay.portlet.blogs.model.BlogsEntry;
+import com.liferay.portlet.blogs.service.BlogsEntryLocalService;
+import com.liferay.portlet.blogs.service.BlogsEntryService;
+import com.liferay.portlet.portletdisplaytemplate.util.PortletDisplayTemplateConstants;
 
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * @author Juan Fernández
@@ -30,15 +36,12 @@ import java.util.Locale;
 public class BlogsPortletDisplayTemplateHandler
 	extends BasePortletDisplayTemplateHandler {
 
+	@Override
 	public String getClassName() {
 		return BlogsEntry.class.getName();
 	}
 
 	@Override
-	public String getHelpTemplatePath() {
-		return PropsValues.BLOGS_DISPLAY_STYLES_TEMPLATE_CONTENT;
-	}
-
 	public String getName(Locale locale) {
 		String portletTitle = PortalUtil.getPortletTitle(
 			PortletKeys.BLOGS, locale);
@@ -47,8 +50,48 @@ public class BlogsPortletDisplayTemplateHandler
 			LanguageUtil.get(locale, "template"));
 	}
 
+	@Override
 	public String getResourceName() {
-		return "com.liferay.portlet.blogs";
+		return PortletKeys.BLOGS;
+	}
+
+	@Override
+	public Map<String, TemplateVariableGroup> getTemplateVariableGroups(
+			long classPK, String language, Locale locale)
+		throws Exception {
+
+		Map<String, TemplateVariableGroup> templateVariableGroups =
+			super.getTemplateVariableGroups(classPK, language, locale);
+
+		TemplateVariableGroup templateVariableGroup =
+			templateVariableGroups.get("fields");
+
+		templateVariableGroup.empty();
+
+		templateVariableGroup.addCollectionVariable(
+			"blog-entries", List.class, PortletDisplayTemplateConstants.ENTRIES,
+			"blog-entry", BlogsEntry.class, "curBlogEntry", "title");
+
+		String[] restrictedVariables = getRestrictedVariables(language);
+
+		TemplateVariableGroup blogServicesTemplateVariableGroup =
+			new TemplateVariableGroup("blog-services", restrictedVariables);
+
+		blogServicesTemplateVariableGroup.setAutocompleteEnabled(false);
+
+		blogServicesTemplateVariableGroup.addServiceLocatorVariables(
+			BlogsEntryLocalService.class, BlogsEntryService.class);
+
+		templateVariableGroups.put(
+			blogServicesTemplateVariableGroup.getLabel(),
+			blogServicesTemplateVariableGroup);
+
+		return templateVariableGroups;
+	}
+
+	@Override
+	protected String getTemplatesConfigPath() {
+		return PropsValues.BLOGS_DISPLAY_TEMPLATES_CONFIG;
 	}
 
 }

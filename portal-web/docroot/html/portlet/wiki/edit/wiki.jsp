@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -32,38 +32,17 @@ boolean showSyntaxHelp = ((toggleValue != null) && toggleValue.equals("block"));
 <div align="right">
 	<liferay-ui:toggle
 		defaultShowContent="<%= false %>"
-		hideMessage='<%= LanguageUtil.get(pageContext, "hide-syntax-help") + " &raquo;" %>'
+		hideMessage='<%= LanguageUtil.get(request, "hide-syntax-help") + " &raquo;" %>'
 		id="<%= toggleId %>"
-		showMessage='<%= "&laquo; " + LanguageUtil.get(pageContext, "show-syntax-help") %>'
+		showMessage='<%= "&laquo; " + LanguageUtil.get(request, "show-syntax-help") %>'
 	/>
 </div>
 
 <div>
-	<aui:layout>
-		<aui:column columnWidth="<%= showSyntaxHelp ? 70 : 100 %>" id="wikiEditorContainer">
+	<aui:row>
+		<aui:col id="wikiEditorContainer" width="<%= showSyntaxHelp ? 70 : 100 %>">
 
-			<%
-			long resourcePrimKey = 0;
-
-			String attachmentURLPrefix = StringPool.BLANK;
-
-			if (wikiPage != null) {
-				resourcePrimKey = wikiPage.getResourcePrimKey();
-
-				attachmentURLPrefix = themeDisplay.getPortalURL() + themeDisplay.getPathMain() + "/wiki/get_page_attachment?p_l_id=" + themeDisplay.getPlid() + "&nodeId=" + wikiPage.getNodeId() + "&title=" + HttpUtil.encodeURL(wikiPage.getTitle()) + "&fileName=";
-			}
-
-			Map<String,String> configParams = new HashMap();
-
-			configParams.put("attachmentURLPrefix", attachmentURLPrefix);
-			configParams.put("wikiPageResourcePrimKey", String.valueOf(resourcePrimKey));
-
-			Map<String,String> fileBrowserParams = new HashMap();
-
-			fileBrowserParams.put("attachmentURLPrefix", attachmentURLPrefix);
-			fileBrowserParams.put("Type", "Attachment");
-			fileBrowserParams.put("wikiPageResourcePrimKey", String.valueOf(resourcePrimKey));
-			%>
+		<%@ include file="/html/portlet/wiki/edit/editor_config.jspf" %>
 
 		<c:choose>
 			<c:when test='<%= format.equals("creole") %>'>
@@ -81,16 +60,15 @@ boolean showSyntaxHelp = ((toggleValue != null) && toggleValue.equals("block"));
 					editorImpl="<%= EDITOR_SIMPLE_IMPL_KEY %>"
 					fileBrowserParams="<%= fileBrowserParams %>"
 					name="content"
-					resizable="<%= false %>"
 					width="100%"
 				/>
 			</c:otherwise>
 		</c:choose>
 
 			<aui:input name="content" type="hidden" />
-		</aui:column>
+		</aui:col>
 
-		<aui:column columnWidth="30" cssClass="syntax-help" id="toggle_id_wiki_editor_help" style='<%= showSyntaxHelp ? StringPool.BLANK : "display: none" %>'>
+		<aui:col cssClass="syntax-help" id="toggle_id_wiki_editor_help" style='<%= showSyntaxHelp ? StringPool.BLANK : "display: none" %>' width="<%= 30 %>">
 			<h3>
 				<liferay-ui:message key="syntax-help" />
 			</h3>
@@ -98,20 +76,20 @@ boolean showSyntaxHelp = ((toggleValue != null) && toggleValue.equals("block"));
 			<liferay-util:include page="<%= WikiUtil.getHelpPage(format) %>" />
 
 			<aui:a href="<%= WikiUtil.getHelpURL(format) %>" target="_blank"><liferay-ui:message key="learn-more" /> &raquo;</aui:a>
-		</aui:column>
-	</aui:layout>
+		</aui:col>
+	</aui:row>
 </div>
 
 <aui:script>
 	function <portlet:namespace />initEditor() {
-		return "<%= UnicodeFormatter.toString(content) %>";
+		return '<%= UnicodeFormatter.toString(content) %>';
 	}
 </aui:script>
 
 <aui:script use="aui-base">
-	var CSS_EDITOR_WIDTH = 'aui-w70';
+	var CSS_EDITOR_WIDTH = 'col-md-8';
 
-	var CSS_EDITOR_WIDTH_EXPANDED = 'aui-w100';
+	var CSS_EDITOR_WIDTH_EXPANDED = 'col-md-12';
 
 	Liferay.on(
 		'toggle:stateChange',

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,77 +14,155 @@
 
 package com.liferay.portal.lar;
 
-import com.liferay.portal.NoSuchLayoutException;
-import com.liferay.portal.kernel.util.FriendlyURLNormalizerUtil;
-import com.liferay.portal.kernel.util.StringPool;
-import com.liferay.portal.model.*;
+import com.liferay.portal.kernel.exception.PortalException;
+import com.liferay.portal.kernel.lar.PortletDataHandlerBoolean;
+import com.liferay.portal.kernel.lar.PortletDataHandlerKeys;
+import com.liferay.portal.kernel.util.FileUtil;
+import com.liferay.portal.model.Group;
+import com.liferay.portal.model.Layout;
+import com.liferay.portal.model.StagedModel;
 import com.liferay.portal.service.LayoutLocalServiceUtil;
-import com.liferay.portal.service.LayoutServiceUtil;
 import com.liferay.portal.service.ServiceContext;
-import com.liferay.portal.service.ServiceTestUtil;
-import com.liferay.portal.util.TestPropsValues;
+import com.liferay.portal.test.DeleteAfterTestRun;
+import com.liferay.portal.util.test.GroupTestUtil;
+import com.liferay.portal.util.test.LayoutTestUtil;
+import com.liferay.portal.util.test.RandomTestUtil;
 
-import org.powermock.api.mockito.PowerMockito;
+import java.io.File;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+import org.junit.After;
+import org.junit.Before;
 
 /**
  * @author Eduardo Garcia
  */
-public class BaseExportImportTestCase extends PowerMockito {
+public class BaseExportImportTestCase {
 
-	protected Layout addLayout(
-			long groupId, String name, LayoutPrototype layoutPrototype,
-			boolean linkEnabled)
-		throws Exception {
+	@Before
+	public void setUp() throws Exception {
+		group = GroupTestUtil.addGroup();
+		importedGroup = GroupTestUtil.addGroup();
 
-		String friendlyURL =
-			StringPool.SLASH + FriendlyURLNormalizerUtil.normalize(name);
+		layout = LayoutTestUtil.addLayout(
+			group.getGroupId(), RandomTestUtil.randomString());
 
-		Layout layout = null;
+		// Delete and readd to ensure a different layout ID (not ID or UUID).
+		// See LPS-32132.
 
-		try {
-			layout = LayoutLocalServiceUtil.getFriendlyURLLayout(
-				groupId, false, friendlyURL);
+		LayoutLocalServiceUtil.deleteLayout(layout, true, new ServiceContext());
 
-			return layout;
+		layout = LayoutTestUtil.addLayout(
+			group.getGroupId(), RandomTestUtil.randomString());
+	}
+
+	@After
+	public void tearDown() throws Exception {
+		if ((larFile != null) && larFile.exists()) {
+			FileUtil.delete(larFile);
 		}
-		catch (NoSuchLayoutException nsle) {
-		}
-
-		ServiceContext serviceContext = ServiceTestUtil.getServiceContext();
-
-		serviceContext.setAttribute("layoutPrototypeLinkEnabled", linkEnabled);
-		serviceContext.setAttribute(
-			"layoutPrototypeUuid", layoutPrototype.getUuid());
-
-		return LayoutLocalServiceUtil.addLayout(
-			TestPropsValues.getUserId(), groupId, false,
-			LayoutConstants.DEFAULT_PARENT_LAYOUT_ID, name, null,
-			"This is a test page.", LayoutConstants.TYPE_PORTLET, false,
-			friendlyURL, serviceContext);
 	}
 
-	protected void propagateChanges(Group group) throws Exception {
-		LayoutLocalServiceUtil.getLayouts(
-			group.getGroupId(), false,
-			LayoutConstants.DEFAULT_PARENT_LAYOUT_ID);
+	protected void addParameter(
+		Map<String, String[]> parameterMap, String name, String value) {
+
+		parameterMap.put(name, new String[] {value});
 	}
 
-	protected void propagateChanges(Layout layout) throws Exception {
-		LayoutLocalServiceUtil.getLayout(layout.getPlid());
+	protected void addParameter(
+		Map<String, String[]> parameterMap, String namespace, String name,
+		boolean value) {
+
+		PortletDataHandlerBoolean portletDataHandlerBoolean =
+			new PortletDataHandlerBoolean(namespace, name);
+
+		addParameter(
+			parameterMap, portletDataHandlerBoolean.getNamespacedControlName(),
+			String.valueOf(value));
 	}
 
-	protected Layout updateLayoutTemplateId(
-		Layout layout, String layoutTemplateId) throws Exception {
-
-		LayoutTypePortlet layoutTypePortlet =
-			(LayoutTypePortlet)layout.getLayoutType();
-
-		layoutTypePortlet.setLayoutTemplateId(
-			TestPropsValues.getUserId(), layoutTemplateId);
-
-		return LayoutServiceUtil.updateLayout(
-			layout.getGroupId(), layout.isPrivateLayout(), layout.getLayoutId(),
-			layout.getTypeSettings());
+	protected StagedModel addStagedModel(long groupId) throws Exception {
+		return null;
 	}
+
+	protected void deleteStagedModel(StagedModel stagedModel) throws Exception {
+		return;
+	}
+
+	protected Map<String, String[]> getExportParameterMap() throws Exception {
+		Map<String, String[]> parameterMap =
+			new LinkedHashMap<String, String[]>();
+
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_CONFIGURATION,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_CONFIGURATION_ALL,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_DATA,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_DATA_ALL,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_SETUP_ALL,
+			new String[] {Boolean.TRUE.toString()});
+
+		return parameterMap;
+	}
+
+	protected Map<String, String[]> getImportParameterMap() throws Exception {
+		Map<String, String[]> parameterMap =
+			new LinkedHashMap<String, String[]>();
+
+		parameterMap.put(
+			PortletDataHandlerKeys.DATA_STRATEGY,
+			new String[] {
+				PortletDataHandlerKeys.DATA_STRATEGY_MIRROR_OVERWRITE});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_CONFIGURATION,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_CONFIGURATION_ALL,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_DATA,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_DATA_ALL,
+			new String[] {Boolean.TRUE.toString()});
+		parameterMap.put(
+			PortletDataHandlerKeys.PORTLET_SETUP_ALL,
+			new String[] {Boolean.TRUE.toString()});
+
+		return parameterMap;
+	}
+
+	@SuppressWarnings("unused")
+	protected StagedModel getStagedModel(String uuid, long groupId)
+		throws PortalException {
+
+		return null;
+	}
+
+	@SuppressWarnings("unused")
+	protected String getStagedModelUuid(StagedModel stagedModel)
+		throws PortalException {
+
+		return stagedModel.getUuid();
+	}
+
+	@DeleteAfterTestRun
+	protected Group group;
+
+	@DeleteAfterTestRun
+	protected Group importedGroup;
+
+	protected Layout importedLayout;
+	protected File larFile;
+	protected Layout layout;
 
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -31,6 +31,8 @@ import java.security.ProtectionDomain;
 
 import java.util.Arrays;
 
+import org.aspectj.bridge.AbortException;
+
 /**
  * @author Shuyang Zhou
  */
@@ -43,7 +45,7 @@ public class WeavingClassLoader extends URLClassLoader {
 
 		_dumpDir = dumpDir;
 
-		_urlWeavingAdaptor = new URLWeavingAdaptor(urls, aspectClasses);
+		_urlWeavingAdapter = new URLWeavingAdapter(urls, aspectClasses);
 	}
 
 	@Override
@@ -59,7 +61,7 @@ public class WeavingClassLoader extends URLClassLoader {
 
 				// It may be a generated inner class
 
-				data = _urlWeavingAdaptor.removeGeneratedClassDate(name);
+				data = _urlWeavingAdapter.removeGeneratedClassDate(name);
 			}
 			else {
 				UnsyncByteArrayOutputStream unsyncByteArrayOutputStream =
@@ -77,7 +79,14 @@ public class WeavingClassLoader extends URLClassLoader {
 
 			byte[] oldData = data;
 
-			data = _urlWeavingAdaptor.weaveClass(name, data, false);
+			try {
+				data = _urlWeavingAdapter.weaveClass(name, data, false);
+			}
+			catch (AbortException ae) {
+				if (_log.isWarnEnabled()) {
+					_log.warn("Abort weaving class " + name, ae);
+				}
+			}
 
 			if (Arrays.equals(oldData, data)) {
 				return _generateClass(name, data);
@@ -90,8 +99,8 @@ public class WeavingClassLoader extends URLClassLoader {
 
 				dumpDir.mkdirs();
 
-				FileOutputStream fileOutputStream =
-					new FileOutputStream(dumpFile);
+				FileOutputStream fileOutputStream = new FileOutputStream(
+					dumpFile);
 
 				fileOutputStream.write(data);
 
@@ -143,6 +152,6 @@ public class WeavingClassLoader extends URLClassLoader {
 	private static Log _log = LogFactoryUtil.getLog(WeavingClassLoader.class);
 
 	private File _dumpDir;
-	private URLWeavingAdaptor _urlWeavingAdaptor;
+	private URLWeavingAdapter _urlWeavingAdapter;
 
 }

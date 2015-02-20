@@ -1,6 +1,6 @@
 <%--
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -19,15 +19,17 @@ NumberFormat numberFormat = NumberFormat.getNumberInstance(locale);
 NumberFormat percentFormat = NumberFormat.getPercentInstance(locale);
 %>
 
-<table border="0" cellpadding="4" cellspacing="0" width="100%">
-<tr class="portlet-section-header results-header" style="font-size: x-small; font-weight: bold;">
-	<td>
+<table class="table table-bordered table-hover table-striped">
+<thead class="table-columns">
+<tr>
+	<td class="table-cell">
 		%
 	</td>
-	<td colspan="4">
+	<td class="table-cell" colspan="4">
 		<liferay-ui:message key="votes" />
 	</td>
 </tr>
+</thead>
 
 <%
 int totalVotes = question.getVotesCount();
@@ -38,14 +40,6 @@ for (int i = 0; i < choices.size(); i++) {
 	choice = choice.toEscapedModel();
 
 	int choiceVotes = choice.getVotesCount();
-
-	String className = "portlet-section-body results-row";
-	String classHoverName = "portlet-section-body-hover results-row hover";
-
-	if (MathUtil.isEven(i)) {
-		className = "portlet-section-alternate results-row alt";
-		classHoverName = "portlet-section-alternate-hover results-row alt hover";
-	}
 
 	double votesPercent = 0.0;
 
@@ -62,28 +56,27 @@ for (int i = 0; i < choices.size(); i++) {
 	int votesPercentWidth = (int)Math.floor(votesPercent * 100);
 %>
 
-<tr class="<%= className %>" onMouseEnter="this.className = '<%= classHoverName %>';" onMouseLeave="this.className = '<%= className %>';" style="font-size: x-small;">
-	<td>
+<tbody class="table-data">
+<tr>
+	<td class="table-cell">
 		<%= percentFormat.format(votesPercent) %>
 	</td>
-	<td colspan="<%= votesPercentWidth > 0 ? "1" : "2" %>">
+	<td class="table-cell">
 		<%= numberFormat.format(choiceVotes) %>
 	</td>
 
-	<c:if test="<%= votesPercentWidth > 0 %>">
-		<td>
-			<div class="aui-progress-bar aui-progress-bar-horizontal" style="height: 1.4em; width: <%= votesPixelWidth %>px;">
-				<div class="aui-progress-bar-content">
-					<div class="aui-progress-bar-status" style="height: 100%; top: auto; width: <%= votesPercentWidth %>%; "></div>
-				</div>
+	<td class="table-cell">
+		<div class="progress-bar progress-bar-horizontal <%= votesPercentWidth == 0 ? "no-progress" : StringPool.BLANK %>" style="height: 1.4em; width: <%= votesPixelWidth %>px;">
+			<div class="progress-bar-content">
+				<div class="progress-bar-status" style="height: 100%; top: auto; width: <%= votesPercentWidth %>%; "></div>
 			</div>
-		</td>
-	</c:if>
+		</div>
+	</td>
 
-	<td>
+	<td class="table-cell">
 		<strong><%= choice.getName() %>.</strong>
 	</td>
-	<td width="99%">
+	<td class="table-cell">
 		<%= choice.getDescription(locale) %>
 	</td>
 </tr>
@@ -92,6 +85,7 @@ for (int i = 0; i < choices.size(); i++) {
 }
 %>
 
+</tbody>
 </table>
 
 <br />
@@ -135,6 +129,7 @@ for (int i = 0; i < choices.size(); i++) {
 		portletURL.setParameter("struts_action", "/polls/view_question");
 		portletURL.setParameter("redirect", redirect);
 		portletURL.setParameter("questionId", String.valueOf(question.getQuestionId()));
+		portletURL.setParameter("viewResults", Boolean.TRUE.toString());
 
 		List<String> headerNames = new ArrayList<String>();
 
@@ -170,7 +165,7 @@ for (int i = 0; i < choices.size(); i++) {
 			}
 
 			if (user2 != null) {
-				row.addText(user2.getFullName(), user2.getDisplayURL(themeDisplay));
+				row.addText(HtmlUtil.escape(user2.getFullName()), user2.getDisplayURL(themeDisplay));
 			}
 			else {
 				row.addText(String.valueOf(vote.getUserId()));
@@ -186,7 +181,7 @@ for (int i = 0; i < choices.size(); i++) {
 
 			// Vote date
 
-			row.addText(dateFormatDateTime.format(vote.getVoteDate()));
+			row.addDate(vote.getVoteDate());
 
 			// Add result row
 
@@ -202,7 +197,7 @@ for (int i = 0; i < choices.size(); i++) {
 	<br />
 
 	<div style="font-size: xx-small;">
-		<%= LanguageUtil.format(pageContext, "voting-is-disabled-because-this-poll-expired-on-x", dateFormatDateTime.format(question.getExpirationDate())) %>
+		<%= LanguageUtil.format(request, "voting-is-disabled-because-this-poll-expired-on-x", dateFormatDateTime.format(question.getExpirationDate()), false) %>
 	</div>
 </c:if>
 

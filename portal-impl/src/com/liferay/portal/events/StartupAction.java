@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -14,9 +14,11 @@
 
 package com.liferay.portal.events;
 
+import com.liferay.portal.cache.ehcache.EhcacheStreamBootstrapCacheLoader;
 import com.liferay.portal.jericho.CachedLoggerProvider;
 import com.liferay.portal.kernel.bean.PortalBeanLocatorUtil;
 import com.liferay.portal.kernel.cluster.ClusterExecutorUtil;
+import com.liferay.portal.kernel.cluster.ClusterMasterExecutorUtil;
 import com.liferay.portal.kernel.events.ActionException;
 import com.liferay.portal.kernel.events.SimpleAction;
 import com.liferay.portal.kernel.log.Log;
@@ -25,19 +27,34 @@ import com.liferay.portal.kernel.messaging.MessageBus;
 import com.liferay.portal.kernel.messaging.MessageBusUtil;
 import com.liferay.portal.kernel.messaging.sender.MessageSender;
 import com.liferay.portal.kernel.messaging.sender.SynchronousMessageSender;
-import com.liferay.portal.kernel.scheduler.SchedulerEngineUtil;
+import com.liferay.portal.kernel.nio.intraband.Intraband;
+import com.liferay.portal.kernel.nio.intraband.SystemDataType;
+import com.liferay.portal.kernel.nio.intraband.mailbox.MailboxDatagramReceiveHandler;
+import com.liferay.portal.kernel.nio.intraband.messaging.MessageDatagramReceiveHandler;
+import com.liferay.portal.kernel.nio.intraband.proxy.IntrabandProxyDatagramReceiveHandler;
+import com.liferay.portal.kernel.nio.intraband.rpc.RPCDatagramReceiveHandler;
+import com.liferay.portal.kernel.resiliency.mpi.MPIHelperUtil;
+import com.liferay.portal.kernel.resiliency.spi.SPIUtil;
+import com.liferay.portal.kernel.resiliency.spi.agent.annotation.Direction;
+import com.liferay.portal.kernel.resiliency.spi.agent.annotation.DistributedRegistry;
+import com.liferay.portal.kernel.resiliency.spi.agent.annotation.MatchType;
+import com.liferay.portal.kernel.scheduler.SchedulerEngineHelperUtil;
 import com.liferay.portal.kernel.search.IndexerRegistryUtil;
-import com.liferay.portal.kernel.servlet.JspFactorySwapper;
 import com.liferay.portal.kernel.template.TemplateManagerUtil;
 import com.liferay.portal.kernel.util.ReleaseInfo;
-import com.liferay.portal.kernel.util.ServerDetector;
 import com.liferay.portal.plugin.PluginPackageIndexer;
-import com.liferay.portal.security.lang.PortalSecurityManager;
-import com.liferay.portal.security.lang.PortalSecurityManagerThreadLocal;
+import com.liferay.portal.security.lang.DoPrivilegedUtil;
+import com.liferay.portal.service.BackgroundTaskLocalServiceUtil;
 import com.liferay.portal.service.LockLocalServiceUtil;
 import com.liferay.portal.tools.DBUpgrader;
-import com.liferay.portal.util.PropsValues;
-import com.liferay.portlet.messageboards.util.MBIndexer;
+import com.liferay.portal.util.WebKeys;
+import com.liferay.portlet.messageboards.util.MBMessageIndexer;
+import com.liferay.taglib.servlet.JspFactorySwapper;
+
+import javax.portlet.MimeResponse;
+import javax.portlet.PortletRequest;
+
+import org.apache.struts.taglib.tiles.ComponentConstants;
 
 /**
  * @author Brian Wing Shun Chan
@@ -65,28 +82,37 @@ public class StartupAction extends SimpleAction {
 
 		System.out.println("Starting " + ReleaseInfo.getReleaseInfo());
 
-		// Clear locks
+		// Portal resiliency
 
-		if (_log.isDebugEnabled()) {
-			_log.debug("Clear locks");
-		}
+		DistributedRegistry.registerDistributed(
+			ComponentConstants.COMPONENT_CONTEXT, Direction.DUPLEX,
+			MatchType.POSTFIX);
+		DistributedRegistry.registerDistributed(
+			MimeResponse.MARKUP_HEAD_ELEMENT, Direction.DUPLEX,
+			MatchType.EXACT);
+		DistributedRegistry.registerDistributed(
+			PortletRequest.LIFECYCLE_PHASE, Direction.DUPLEX, MatchType.EXACT);
+		DistributedRegistry.registerDistributed(WebKeys.class);
 
-		boolean enabled = PortalSecurityManagerThreadLocal.isEnabled();
+		Intraband intraband = MPIHelperUtil.getIntraband();
 
-		try {
-			PortalSecurityManagerThreadLocal.setEnabled(false);
+		intraband.registerDatagramReceiveHandler(
+			SystemDataType.MAILBOX.getValue(),
+			new MailboxDatagramReceiveHandler());
 
-			LockLocalServiceUtil.clear();
-		}
-		catch (Exception e) {
-			if (_log.isWarnEnabled()) {
-				_log.warn(
-					"Unable to clear locks because Lock table does not exist");
-			}
-		}
-		finally {
-			PortalSecurityManagerThreadLocal.setEnabled(enabled);
-		}
+		MessageBus messageBus = (MessageBus)PortalBeanLocatorUtil.locate(
+			MessageBus.class.getName());
+
+		intraband.registerDatagramReceiveHandler(
+			SystemDataType.MESSAGE.getValue(),
+			new MessageDatagramReceiveHandler(messageBus));
+
+		intraband.registerDatagramReceiveHandler(
+			SystemDataType.PROXY.getValue(),
+			new IntrabandProxyDatagramReceiveHandler());
+
+		intraband.registerDatagramReceiveHandler(
+			SystemDataType.RPC.getValue(), new RPCDatagramReceiveHandler());
 
 		// Shutdown hook
 
@@ -98,29 +124,6 @@ public class StartupAction extends SimpleAction {
 
 		runtime.addShutdownHook(new Thread(new ShutdownHook()));
 
-		// Security manager
-
-		String portalSecurityManagerStrategy =
-			PropsValues.PORTAL_SECURITY_MANAGER_STRATEGY;
-
-		if (portalSecurityManagerStrategy.equals("smart")) {
-			if (ServerDetector.isWebSphere()) {
-				portalSecurityManagerStrategy = "none";
-			}
-			else {
-				portalSecurityManagerStrategy = "default";
-			}
-		}
-
-		if (portalSecurityManagerStrategy.equals("liferay")) {
-			if (System.getSecurityManager() == null) {
-				System.setSecurityManager(new PortalSecurityManager());
-			}
-		}
-		else if (portalSecurityManagerStrategy.equals("none")) {
-			System.setSecurityManager(null);
-		}
-
 		// Template manager
 
 		if (_log.isDebugEnabled()) {
@@ -131,7 +134,7 @@ public class StartupAction extends SimpleAction {
 
 		// Indexers
 
-		IndexerRegistryUtil.register(new MBIndexer());
+		IndexerRegistryUtil.register(new MBMessageIndexer());
 		IndexerRegistryUtil.register(new PluginPackageIndexer());
 
 		// Upgrade
@@ -140,15 +143,22 @@ public class StartupAction extends SimpleAction {
 			_log.debug("Upgrade database");
 		}
 
-		enabled = PortalSecurityManagerThreadLocal.isEnabled();
+		DBUpgrader.upgrade();
+
+		// Clear locks
+
+		if (_log.isDebugEnabled()) {
+			_log.debug("Clear locks");
+		}
 
 		try {
-			PortalSecurityManagerThreadLocal.setEnabled(false);
-
-			DBUpgrader.upgrade();
+			LockLocalServiceUtil.clear();
 		}
-		finally {
-			PortalSecurityManagerThreadLocal.setEnabled(enabled);
+		catch (Exception e) {
+			if (_log.isWarnEnabled()) {
+				_log.warn(
+					"Unable to clear locks because Lock table does not exist");
+			}
 		}
 
 		// Messaging
@@ -157,8 +167,6 @@ public class StartupAction extends SimpleAction {
 			_log.debug("Initialize message bus");
 		}
 
-		MessageBus messageBus = (MessageBus)PortalBeanLocatorUtil.locate(
-			MessageBus.class.getName());
 		MessageSender messageSender =
 			(MessageSender)PortalBeanLocatorUtil.locate(
 				MessageSender.class.getName());
@@ -167,11 +175,21 @@ public class StartupAction extends SimpleAction {
 				SynchronousMessageSender.class.getName());
 
 		MessageBusUtil.init(
-			messageBus, messageSender, synchronousMessageSender);
+			DoPrivilegedUtil.wrap(messageBus),
+			DoPrivilegedUtil.wrap(messageSender),
+			DoPrivilegedUtil.wrap(synchronousMessageSender));
 
 		// Cluster executor
 
 		ClusterExecutorUtil.initialize();
+
+		if (!SPIUtil.isSPI()) {
+			ClusterMasterExecutorUtil.initialize();
+		}
+
+		// Ehache bootstrap
+
+		EhcacheStreamBootstrapCacheLoader.start();
 
 		// Scheduler
 
@@ -179,7 +197,7 @@ public class StartupAction extends SimpleAction {
 			_log.debug("Initialize scheduler engine lifecycle");
 		}
 
-		SchedulerEngineUtil.initialize();
+		SchedulerEngineHelperUtil.initialize();
 
 		// Verify
 
@@ -188,6 +206,12 @@ public class StartupAction extends SimpleAction {
 		}
 
 		DBUpgrader.verify();
+
+		// Background tasks
+
+		if (!ClusterMasterExecutorUtil.isEnabled()) {
+			BackgroundTaskLocalServiceUtil.cleanUpBackgroundTasks();
+		}
 
 		// Liferay JspFactory
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2000-2012 Liferay, Inc. All rights reserved.
+ * Copyright (c) 2000-present Liferay, Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or modify it under
  * the terms of the GNU Lesser General Public License as published by the Free
@@ -18,12 +18,13 @@ import com.liferay.portal.kernel.configuration.Filter;
 import com.liferay.portal.kernel.image.ImageMagick;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
+import com.liferay.portal.kernel.security.pacl.DoPrivileged;
 import com.liferay.portal.kernel.util.NamedThreadFactory;
 import com.liferay.portal.kernel.util.OSDetector;
-import com.liferay.portal.kernel.util.PortalClassLoaderUtil;
 import com.liferay.portal.kernel.util.PropsKeys;
 import com.liferay.portal.kernel.util.StringBundler;
 import com.liferay.portal.kernel.util.Validator;
+import com.liferay.portal.util.ClassLoaderUtil;
 import com.liferay.portal.util.PrefsPropsUtil;
 import com.liferay.portal.util.PropsUtil;
 
@@ -42,12 +43,14 @@ import org.im4java.process.ProcessTask;
  * @author Alexander Chow
  * @author Ivica Cardic
  */
+@DoPrivileged
 public class ImageMagickImpl implements ImageMagick {
 
 	public static ImageMagickImpl getInstance() {
 		return _instance;
 	}
 
+	@Override
 	public Future<?> convert(List<String> arguments) throws Exception {
 		if (!isEnabled()) {
 			throw new IllegalStateException(
@@ -66,6 +69,7 @@ public class ImageMagickImpl implements ImageMagick {
 		return processTask;
 	}
 
+	@Override
 	public void destroy() {
 		if (_processExecutor == null) {
 			return;
@@ -78,8 +82,9 @@ public class ImageMagickImpl implements ImageMagick {
 		_processExecutor = null;
 	}
 
+	@Override
 	public String getGlobalSearchPath() throws Exception {
-		PortletPreferences preferences = PrefsPropsUtil.getPreferences();
+		PortletPreferences preferences = PrefsPropsUtil.getPreferences(true);
 
 		String globalSearchPath = preferences.getValue(
 			PropsKeys.IMAGEMAGICK_GLOBAL_SEARCH_PATH, null);
@@ -104,6 +109,7 @@ public class ImageMagickImpl implements ImageMagick {
 			PropsKeys.IMAGEMAGICK_GLOBAL_SEARCH_PATH, new Filter(filterName));
 	}
 
+	@Override
 	public Properties getResourceLimitsProperties() throws Exception {
 		Properties resourceLimitsProperties = PrefsPropsUtil.getProperties(
 			PropsKeys.IMAGEMAGICK_RESOURCE_LIMIT, true);
@@ -116,6 +122,7 @@ public class ImageMagickImpl implements ImageMagick {
 		return resourceLimitsProperties;
 	}
 
+	@Override
 	public String[] identify(List<String> arguments) throws Exception {
 		if (!isEnabled()) {
 			throw new IllegalStateException(
@@ -147,6 +154,7 @@ public class ImageMagickImpl implements ImageMagick {
 		return new String[0];
 	}
 
+	@Override
 	public boolean isEnabled() {
 		boolean enabled = false;
 
@@ -154,17 +162,19 @@ public class ImageMagickImpl implements ImageMagick {
 			enabled = PrefsPropsUtil.getBoolean(PropsKeys.IMAGEMAGICK_ENABLED);
 		}
 		catch (Exception e) {
-			_log.warn(e, e);
+			if (_log.isWarnEnabled()) {
+				_log.warn(e, e);
+			}
 		}
 
-		if (!enabled && !_warned) {
+		if (!enabled && !_warned && _log.isWarnEnabled()) {
 			StringBundler sb = new StringBundler(7);
 
 			sb.append("Liferay is not configured to use ImageMagick and ");
 			sb.append("Ghostscript. For better quality document and image ");
 			sb.append("previews, install ImageMagick and Ghostscript. Enable ");
 			sb.append("ImageMagick in portal-ext.properties or in the Server ");
-			sb.append("Administration control panel at: ");
+			sb.append("Administration section of the Control Panel at: ");
 			sb.append("http://<server>/group/control_panel/manage/-/server/");
 			sb.append("external-services");
 
@@ -176,6 +186,7 @@ public class ImageMagickImpl implements ImageMagick {
 		return enabled;
 	}
 
+	@Override
 	public void reset() {
 		if (isEnabled()) {
 			try {
@@ -184,7 +195,7 @@ public class ImageMagickImpl implements ImageMagick {
 				_resourceLimitsProperties = getResourceLimitsProperties();
 			}
 			catch (Exception e) {
-				_log.warn(e, e);
+				_log.error(e, e);
 			}
 		}
 	}
@@ -223,7 +234,7 @@ public class ImageMagickImpl implements ImageMagick {
 				_processExecutor.setThreadFactory(
 					new NamedThreadFactory(
 						ImageMagickImpl.class.getName(), Thread.MIN_PRIORITY,
-						PortalClassLoaderUtil.getClassLoader()));
+						ClassLoaderUtil.getPortalClassLoader()));
 			}
 		}
 
